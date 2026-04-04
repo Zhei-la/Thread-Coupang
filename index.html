@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Threads 자동화</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap');
+  :root {
+    --bg: #0a0a0a; --surface: #141414; --surface2: #1e1e1e;
+    --border: #2a2a2a; --text: #f0f0f0; --text2: #888;
+    --green: #22c55e; --red: #ef4444; --blue: #3b82f6; --yellow: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+  .sidebar { width: 220px; min-height: 100vh; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 0; position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; }
+  .logo { padding: 0 20px 24px; font-size: 18px; font-weight: 700; letter-spacing: -0.5px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .logo span { color: var(--text2); font-weight: 400; }
+  .nav-item { padding: 10px 20px; cursor: pointer; font-size: 14px; color: var(--text2); transition: all 0.15s; display: flex; align-items: center; gap: 10px; }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--text); background: var(--surface2); border-right: 2px solid var(--text); }
+  .sidebar-bottom { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--border); }
+  .main { margin-left: 220px; flex: 1; padding: 32px; max-width: 900px; }
+  .page { display: none; }
+  .page.active { display: block; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+  h2 { font-size: 12px; font-weight: 600; margin-bottom: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  select, input, textarea { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px 14px; font-size: 14px; font-family: inherit; outline: none; transition: border 0.15s; width: 100%; }
+  select:focus, input:focus, textarea:focus { border-color: #444; }
+  select { cursor: pointer; }
+  textarea { resize: vertical; min-height: 120px; line-height: 1.6; }
+  .btn { padding: 10px 18px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 14px; font-family: inherit; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .btn:hover { background: #2a2a2a; border-color: #444; }
+  .btn-primary { background: var(--text); color: #000; border-color: var(--text); }
+  .btn-primary:hover { background: #ddd; }
+  .btn-green { background: var(--green); color: #000; border-color: var(--green); }
+  .btn-green:hover { background: #16a34a; }
+  .btn-red { background: transparent; color: var(--red); border-color: var(--red); }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .chip-group { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip { padding: 6px 14px; border-radius: 100px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .chip:hover, .chip.active { border-color: var(--text); color: var(--text); }
+  .topic-chip { padding: 6px 14px; border-radius: 100px; border: 1px solid rgba(59,130,246,0.3); background: rgba(59,130,246,0.08); color: #7cb4ff; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .topic-chip:hover, .topic-chip.active { border-color: var(--blue); background: rgba(59,130,246,0.2); color: #fff; }
+  .label { font-size: 13px; color: var(--text2); margin-bottom: 6px; display: block; }
+  .upload-area { border: 1px dashed var(--border); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: border 0.15s; color: var(--text2); font-size: 14px; }
+  .upload-area:hover { border-color: #555; color: var(--text); }
+  .image-preview-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .image-preview-item { position: relative; }
+  .image-preview-item img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+  .remove-img { position: absolute; top: -6px; right: -6px; background: var(--red); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge-yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .post-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .account-item { display: flex; align-items: flex-start; justify-content: space-between; padding: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; gap: 12px; }
+  .scheduled-item { display: flex; align-items: flex-start; justify-content: space-between; padding: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; gap: 12px; }
+  .insight-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .insight-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+  .insight-num { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .insight-label { font-size: 12px; color: var(--text2); }
+  .kw-tabs { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 16px; }
+  .kw-tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; cursor: pointer; color: var(--text2); background: var(--surface2); border: none; font-family: inherit; transition: all 0.15s; }
+  .kw-tab.active { background: var(--surface); color: var(--text); font-weight: 600; }
+  .kw-panel { display: none; }
+  .kw-panel.active { display: block; }
+  .kw-list { display: flex; flex-direction: column; gap: 6px; }
+  .kw-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; background: var(--surface2); border-radius: 6px; font-size: 13px; cursor: pointer; transition: background 0.15s; }
+  .kw-item:hover { background: #2a2a2a; }
+  .kw-rank { color: var(--text2); font-size: 12px; min-width: 24px; }
+  .kw-new { font-size: 10px; color: var(--red); font-weight: 700; margin-left: 4px; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; font-size: 14px; z-index: 999; animation: slideUp 0.3s ease; max-width: 300px; }
+  .toast.success { border-color: var(--green); }
+  .toast.error { border-color: var(--red); }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .loading { display: inline-block; width: 14px; height: 14px; border: 2px solid #333; border-top-color: #888; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; width: 420px; max-width: 90vw; }
+  .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .tag-input-wrap { display: flex; gap: 8px; margin-bottom: 10px; }
+  .tag-list { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+  .tag-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25); border-radius: 100px; font-size: 12px; color: #7cb4ff; }
+  .tag-pill button { background: none; border: none; color: #7cb4ff; cursor: pointer; font-size: 12px; padding: 0; line-height: 1; opacity: 0.7; }
+  .tag-pill button:hover { opacity: 1; }
+  .empty-hint { font-size: 13px; color: var(--text2); padding: 4px 0; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">Threads<span>Auto</span></div>
+  <nav>
+    <div class="nav-item active" onclick="showPage('write',this)">✏️ 글 작성</div>
+    <div class="nav-item" onclick="showPage('schedule',this)">📅 예약 목록</div>
+    <div class="nav-item" onclick="showPage('insights',this)">📊 인사이트</div>
+    <div class="nav-item" onclick="showPage('keywords',this)">🔥 실시간 키워드</div>
+    <div class="nav-item" onclick="showPage('accounts',this)">👤 계정 관리</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:6px">계정 선택</div>
+    <select id="globalAccount" onchange="onAccountChange()">
+      <option value="">계정 없음</option>
+    </select>
+  </div>
+</aside>
+
+<main class="main">
+
+  <!-- 글 작성 -->
+  <div class="page active" id="page-write">
+    <h1>✏️ 글 작성</h1>
+
+    <div class="card">
+      <h2>주제 & 설정</h2>
+
+      <label class="label">주제 선택 <span style="font-size:11px;color:var(--text2)">(계정 관리에서 태그 추가 가능)</span></label>
+      <div class="chip-group" id="topicTagGroup" style="margin-bottom:10px">
+        <span class="empty-hint">계정을 선택하면 주제 태그가 표시돼요</span>
+      </div>
+
+      <label class="label">직접 입력 (또는 위에서 선택)</label>
+      <div style="margin-bottom:12px">
+        <input type="text" id="topic" placeholder="예: 요즘 물가 미침, AI 최신 소식" />
+      </div>
+
+      <label class="label">말투 (반말 고정)</label>
+      <div class="chip-group" id="toneGroup">
+        <div class="chip active" onclick="selectToneChip(this)">일상</div>
+        <div class="chip" onclick="selectToneChip(this)">정보</div>
+        <div class="chip" onclick="selectToneChip(this)">유머</div>
+        <div class="chip" onclick="selectToneChip(this)">감성</div>
+        <div class="chip" onclick="selectToneChip(this)">도발</div>
+      </div>
+
+      <button class="btn btn-primary" onclick="generatePost()" id="genBtn">🪄 글 생성</button>
+    </div>
+
+    <div class="card">
+      <h2>생성된 글</h2>
+      <textarea id="postText" placeholder="글이 여기 생성됩니다..."></textarea>
+      <div class="post-actions">
+        <button class="btn btn-sm" onclick="generatePost()">🔄 재생성</button>
+        <button class="btn btn-sm" onclick="copyText('postText')">📋 복사</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>댓글 자동 생성</h2>
+      <textarea id="commentText" placeholder="댓글이 여기 생성됩니다..."></textarea>
+      <div class="post-actions">
+        <button class="btn btn-sm" onclick="generateComment()">🪄 댓글 생성</button>
+        <button class="btn btn-sm" onclick="generateComment()">🔄 재생성</button>
+        <button class="btn btn-sm" onclick="copyText('commentText')">📋 복사</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>미디어 첨부</h2>
+      <div class="chip-group" style="margin-bottom:14px">
+        <div class="chip active" id="tabPhoto" onclick="switchMediaTab('photo')">📷 사진</div>
+        <div class="chip" id="tabVideo" onclick="switchMediaTab('video')">🎬 영상</div>
+      </div>
+      <div id="mediaPhoto">
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">📷 클릭해서 사진 추가 (여러 장 가능)</div>
+        <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleImages(this)">
+        <div class="image-preview-list" id="previewList"></div>
+      </div>
+      <div id="mediaVideo" style="display:none">
+        <div class="upload-area" onclick="document.getElementById('videoInput').click()">🎬 클릭해서 영상 추가 (mp4, 최대 5분)</div>
+        <input type="file" id="videoInput" accept="video/mp4,video/quicktime" style="display:none" onchange="handleVideo(this)">
+        <div id="videoPreview" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>발행</h2>
+      <div class="row">
+        <button class="btn btn-green" onclick="publishNow()" style="flex:1">⚡ 즉시 발행</button>
+        <button class="btn" onclick="openScheduleModal()" style="flex:1">📅 예약 발행</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 예약 목록 -->
+  <div class="page" id="page-schedule">
+    <h1>📅 예약 목록</h1>
+    <div id="scheduleList"><div style="color:var(--text2);font-size:14px">불러오는 중...</div></div>
+  </div>
+
+  <!-- 인사이트 -->
+  <div class="page" id="page-insights">
+    <h1>📊 인사이트</h1>
+    <div id="insightsContent">
+      <div style="color:var(--text2);font-size:14px;margin-bottom:12px">계정을 선택하고 불러오기를 눌러주세요.</div>
+      <button class="btn btn-primary" onclick="loadInsights()">📊 불러오기</button>
+    </div>
+  </div>
+
+  <!-- 실시간 키워드 -->
+  <div class="page" id="page-keywords">
+    <h1>🔥 실시간 키워드</h1>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <button class="btn btn-sm" onclick="loadKeywords()">🔄 새로고침</button>
+    </div>
+    <div class="card">
+      <div class="kw-tabs">
+        <button class="kw-tab active" onclick="switchKwTab('google',this)">🔍 구글</button>
+        <button class="kw-tab" onclick="switchKwTab('naver',this)">🟢 네이버</button>
+        <button class="kw-tab" onclick="switchKwTab('threads',this)">🧵 Threads</button>
+      </div>
+      <div class="kw-panel active" id="kw-google"><div class="kw-list" id="googleKw"><span class="loading"></span></div></div>
+      <div class="kw-panel" id="kw-naver"><div class="kw-list" id="naverKw"><span class="loading"></span></div></div>
+      <div class="kw-panel" id="kw-threads"><div class="kw-list" id="threadsKw"><span class="loading"></span></div></div>
+    </div>
+  </div>
+
+  <!-- 계정 관리 -->
+  <div class="page" id="page-accounts">
+    <h1>👤 계정 관리</h1>
+    <div class="card">
+      <h2>계정 추가</h2>
+      <div style="margin-bottom:12px">
+        <label class="label">계정 이름</label>
+        <input type="text" id="newAccName" placeholder="예: 메인 계정" />
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="label">Threads 장기 액세스 토큰</label>
+        <input type="text" id="newAccToken" placeholder="THAAMr..." />
+      </div>
+      <div style="margin-bottom:16px">
+        <label class="label">주제 태그 <span style="color:var(--text2);font-size:11px">입력 후 Enter 또는 + 버튼</span></label>
+        <div class="tag-input-wrap">
+          <input type="text" id="newTagInput" placeholder="예: AI, 바이브코딩, 재테크" style="flex:1"
+            onkeydown="if(event.key==='Enter'){addNewTag();event.preventDefault()}" />
+          <button class="btn btn-sm" onclick="addNewTag()">+ 추가</button>
+        </div>
+        <div class="tag-list" id="newTagList"></div>
+      </div>
+      <button class="btn btn-primary" onclick="addAccount()">+ 계정 추가</button>
+    </div>
+    <div class="card">
+      <h2>등록된 계정</h2>
+      <div id="accountList"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- 예약 모달 -->
+<div class="modal-bg" id="scheduleModal">
+  <div class="modal">
+    <h3>📅 예약 발행</h3>
+    <label class="label">발행 시간</label>
+    <input type="datetime-local" id="scheduleTime" style="margin-bottom:16px" />
+    <div class="row">
+      <button class="btn" onclick="closeScheduleModal()" style="flex:1">취소</button>
+      <button class="btn btn-green" onclick="schedulePost()" style="flex:1">예약 등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- 태그 편집 모달 -->
+<div class="modal-bg" id="editTagModal">
+  <div class="modal">
+    <h3>✏️ 주제 태그 편집</h3>
+    <input type="hidden" id="editAccId" />
+    <label class="label">태그 추가</label>
+    <div class="tag-input-wrap">
+      <input type="text" id="editTagInput" placeholder="태그 입력 후 Enter" style="flex:1"
+        onkeydown="if(event.key==='Enter'){addEditTag();event.preventDefault()}" />
+      <button class="btn btn-sm" onclick="addEditTag()">+ 추가</button>
+    </div>
+    <div class="tag-list" id="editTagList" style="margin-bottom:16px"></div>
+    <div class="row">
+      <button class="btn" onclick="closeEditTagModal()" style="flex:1">취소</button>
+      <button class="btn btn-primary" onclick="saveEditTags()" style="flex:1">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedTone = '일상';
+let mediaMode = 'photo';
+let uploadedImageUrls = [], uploadedFiles = [], uploadedVideoUrl = '';
+let newTags = [], editTags = [];
+
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  if (name === 'schedule') loadSchedule();
+  if (name === 'keywords') loadKeywords();
+  if (name === 'accounts') loadAccounts();
+}
+
+function toast(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`; el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function selectToneChip(el) {
+  document.querySelectorAll('#toneGroup .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  selectedTone = el.textContent;
+}
+
+// ── 계정 변경 → 주제 태그 연동 ──
+async function onAccountChange() {
+  const accountId = document.getElementById('globalAccount').value;
+  const group = document.getElementById('topicTagGroup');
+  if (!accountId) {
+    group.innerHTML = '<span class="empty-hint">계정을 선택하면 주제 태그가 표시돼요</span>';
+    return;
+  }
+  const r = await fetch('/api/accounts');
+  const accs = await r.json();
+  const acc = accs.find(a => a.id === accountId);
+  const tags = acc?.topics || [];
+  if (!tags.length) {
+    group.innerHTML = '<span class="empty-hint">주제 태그 없음 — 계정 관리에서 추가해줘</span>';
+    return;
+  }
+  group.innerHTML = tags.map(t =>
+    `<div class="topic-chip" onclick="selectTopicTag(this,'${t}')">${t}</div>`
+  ).join('');
+}
+
+function selectTopicTag(el, tag) {
+  document.querySelectorAll('#topicTagGroup .topic-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('topic').value = tag;
+}
+
+// ── 글/댓글 생성 ──
+async function generatePost() {
+  const topic = document.getElementById('topic').value.trim();
+  if (!topic) return toast('주제를 입력해줘', 'error');
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="loading"></span> 생성 중...';
+  try {
+    const r = await fetch('/api/generate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({topic, tone:selectedTone, type:'post'}) });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    document.getElementById('postText').value = d.text;
+    toast('글 생성 완료!');
+  } catch(e) { toast(e.message, 'error'); }
+  btn.disabled = false; btn.innerHTML = '🪄 글 생성';
+}
+
+async function generateComment() {
+  const topic = document.getElementById('topic').value.trim() || '일상';
+  try {
+    const r = await fetch('/api/generate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({topic, tone:selectedTone, type:'comment'}) });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    document.getElementById('commentText').value = d.text;
+    toast('댓글 생성 완료!');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── 미디어 ──
+function switchMediaTab(tab) {
+  mediaMode = tab;
+  document.getElementById('tabPhoto').classList.toggle('active', tab==='photo');
+  document.getElementById('tabVideo').classList.toggle('active', tab==='video');
+  document.getElementById('mediaPhoto').style.display = tab==='photo' ? '' : 'none';
+  document.getElementById('mediaVideo').style.display = tab==='video' ? '' : 'none';
+}
+
+async function handleImages(input) {
+  for (const file of Array.from(input.files)) {
+    uploadedFiles.push(file);
+    addImagePreview(URL.createObjectURL(file), uploadedFiles.length - 1);
+  }
+  const fd = new FormData();
+  Array.from(input.files).forEach(f => fd.append('images', f));
+  try {
+    const r = await fetch('/api/upload', { method:'POST', body:fd });
+    const d = await r.json();
+    if (d.urls) uploadedImageUrls.push(...d.urls);
+  } catch(e) {}
+}
+
+async function handleVideo(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('videoPreview').innerHTML = `
+    <video src="${URL.createObjectURL(file)}" controls style="max-width:100%;border-radius:8px;border:1px solid var(--border);margin-top:8px"></video>
+    <div style="font-size:12px;color:var(--text2);margin-top:6px">${file.name} (${(file.size/1024/1024).toFixed(1)}MB)</div>`;
+  const fd = new FormData(); fd.append('video', file);
+  try {
+    const r = await fetch('/api/upload-video', { method:'POST', body:fd });
+    const d = await r.json();
+    if (d.url) { uploadedVideoUrl = d.url; toast('영상 업로드 완료!'); }
+  } catch(e) { toast('영상 업로드 실패', 'error'); }
+}
+
+function addImagePreview(url, idx) {
+  const item = document.createElement('div');
+  item.className = 'image-preview-item'; item.dataset.idx = idx;
+  item.innerHTML = `<img src="${url}"><button class="remove-img" onclick="removeImage(${idx})">✕</button>`;
+  document.getElementById('previewList').appendChild(item);
+}
+function removeImage(idx) {
+  uploadedFiles.splice(idx,1); uploadedImageUrls.splice(idx,1);
+  document.querySelector(`[data-idx="${idx}"]`)?.remove();
+}
+
+// ── 발행 ──
+async function publishNow() {
+  const accountId = document.getElementById('globalAccount').value;
+  if (!accountId) return toast('계정을 선택해줘', 'error');
+  const text = document.getElementById('postText').value.trim();
+  if (!text) return toast('글을 작성해줘', 'error');
+  const body = { accountId, text };
+  if (mediaMode==='photo') body.imageUrls = uploadedImageUrls;
+  if (mediaMode==='video') body.videoUrl = uploadedVideoUrl;
+  try {
+    const r = await fetch('/api/publish', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    toast('✅ 발행 완료!');
+    document.getElementById('postText').value = '';
+    uploadedImageUrls=[]; uploadedFiles=[]; uploadedVideoUrl='';
+    document.getElementById('previewList').innerHTML='';
+    document.getElementById('videoPreview').innerHTML='';
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function openScheduleModal() {
+  if (!document.getElementById('postText').value.trim()) return toast('글을 먼저 작성해줘', 'error');
+  document.getElementById('scheduleTime').value = new Date(Date.now()+3600000).toISOString().slice(0,16);
+  document.getElementById('scheduleModal').classList.add('open');
+}
+function closeScheduleModal() { document.getElementById('scheduleModal').classList.remove('open'); }
+
+async function schedulePost() {
+  const accountId = document.getElementById('globalAccount').value;
+  if (!accountId) return toast('계정을 선택해줘', 'error');
+  const text = document.getElementById('postText').value.trim();
+  const scheduledAt = document.getElementById('scheduleTime').value;
+  if (!scheduledAt) return toast('시간을 선택해줘', 'error');
+  try {
+    const r = await fetch('/api/schedule', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({accountId, text, imageUrls:uploadedImageUrls, scheduledAt: new Date(scheduledAt).toISOString()}) });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    toast('📅 예약 등록 완료!'); closeScheduleModal();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── 예약 목록 ──
+async function loadSchedule() {
+  const r = await fetch('/api/schedule');
+  const posts = await r.json();
+  const el = document.getElementById('scheduleList');
+  if (!posts.length) { el.innerHTML = '<div style="color:var(--text2);font-size:14px">예약된 글 없음</div>'; return; }
+  el.innerHTML = [...posts].reverse().map(p => `
+    <div class="scheduled-item">
+      <div style="flex:1">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:4px">${p.accountName} · ${new Date(p.scheduledAt).toLocaleString('ko-KR')}</div>
+        <div style="font-size:14px;line-height:1.5">${p.text.slice(0,100)}${p.text.length>100?'...':''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <span class="badge ${p.status==='done'?'badge-green':p.status==='failed'?'badge-red':'badge-yellow'}">${p.status==='done'?'발행됨':p.status==='failed'?'실패':'대기중'}</span>
+        ${p.status==='pending'?`<button class="btn btn-sm btn-red" onclick="cancelSchedule('${p.id}')">취소</button>`:''}
+      </div>
+    </div>`).join('');
+}
+
+async function cancelSchedule(id) {
+  await fetch(`/api/schedule/${id}`, {method:'DELETE'});
+  loadSchedule(); toast('예약 취소됨');
+}
+
+// ── 인사이트 ──
+async function loadInsights() {
+  const accountId = document.getElementById('globalAccount').value;
+  if (!accountId) return toast('계정을 선택해줘', 'error');
+  const el = document.getElementById('insightsContent');
+  el.innerHTML = '<span class="loading"></span>';
+  try {
+    const r = await fetch(`/api/insights/${accountId}`);
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    el.innerHTML = `
+      <div class="insight-grid">
+        <div class="insight-card"><div class="insight-num">${(d.followers_count||0).toLocaleString()}</div><div class="insight-label">팔로워</div></div>
+        <div class="insight-card"><div class="insight-num">@${d.username||'-'}</div><div class="insight-label">계정명</div></div>
+        <div class="insight-card"><div class="insight-num">${d.id||'-'}</div><div class="insight-label">사용자 ID</div></div>
+      </div><br>
+      <button class="btn" onclick="loadInsights()">🔄 새로고침</button>`;
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--red);font-size:14px;margin-bottom:12px">${e.message}</div><button class="btn" onclick="loadInsights()">다시 시도</button>`;
+  }
+}
+
+// ── 실시간 키워드 ──
+function switchKwTab(tab, el) {
+  document.querySelectorAll('.kw-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.kw-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('kw-'+tab).classList.add('active');
+}
+
+async function loadKeywords() {
+  ['googleKw','naverKw','threadsKw'].forEach(id => {
+    document.getElementById(id).innerHTML = '<span class="loading"></span>';
+  });
+  try {
+    const r = await fetch('/api/keywords');
+    const d = await r.json();
+    renderKw('googleKw', d.google||[]);
+    renderKw('naverKw', d.naver||[]);
+    renderKw('threadsKw', d.threads||[]);
+  } catch(e) {
+    ['googleKw','naverKw','threadsKw'].forEach(id => {
+      document.getElementById(id).innerHTML = '<div style="color:var(--text2);font-size:13px;padding:8px">불러오기 실패</div>';
+    });
+  }
+}
+
+function renderKw(elId, keywords) {
+  const el = document.getElementById(elId);
+  if (!keywords.length) { el.innerHTML = '<div style="color:var(--text2);font-size:13px;padding:8px">데이터 없음</div>'; return; }
+  el.innerHTML = keywords.map((kw, i) => {
+    const text = typeof kw === 'string' ? kw : kw.text;
+    const isNew = kw.isNew || false;
+    return `<div class="kw-item" onclick="useKeyword('${text.replace(/'/g,"\\'")}')">
+      <span><span class="kw-rank">${i+1}</span> ${text}${isNew?'<span class="kw-new">NEW</span>':''}</span>
+      <span style="font-size:11px;color:var(--text2)">주제로 →</span>
+    </div>`;
+  }).join('');
+}
+
+function useKeyword(kw) {
+  document.getElementById('topic').value = kw;
+  showPage('write', document.querySelector('.nav-item'));
+  document.querySelectorAll('.nav-item').forEach((n,i) => i===0?n.classList.add('active'):n.classList.remove('active'));
+  toast(`"${kw}" 주제로 설정됨`);
+}
+
+// ── 계정 관리 ──
+async function loadAccounts() {
+  const r = await fetch('/api/accounts');
+  const accs = await r.json();
+  const sel = document.getElementById('globalAccount');
+  const curVal = sel.value;
+  sel.innerHTML = '<option value="">계정 선택</option>' + accs.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
+  if (curVal) sel.value = curVal;
+
+  const list = document.getElementById('accountList');
+  if (!accs.length) { list.innerHTML = '<div style="color:var(--text2);font-size:14px">등록된 계정 없음</div>'; return; }
+  list.innerHTML = accs.map(a => `
+    <div class="account-item">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">${a.name}</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${a.accessToken.slice(0,24)}...</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${(a.topics||[]).length ? (a.topics||[]).map(t=>`<span class="tag-pill">${t}</span>`).join('') : '<span style="font-size:12px;color:var(--text2)">주제 태그 없음</span>'}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <button class="btn btn-sm" onclick='openEditTagModal("${a.id}", ${JSON.stringify(a.topics||[])})'>태그 편집</button>
+        <button class="btn btn-sm btn-red" onclick="deleteAccount('${a.id}')">삭제</button>
+      </div>
+    </div>`).join('');
+}
+
+async function addAccount() {
+  const name = document.getElementById('newAccName').value.trim();
+  const accessToken = document.getElementById('newAccToken').value.trim();
+  if (!name || !accessToken) return toast('이름과 토큰 입력해줘', 'error');
+  await fetch('/api/accounts', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name, accessToken, topics: newTags}) });
+  document.getElementById('newAccName').value='';
+  document.getElementById('newAccToken').value='';
+  newTags=[]; renderNewTags();
+  loadAccounts(); toast('계정 추가됨!');
+}
+
+async function deleteAccount(id) {
+  if (!confirm('정말 삭제할까?')) return;
+  await fetch(`/api/accounts/${id}`, {method:'DELETE'});
+  loadAccounts(); toast('계정 삭제됨');
+}
+
+// 새 계정 태그
+function addNewTag() {
+  const input = document.getElementById('newTagInput');
+  const val = input.value.trim();
+  if (!val || newTags.includes(val)) { input.value=''; return; }
+  newTags.push(val); renderNewTags(); input.value='';
+}
+function renderNewTags() {
+  document.getElementById('newTagList').innerHTML = newTags.map((t,i)=>
+    `<span class="tag-pill">${t}<button onclick="removeNewTag(${i})">✕</button></span>`).join('');
+}
+function removeNewTag(i) { newTags.splice(i,1); renderNewTags(); }
+
+// 태그 편집 모달
+function openEditTagModal(id, tags) {
+  document.getElementById('editAccId').value = id;
+  editTags = Array.isArray(tags) ? [...tags] : [];
+  renderEditTags();
+  document.getElementById('editTagModal').classList.add('open');
+}
+function closeEditTagModal() { document.getElementById('editTagModal').classList.remove('open'); }
+function addEditTag() {
+  const input = document.getElementById('editTagInput');
+  const val = input.value.trim();
+  if (!val || editTags.includes(val)) { input.value=''; return; }
+  editTags.push(val); renderEditTags(); input.value='';
+}
+function renderEditTags() {
+  document.getElementById('editTagList').innerHTML = editTags.map((t,i)=>
+    `<span class="tag-pill">${t}<button onclick="removeEditTag(${i})">✕</button></span>`).join('');
+}
+function removeEditTag(i) { editTags.splice(i,1); renderEditTags(); }
+async function saveEditTags() {
+  const id = document.getElementById('editAccId').value;
+  await fetch(`/api/accounts/${id}/topics`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({topics: editTags}) });
+  closeEditTagModal(); loadAccounts(); onAccountChange(); toast('주제 태그 저장됨!');
+}
+
+function copyText(id) {
+  navigator.clipboard.writeText(document.getElementById(id).value).then(()=>toast('복사됨!'));
+}
+
+loadAccounts();
+loadKeywords();
+</script>
+</body>
+</html>
