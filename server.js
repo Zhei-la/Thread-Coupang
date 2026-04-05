@@ -575,12 +575,18 @@ async function publishToThreads(accessToken, text, imageUrls = [], videoUrl = ''
     containerId = d.id;
     await new Promise(r => setTimeout(r, 10000));
   } else if (imageUrls.length === 0) {
+    console.log('[PUBLISH] 텍스트 발행 시작');
     const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'TEXT', text, access_token: accessToken }) });
-    const d = await r.json(); if (d.error) throw new Error(d.error.message);
+    const d = await r.json();
+    console.log('[PUBLISH] Threads TEXT 응답:', JSON.stringify(d));
+    if (d.error) throw new Error(d.error.message);
     containerId = d.id;
   } else if (imageUrls.length === 1) {
+    console.log('[PUBLISH] 이미지 URL:', imageUrls[0]);
     const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'IMAGE', image_url: imageUrls[0], text, access_token: accessToken }) });
-    const d = await r.json(); if (d.error) throw new Error(d.error.message);
+    const d = await r.json();
+    console.log('[PUBLISH] Threads API 응답:', JSON.stringify(d));
+    if (d.error) throw new Error(d.error.message);
     containerId = d.id;
   } else {
     const childIds = [];
