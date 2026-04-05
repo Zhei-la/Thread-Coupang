@@ -239,11 +239,28 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       <div class="card">
         <h2>댓글 자동 생성</h2>
         <textarea id="commentText" placeholder="댓글이 여기 생성됩니다..."></textarea>
-        <div style="display:flex;gap:8px;margin-top:10px">
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button class="btn btn-sm" onclick="genComment()">🪄 댓글 생성</button>
           <button class="btn btn-sm" onclick="genComment()">🔄 재생성</button>
           <button class="btn btn-sm" onclick="copy('commentText')">📋 복사</button>
           <button class="btn btn-sm" onclick="openSched('comment')">📅 댓글 예약</button>
+        </div>
+      </div>
+
+      <div class="card" id="coupangLinkCard" style="display:none">
+        <h2>🛒 쿠팡 고정댓글 생성</h2>
+        <label class="label">쿠팡 링크 입력 <span style="font-size:11px;color:var(--txt2)">(여러 개면 줄바꿈으로 구분)</span></label>
+        <textarea id="coupangLinks" placeholder="https://coupang.com/..." style="min-height:80px"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-sm btn-p" onclick="genCoupangComment()">🪄 고정댓글 생성</button>
+          <button class="btn btn-sm" onclick="copy('coupangCommentText')">📋 복사</button>
+        </div>
+        <div style="margin-top:10px;display:none" id="coupangCommentWrap">
+          <label class="label">생성된 고정댓글</label>
+          <textarea id="coupangCommentText" style="min-height:120px" readonly></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-sm btn-g" onclick="useCoupangComment()">댓글란에 적용</button>
+          </div>
         </div>
       </div>
 
@@ -533,6 +550,9 @@ function pickTone(el) {
   document.querySelectorAll('#toneChips .chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   tone = el.textContent;
+  // 쿠팡 선택시 링크카드 표시
+  const card = document.getElementById('coupangLinkCard');
+  if (card) card.style.display = tone === '쿠팡' ? 'block' : 'none';
 }
 
 // ── 글/댓글 생성 ──
@@ -697,18 +717,37 @@ async function loadSched() {
           ${p.type === 'comment' ? '<span class="badge bb" style="margin-left:4px">댓글</span>' : ''}
         </div>
         <div style="font-size:14px;line-height:1.5;margin-bottom:8px">${p.text.slice(0, 100)}${p.text.length > 100 ? '...' : ''}</div>
-        ${p.status === 'pending' ? `
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-sm" onclick="editSched('${p.id}')">✏️ 수정</button>
-          <button class="btn btn-sm btn-g" onclick="pubNowSched('${p.id}')">⚡ 즉시발행</button>
-          <button class="btn btn-sm btn-r" onclick="cancelSched('${p.id}')">취소</button>
-        </div>` : ''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          ${p.status === 'pending' ? `
+            <button class="btn btn-sm" onclick="editSched('${p.id}')">✏️ 수정</button>
+            <button class="btn btn-sm btn-g" onclick="pubNowSched('${p.id}')">⚡ 즉시발행</button>
+            <button class="btn btn-sm btn-r" onclick="cancelSched('${p.id}')">✕ 취소</button>
+          ` : ''}
+          ${p.status === 'failed' ? `
+            <button class="btn btn-sm btn-g" onclick="retryFailed('${p.id}')">🔄 재발행</button>
+            <button class="btn btn-sm btn-r" onclick="cancelSched('${p.id}')">✕ 삭제</button>
+          ` : ''}
+          ${p.status === 'done' ? `
+            <button class="btn btn-sm btn-r" onclick="cancelSched('${p.id}')">✕ 삭제</button>
+          ` : ''}
+        </div>
       </div>
       <span class="badge ${p.status === 'done' ? 'bg' : p.status === 'failed' ? 'br' : 'by'}">${p.status === 'done' ? '발행됨' : p.status === 'failed' ? '실패' : '대기중'}</span>
     </div>`).join('');
 }
 
-async function cancelSched(id) { await api(`/api/schedule/${id}`, { method: 'DELETE' }); loadSched(); toast('예약 취소됨'); }
+async function cancelSched(id) { await api(`/api/schedule/${id}`, { method: 'DELETE' }); loadSched(); toast('삭제됨'); }
+
+async function retryFailed(id) {
+  // 상태를 pending으로 되돌리고 즉시 발행
+  const posts = await api('/api/schedule');
+  const p = posts.find(x => x.id === id);
+  if (!p) return;
+  // 즉시 발행 시도
+  const d = await api(`/api/schedule/${id}/publish-now`, { method: 'POST' });
+  if (d.error) return toast('재발행 실패: ' + d.error, 'err');
+  toast('✅ 재발행 완료!'); loadSched();
+}
 
 async function pubNowSched(id) {
   const d = await api(`/api/schedule/${id}/publish-now`, { method: 'POST' });
