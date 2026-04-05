@@ -560,37 +560,43 @@ cron.schedule('* * * * *', async () => {
   const dataDir = `${DATA_ROOT}/users`;
   if (!fs.existsSync(dataDir)) return;
   const userDirs = fs.readdirSync(dataDir);
-  console.log(`[CRON] 실행 - 유저 ${userDirs.length}명 확인`);
   for (const userId of userDirs) {
-    let posts = getScheduled(userId);
+    const posts = getScheduled(userId);
     const now = new Date();
     const pending = posts.filter(p => p.status === 'pending' && new Date(p.scheduledAt) <= now);
     if (!pending.length) continue;
     console.log(`[CRON] 유저 ${userId} - 발행 대기 ${pending.length}건`);
+    let changed = false;
     for (const post of pending) {
       const accs = getAccounts(userId);
       const account = accs.find(a => a.id === post.accountId);
-      if (!account) { post.status = 'failed'; continue; }
+      if (!account) { post.status = 'failed'; changed = true; continue; }
       try {
-        if (post.type === 'comment' && post.replyToId) {
-          await replyToThread(account.accessToken, post.replyToId, post.text);
+        // 댓글 전용 예약
+        if (post.type === 'comment') {
+          if (post.replyToId) {
+            await replyToThread(account.accessToken, post.replyToId, post.text);
+          }
         } else {
-          const postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || []);
-          if (post.commentText) {
+          // 글 발행
+          const postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrl || '');
+          // 댓글이 있으면 글 발행 후 댓글 달기
+          if (post.commentText && post.commentText.trim()) {
             await new Promise(r => setTimeout(r, 3000));
-            await replyToThread(account.accessToken, postId, post.commentText);
+            await replyToThread(account.accessToken, postId, post.commentText.trim());
           }
         }
         post.status = 'done';
+        changed = true;
         console.log(`[CRON] 발행 성공:`, post.id);
-      } catch(e) { post.status = 'failed'; post.error = e.message; }
+      } catch(e) {
+        post.status = 'failed';
+        post.error = e.message;
+        changed = true;
+        console.log(`[CRON] 발행 실패:`, post.id, e.message);
+      }
     }
-    if (pending.length > 0) {
-      // done/failed 항목 중 1시간 지난 것 자동 삭제
-      const cutoff = Date.now() - 60 * 60 * 1000;
-      posts = posts.filter(p => p.status === 'pending' || new Date(p.scheduledAt).getTime() > cutoff);
-      saveScheduled(userId, posts);
-    }
+    if (changed) saveScheduled(userId, posts);
   }
 });
 
