@@ -118,6 +118,39 @@
   .invite-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;}
   .invite-code{font-family:monospace;font-size:16px;font-weight:700;letter-spacing:2px;color:var(--green);}
   .user-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;}
+
+  /* ── 모바일 반응형 ── */
+  .hamburger{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:18px;}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:149;}
+  @media(max-width:768px){
+    .hamburger{display:block;}
+    .sidebar{transform:translateX(-100%);transition:transform .25s;z-index:150;}
+    .sidebar.open{transform:translateX(0);}
+    .sidebar-overlay.open{display:block;}
+    .main{margin-left:0;padding:16px;padding-top:56px;}
+  }
+  /* ── 키워드 스타일 ── */
+  .kw-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
+  .kw-section-title{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+  .kw-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+  .kw-row:last-child{border-bottom:none;}
+  .kw-num{font-size:14px;font-weight:700;color:var(--green);min-width:28px;}
+  .kw-num.top3{color:var(--green);}
+  .kw-num.normal{color:var(--text2);}
+  .kw-name{font-size:14px;flex:1;cursor:pointer;}
+  .kw-name:hover{color:var(--blue);}
+  .kw-badge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;}
+  .kw-badge.hot{background:rgba(239,68,68,.15);color:var(--red);}
+  .kw-badge.new{background:rgba(34,197,94,.15);color:var(--green);}
+  .kw-badge.up{color:var(--yellow);font-size:13px;}
+  /* ── 인사이트 스타일 ── */
+  .insight-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .insight-date{font-size:13px;color:var(--text2);}
+  .insight-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px;}
+  @media(max-width:480px){.insight-stat-grid{grid-template-columns:1fr 1fr;}}
+  .insight-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .insight-stat-num{font-size:26px;font-weight:700;color:var(--green);margin-bottom:4px;}
+  .insight-stat-label{font-size:12px;color:var(--text2);}
 </style>
 </head>
 <body>
@@ -152,6 +185,8 @@
   </div>
 </div>
 
+<button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 <!-- ══ 앱 본체 ══ -->
 <div class="app" id="appWrap">
   <aside class="sidebar">
@@ -251,28 +286,34 @@
 
     <!-- 인사이트 -->
     <div class="page" id="page-insights">
-      <h1>📊 인사이트</h1>
+      <div class="insight-header">
+        <h1 style="margin-bottom:0">📊 인사이트</h1>
+        <button class="btn btn-sm" onclick="loadInsights()">🔄 새로고침</button>
+      </div>
       <div id="insightsContent">
-        <div style="color:var(--text2);font-size:14px;margin-bottom:12px">계정을 선택하고 불러오기를 눌러주세요.</div>
+        <div style="color:var(--text2);font-size:14px;margin-bottom:12px">계정을 선택하면 자동으로 불러와요.</div>
         <button class="btn btn-primary" onclick="loadInsights()">📊 불러오기</button>
       </div>
     </div>
 
     <!-- 실시간 키워드 -->
     <div class="page" id="page-keywords">
-      <h1>🔥 실시간 키워드</h1>
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <div class="insight-header">
+        <h1 style="margin-bottom:0">🔥 실시간 키워드</h1>
         <button class="btn btn-sm" onclick="loadKeywords()">🔄 새로고침</button>
       </div>
-      <div class="card">
-        <div class="kw-tabs">
-          <button class="kw-tab active" onclick="switchKwTab('google',this)">🔍 구글</button>
-          <button class="kw-tab" onclick="switchKwTab('naver',this)">🟢 네이버</button>
-          <button class="kw-tab" onclick="switchKwTab('threads',this)">🧵 Threads</button>
-        </div>
-        <div class="kw-panel active" id="kw-google"><div class="kw-list" id="googleKw"><span class="loading"></span></div></div>
-        <div class="kw-panel" id="kw-naver"><div class="kw-list" id="naverKw"><span class="loading"></span></div></div>
-        <div class="kw-panel" id="kw-threads"><div class="kw-list" id="threadsKw"><span class="loading"></span></div></div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:16px" id="kwUpdateTime">불러오는 중...</div>
+      <div class="kw-section">
+        <div class="kw-section-title">🔥 네이버 인기검색어</div>
+        <div id="naverKw"><span class="loading"></span></div>
+      </div>
+      <div class="kw-section">
+        <div class="kw-section-title">🔍 구글 인기검색어</div>
+        <div id="googleKw"><span class="loading"></span></div>
+      </div>
+      <div class="kw-section">
+        <div class="kw-section-title">🧵 Threads 추천 키워드</div>
+        <div id="threadsKw"><span class="loading"></span></div>
       </div>
     </div>
 
@@ -434,6 +475,7 @@ function showPage(name, el) {
   if(name==='keywords') loadKeywords();
   if(name==='accounts') loadAccounts();
   if(name==='admin') loadAdmin();
+  closeSidebar();
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -616,14 +658,31 @@ async function loadInsights() {
   const el=document.getElementById('insightsContent');
   el.innerHTML='<span class="loading"></span>';
   const d=await api(`/api/insights/${accountId}`);
-  if(d.error){el.innerHTML=`<div style="color:var(--red);font-size:14px;margin-bottom:12px">${d.error}</div><button class="btn" onclick="loadInsights()">다시 시도</button>`;return;}
+  if(d.error){
+    el.innerHTML=`<div style="color:var(--red);font-size:14px;margin-bottom:12px">${d.error}</div><button class="btn" onclick="loadInsights()">다시 시도</button>`;
+    return;
+  }
+  const today = new Date().toLocaleDateString('ko-KR');
   el.innerHTML=`
-    <div class="insight-grid">
-      <div class="insight-card"><div class="insight-num">${(d.followers_count||0).toLocaleString()}</div><div class="insight-label">팔로워</div></div>
-      <div class="insight-card"><div class="insight-num">@${d.username||'-'}</div><div class="insight-label">계정명</div></div>
-      <div class="insight-card"><div class="insight-num">${d.id||'-'}</div><div class="insight-label">사용자 ID</div></div>
-    </div><br>
-    <button class="btn" onclick="loadInsights()">🔄 새로고침</button>`;
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">📅 ${today} 기준</div>
+    <div class="insight-stat-grid">
+      <div class="insight-stat">
+        <div class="insight-stat-num">${(d.followers_count||0).toLocaleString()}</div>
+        <div class="insight-stat-label">👥 팔로워</div>
+      </div>
+      <div class="insight-stat">
+        <div class="insight-stat-num">@${d.username||'-'}</div>
+        <div class="insight-stat-label">🧵 계정명</div>
+      </div>
+      <div class="insight-stat">
+        <div class="insight-stat-num">${d.id||'-'}</div>
+        <div class="insight-stat-label">🆔 사용자 ID</div>
+      </div>
+      <div class="insight-stat">
+        <div class="insight-stat-num" style="font-size:16px">${d.threads_biography||'없음'}</div>
+        <div class="insight-stat-label">📝 바이오</div>
+      </div>
+    </div>`;
 }
 
 // ── 키워드 ──
@@ -759,6 +818,15 @@ async function deleteUser(id){
 }
 
 function copyText(id){navigator.clipboard.writeText(document.getElementById(id).value).then(()=>toast('복사됨!'));}
+
+function toggleSidebar(){
+  document.getElementById('hamburger').closest('body').querySelector('.sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar(){
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
 
 // ── 초기화 ──
 async function checkSetup() {
