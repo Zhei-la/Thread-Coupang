@@ -622,9 +622,11 @@ async function pubNow() {
   const text = document.getElementById('postText').value.trim();
   if (!text) return toast('글을 작성해줘', 'err');
   const commentText = document.getElementById('commentText').value.trim();
-  const body = { accountId: accId, text, commentText };
-  if (mediaMode === 'photo') body.imageUrls = imgUrls;
-  if (mediaMode === 'video') body.videoUrl = vidUrl;
+  const body = { accountId: accId, text };
+  // 댓글은 있을 때만 포함
+  if (commentText) body.commentText = commentText;
+  if (mediaMode === 'photo' && imgUrls.length) body.imageUrls = imgUrls;
+  if (mediaMode === 'video' && vidUrl) body.videoUrl = vidUrl;
   try {
     const d = await api('/api/publish', { method: 'POST', body });
     if (d.error) throw new Error(d.error);
@@ -652,11 +654,31 @@ async function doSched() {
   const accId = document.getElementById('globalAcc').value;
   if (!accId) return toast('계정을 선택해줘', 'err');
   const type = document.getElementById('schedType').value;
-  const text = document.getElementById(type === 'comment' ? 'commentText' : 'postText').value.trim();
   const scheduledAt = document.getElementById('schedTime').value;
   if (!scheduledAt) return toast('시간을 선택해줘', 'err');
-  const commentText = document.getElementById('commentText').value.trim();
-  const d = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text, type, commentText, imageUrls: type === 'post' ? imgUrls : [], scheduledAt: new Date(scheduledAt).toISOString() } });
+
+  let body = { accountId: accId, scheduledAt: new Date(scheduledAt).toISOString() };
+
+  if (type === 'comment') {
+    // 댓글 예약 - 댓글 텍스트만
+    const text = document.getElementById('commentText').value.trim();
+    if (!text) return toast('댓글을 먼저 생성해줘', 'err');
+    body.text = text;
+    body.type = 'comment';
+  } else {
+    // 글 예약 - 글 텍스트 + 사진 + 댓글(있으면)
+    const text = document.getElementById('postText').value.trim();
+    if (!text) return toast('글을 먼저 작성해줘', 'err');
+    body.text = text;
+    body.type = 'post';
+    body.imageUrls = imgUrls;
+    body.videoUrl = vidUrl;
+    // 댓글도 있으면 같이 예약
+    const commentText = document.getElementById('commentText').value.trim();
+    if (commentText) body.commentText = commentText;
+  }
+
+  const d = await api('/api/schedule', { method: 'POST', body });
   if (d.error) return toast(d.error, 'err');
   toast('📅 예약 등록 완료!'); closeModal('schedModal');
 }
