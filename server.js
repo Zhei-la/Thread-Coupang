@@ -167,9 +167,11 @@ app.post('/api/auth/register', rateLimit(5, 60000), (req, res) => {
   } else {
     // 이후엔 초대코드 필수
     if (!inviteCode) return res.status(400).json({ error: '초대코드가 필요해' });
-    const invite = inviteCodes.find(c => c.code === inviteCode && !c.used);
+    const invite = inviteCodes.find(c => c.code === inviteCode);
     if (!invite) return res.status(400).json({ error: '유효하지 않은 초대코드' });
-    invite.used = true; invite.usedBy = nickname; invite.usedAt = new Date().toISOString();
+    if (invite.status === 'done') return res.status(400).json({ error: '만료된 초대코드야. 새 코드를 받아줘.' });
+    invite.lastUsedBy = nickname; invite.lastUsedAt = new Date().toISOString();
+    invite.useCount = (invite.useCount || 0) + 1;
     saveJSON(`${DATA_ROOT}/invite_codes.json`, inviteCodes);
   }
 
@@ -192,6 +194,10 @@ app.post('/api/auth/login', rateLimit(10, 60000), (req, res) => {
   if (!user) return res.status(401).json({ error: '닉네임 또는 비밀번호 오류' });
   if (user.status === 'pending') return res.status(403).json({ error: 'pending' });
   if (user.status === 'suspended') return res.status(403).json({ error: 'suspended' });
+  // 사용기간 만료 체크
+  if (user.expiresAt && new Date() > new Date(user.expiresAt) && user.role !== 'admin') {
+    return res.status(403).json({ error: 'expired' });
+  }
   const token = createSession(user.id);
   res.json({ token, nickname: user.nickname, role: user.role });
 });
@@ -216,8 +222,12 @@ app.get('/api/auth/me', auth, (req, res) => {
 app.get('/api/invites', adminAuth, (req, res) => res.json(inviteCodes));
 
 app.post('/api/invites', adminAuth, (req, res) => {
-  const code = crypto.randomBytes(4).toString('hex').toUpperCase(); // 예: A3F2B1C4
-  const invite = { code, createdBy: req.user.nickname, used: false, createdAt: new Date().toISOString() };
+  // 기존 active 코드들 모두 사용완료로 변경
+  inviteCodes.forEach(c => {
+    if (c.status !== 'done') c.status = 'done';
+  });
+  const code = crypto.randomBytes(4).toString('hex').toUpperCase();
+  const invite = { code, createdBy: req.user.nickname, status: 'active', useCount: 0, createdAt: new Date().toISOString() };
   inviteCodes.push(invite);
   saveJSON(`${DATA_ROOT}/invite_codes.json`, inviteCodes);
   res.json(invite);
@@ -231,12 +241,49 @@ app.delete('/api/invites/:code', adminAuth, (req, res) => {
 
 // 유저 목록 (관리자)
 app.get('/api/users', adminAuth, (req, res) => {
-  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', createdAt: u.createdAt })));
+  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', accountLimit: u.accountLimit||3, limitRequest: u.limitRequest||null, approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt })));
 });
 
 app.delete('/api/users/:id', adminAuth, (req, res) => {
   if (req.params.id === req.userId) return res.status(400).json({ error: '본인 삭제 불가' });
   users = users.filter(u => u.id !== req.params.id);
+  saveJSON(`${DATA_ROOT}/users.json`, users);
+  res.json({ ok: true });
+});
+
+// 계정 한도 변경 요청 (유저가 직접)
+app.post('/api/users/limit-request', auth, (req, res) => {
+  const user = users.find(u => u.id === req.userId);
+  if (!user) return res.status(404).json({ error: '없음' });
+  const { requestLimit } = req.body;
+  if (![3, 6].includes(requestLimit)) return res.status(400).json({ error: '3 또는 6만 가능' });
+  if (user.accountLimit === requestLimit) return res.status(400).json({ error: '이미 해당 한도야' });
+  user.limitRequest = { requestLimit, requestedAt: new Date().toISOString() };
+  saveJSON(`${DATA_ROOT}/users.json`, users);
+  res.json({ ok: true });
+});
+
+// 유저 상태 변경 (승인/정지/활성화) + 계정 한도
+app.put('/api/users/:id/status', adminAuth, (req, res) => {
+  const user = users.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: '없음' });
+  if (user.role === 'admin') return res.status(400).json({ error: '관리자 상태 변경 불가' });
+  user.status = req.body.status;
+  if (req.body.status === 'approved' && !user.approvedAt) {
+    // 최초 승인 시 30일 사용기간 설정
+    user.approvedAt = new Date().toISOString();
+    user.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  }
+  if (req.body.accountLimit) {
+    user.accountLimit = req.body.accountLimit;
+    user.limitRequest = null;
+  }
+  if (req.body.clearLimitRequest) user.limitRequest = null;
+  if (req.body.extendDays) {
+    // 기간 연장
+    const base = user.expiresAt ? new Date(user.expiresAt) : new Date();
+    user.expiresAt = new Date(base.getTime() + req.body.extendDays * 24 * 60 * 60 * 1000).toISOString();
+  }
   saveJSON(`${DATA_ROOT}/users.json`, users);
   res.json({ ok: true });
 });
@@ -251,6 +298,12 @@ app.post('/api/accounts', auth, (req, res) => {
   const { name, accessToken, topics } = req.body;
   if (!name || !accessToken) return res.status(400).json({ error: '이름과 토큰 필요' });
   const accs = getAccounts(req.userId);
+  // 관리자는 무제한, 일반 유저는 accountLimit 기준
+  const user = users.find(u => u.id === req.userId);
+  const limit = user?.accountLimit || 3;
+  if (user?.role !== 'admin' && accs.length >= limit) {
+    return res.status(400).json({ error: `계정은 최대 ${limit}개까지 등록 가능해` });
+  }
   const acc = { id: Date.now().toString(), name, accessToken, topics: topics || [] };
   accs.push(acc);
   saveAccounts(req.userId, accs);
