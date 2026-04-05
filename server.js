@@ -215,6 +215,7 @@ app.post('/api/generate', auth, async (req, res) => {
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.9, maxOutputTokens: 500 } })
     });
     const data = await r.json();
+    console.log("Gemini 응답:", JSON.stringify(data));
     res.json({ text: (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim() });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
