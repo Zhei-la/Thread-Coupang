@@ -151,6 +151,9 @@
   .insight-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;}
   .insight-stat-num{font-size:26px;font-weight:700;color:var(--green);margin-bottom:4px;}
   .insight-stat-label{font-size:12px;color:var(--text2);}
+  @media(max-width:768px){
+    .kw-grid{grid-template-columns:1fr !important;}
+  }
 </style>
 </head>
 <body>
@@ -304,17 +307,15 @@
         <button class="btn btn-sm" onclick="loadKeywords()">🔄 새로고침</button>
       </div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:16px" id="kwUpdateTime">불러오는 중...</div>
-      <div class="kw-section">
-        <div class="kw-section-title">🔥 네이버 인기검색어</div>
-        <div id="naverKw"><span class="loading"></span></div>
-      </div>
-      <div class="kw-section">
-        <div class="kw-section-title">🔍 구글 인기검색어</div>
-        <div id="googleKw"><span class="loading"></span></div>
-      </div>
-      <div class="kw-section">
-        <div class="kw-section-title">🧵 Threads 추천 키워드</div>
-        <div id="threadsKw"><span class="loading"></span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="kw-grid">
+        <div class="kw-section">
+          <div class="kw-section-title">🔥 구글 실시간 인기검색어</div>
+          <div id="googleKw"><span class="loading"></span></div>
+        </div>
+        <div class="kw-section">
+          <div class="kw-section-title">⚡ 구글 급상승 검색어 (4시간)</div>
+          <div id="threadsKw"><span class="loading"></span></div>
+        </div>
       </div>
     </div>
 
