@@ -249,7 +249,10 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 
       <div class="card" id="coupangLinkCard" style="display:none">
         <h2>🛒 쿠팡 링크</h2>
-        <label class="label">쿠팡 링크 입력 <span style="font-size:11px;color:var(--txt2)">링크 입력 후 댓글 적용 버튼 클릭</span></label>
+        <label class="label">쿠팡 링크 입력</label>
+        <div style="font-size:12px;color:var(--blue);margin-bottom:8px;padding:8px 12px;background:rgba(59,130,246,.08);border-radius:8px;border:1px solid rgba(59,130,246,.2)">
+          📌 순서: 링크 입력 → 댓글 적용 버튼 클릭 → 댓글 생성란 확인 후 예약/발행
+        </div>
         <input id="coupangLinks" placeholder="https://coupang.com/vp/products/..." style="margin-bottom:10px" />
         <button class="btn btn-p btn-sm" onclick="applyCoupangComment()">✅ 댓글에 적용</button>
       </div>
@@ -272,8 +275,39 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     <!-- 계정 관리 -->
     <div class="page" id="page-accounts">
       <h1>👤 계정 관리</h1>
+
       <div class="card">
-        <h2>Threads 계정 추가</h2>
+        <h2>🔑 장기 액세스 토큰 발급 방법</h2>
+        <div style="font-size:13px;line-height:1.8;color:var(--txt2)">
+          <div style="color:var(--txt);font-weight:600;margin-bottom:8px">📌 순서대로 따라하세요</div>
+
+          <div style="margin-bottom:12px">
+            <div style="color:var(--blue);font-weight:600;margin-bottom:4px">1단계 — Meta 개발자 콘솔 설정</div>
+            <div>① <a href="https://developers.facebook.com" target="_blank" style="color:var(--blue)">developers.facebook.com</a> 접속 → 앱 생성</div>
+            <div>② 앱 유형: <b style="color:var(--txt)">소비자</b> 선택</div>
+            <div>③ 왼쪽 메뉴 → <b style="color:var(--txt)">Threads API 액세스</b> → 설정 탭</div>
+            <div>④ <b style="color:var(--txt)">사용자 토큰 생성기</b> 섹션에서 Threads 테스터 추가</div>
+          </div>
+
+          <div style="margin-bottom:12px">
+            <div style="color:var(--blue);font-weight:600;margin-bottom:4px">2단계 — 단기 토큰 발급</div>
+            <div>① 사용자 토큰 생성기에서 <b style="color:var(--txt)">액세스 토큰 생성하기</b> 클릭</div>
+            <div>② 단기 토큰 복사 (1시간짜리)</div>
+          </div>
+
+          <div style="margin-bottom:4px">
+            <div style="color:var(--green);font-weight:600;margin-bottom:4px">3단계 — 장기 토큰으로 교환 (60일짜리)</div>
+            <div>아래 URL을 브라우저 주소창에 붙여넣기 (앱시크릿과 단기토큰 교체)</div>
+          </div>
+          <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;word-break:break-all;color:var(--txt);margin-bottom:8px">
+            https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=<b>앱시크릿</b>&access_token=<b>단기토큰</b>
+          </div>
+          <div style="color:var(--green)">✅ 응답에서 access_token 값 복사 → 아래 토큰란에 붙여넣기</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Threads 계정 추가 <span id="accLimitBadge" style="font-size:11px;color:var(--txt2);font-weight:400"></span></h2>
         <div style="margin-bottom:12px"><label class="label">계정 이름</label><input id="accName" placeholder="예: 메인 계정" /></div>
         <div style="margin-bottom:12px"><label class="label">장기 액세스 토큰</label><input id="accToken" placeholder="THAAMr..." /></div>
         <div style="margin-bottom:16px">
@@ -287,18 +321,49 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <button class="btn btn-p" onclick="addAcc()">+ 계정 추가</button>
       </div>
       <div class="card"><h2>등록된 계정</h2><div id="accList"></div></div>
+
+      <div class="card" id="expireNoticeCard" style="display:none;border-color:var(--red)">
+        <h2 style="color:var(--red)">⏰ 사용 기간 만료 안내</h2>
+        <div style="font-size:13px;line-height:1.7" id="expireNoticeText"></div>
+      </div>
+
+      <div class="card" id="limitRequestCard">
+        <h2>📩 계정 한도 변경 요청</h2>
+        <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">관리자에게 계정 한도 변경을 요청할 수 있어요. 관리자가 승인하면 바꿔줘요.</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm" onclick="requestLimit(3)">3개로 변경 요청</button>
+          <button class="btn btn-sm" onclick="requestLimit(6)">6개로 변경 요청</button>
+        </div>
+        <div id="limitRequestStatus" style="margin-top:10px;font-size:13px;color:var(--txt2)"></div>
+      </div>
     </div>
 
     <!-- 관리자 -->
     <div class="page" id="page-admin">
       <h1>⚙️ 관리자</h1>
+
       <div class="card">
         <h2>초대코드 관리</h2>
         <button class="btn btn-p" onclick="makeInvite()" style="margin-bottom:16px">🔑 초대코드 생성</button>
         <div id="inviteList"></div>
       </div>
+
       <div class="card">
-        <h2>유저 목록</h2>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h2 style="margin-bottom:0">🕐 가입 승인 대기 <span id="pendingCount" class="badge br"></span></h2>
+        </div>
+        <div id="pendingList"><div style="color:var(--txt2);font-size:14px">대기중인 가입 신청 없음</div></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h2 style="margin-bottom:0">📩 계정 한도 변경 요청 <span id="limitReqCount" class="badge by"></span></h2>
+        </div>
+        <div id="limitReqList"><div style="color:var(--txt2);font-size:14px">한도 변경 요청 없음</div></div>
+      </div>
+
+      <div class="card">
+        <h2>👥 유저 목록 <span id="userCount" style="font-size:12px;color:var(--txt2);font-weight:400"></span></h2>
         <div id="userList"></div>
       </div>
     </div>
@@ -461,6 +526,13 @@ function enterApp(user) {
   if (user.role === 'admin') {
     document.getElementById('adminNav').style.display = 'block';
     document.getElementById('adminSep').style.display = 'block';
+    const limitCard = document.getElementById('limitRequestCard');
+    if (limitCard) limitCard.style.display = 'none';
+    const expCard = document.getElementById('expireNoticeCard');
+    if (expCard) expCard.style.display = 'none';
+  } else {
+    // 만료일 체크
+    checkExpiry();
   }
   loadAccs();
   const saved = localStorage.getItem('page') || 'write';
@@ -479,7 +551,8 @@ async function doLogin() {
   if (d.error) {
     document.getElementById('loginErr').textContent =
       d.error === 'pending' ? '⏳ 관리자 승인 대기 중이야' :
-      d.error === 'suspended' ? '🚫 사용 정지된 계정이야' : d.error;
+      d.error === 'suspended' ? '🚫 사용 정지된 계정이야' :
+      d.error === 'expired' ? '⏰ 사용 기간이 만료됐어. 관리자에게 연락해서 기간 연장 문의해줘.' : d.error;
     return;
   }
   session = d.token;
@@ -778,6 +851,19 @@ async function loadAccs() {
   sel.innerHTML = '<option value="">계정 선택</option>' + (Array.isArray(accs) ? accs : []).map(a => `<option value="${a.id}">${a.name}</option>`).join('');
   if (cur) sel.value = cur;
 
+  // 계정 수 뱃지 표시
+  const badge = document.getElementById('accLimitBadge');
+  const isAdmin = document.getElementById('sideRole').textContent === '관리자';
+  // 계정 한도 확인
+  try {
+    const me = await api('/api/auth/me');
+    const allUsers = isAdmin ? await api('/api/users') : null;
+    const myLimit = allUsers ? (allUsers.find(u => u.nickname === me.nickname)?.accountLimit || 3) : 3;
+    if (badge && !isAdmin) badge.textContent = `(${Array.isArray(accs) ? accs.length : 0}/${myLimit})`;
+  } catch(e) {
+    if (badge && !isAdmin) badge.textContent = `(${Array.isArray(accs) ? accs.length : 0}/3)`;
+  }
+
   const list = document.getElementById('accList');
   if (!list) return;
   if (!Array.isArray(accs) || !accs.length) { list.innerHTML = '<div style="color:var(--txt2);font-size:14px">등록된 계정 없음</div>'; return; }
@@ -844,40 +930,105 @@ async function saveEditTags() {
 
 // ── 관리자 ──
 async function loadAdmin() {
+  // 초대코드
   const invites = await api('/api/invites');
   const iEl = document.getElementById('inviteList');
-  iEl.innerHTML = Array.isArray(invites) && invites.length ? invites.map(c => `
+  const activeInvites = Array.isArray(invites) ? invites.filter(c => c.status !== 'done') : [];
+  const doneInvites = Array.isArray(invites) ? invites.filter(c => c.status === 'done') : [];
+  const renderInvite = (c) => `
     <div class="list-item">
-      <div>
-        <div style="font-family:monospace;font-size:16px;font-weight:700;letter-spacing:2px;color:var(--green)">${c.code}</div>
-        <div style="font-size:12px;color:var(--txt2);margin-top:3px">${c.used ? `사용됨 (${c.usedBy})` : '미사용'} · ${new Date(c.createdAt).toLocaleDateString('ko-KR')}</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-family:monospace;font-size:16px;font-weight:700;letter-spacing:2px;color:${c.status==='done'?'var(--txt2)':'var(--green)'}">${c.code}</span>
+          <span class="badge ${c.status==='done'?'by':'bg'}">${c.status==='done'?'사용완료':'사용중'}</span>
+        </div>
+        <div style="font-size:12px;color:var(--txt2)">사용횟수: ${c.useCount||0}회 ${c.lastUsedBy?`· 마지막: ${c.lastUsedBy}`:''} · ${new Date(c.createdAt).toLocaleDateString('ko-KR')} 생성</div>
       </div>
-      ${!c.used ? `<button class="btn btn-sm btn-r" onclick="delInvite('${c.code}')">삭제</button>` : `<span class="badge bg">사용됨</span>`}
-    </div>`).join('') : '<div style="color:var(--txt2);font-size:14px">초대코드 없음</div>';
+      <button class="btn btn-sm btn-r" onclick="delInvite('${c.code}')">삭제</button>
+    </div>`;
+  iEl.innerHTML = activeInvites.length || doneInvites.length
+    ? [...activeInvites, ...doneInvites].map(renderInvite).join('')
+    : '<div style="color:var(--txt2);font-size:14px">초대코드 없음</div>';
 
   const users = await api('/api/users');
+  if (!Array.isArray(users)) return;
+
+  // 가입 승인 대기
+  const pending = users.filter(u => u.status === 'pending');
+  const pendingEl = document.getElementById('pendingList');
+  const pendingCount = document.getElementById('pendingCount');
+  pendingCount.textContent = pending.length ? pending.length + '명' : '';
+  pendingCount.style.display = pending.length ? '' : 'none';
+  pendingEl.innerHTML = pending.length ? pending.map(u => `
+    <div class="list-item">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">${u.name||'-'} <span style="color:var(--txt2);font-size:13px">(${u.nickname})</span></div>
+        <div style="font-size:12px;color:var(--txt2)">${new Date(u.createdAt).toLocaleDateString('ko-KR')} 신청</div>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-sm btn-g" onclick="setStatus('${u.id}','approved',3)">승인 3개</button>
+        <button class="btn btn-sm btn-g" onclick="setStatus('${u.id}','approved',6)">승인 6개</button>
+        <button class="btn btn-sm btn-r" onclick="delUser('${u.id}')">거절</button>
+      </div>
+    </div>`).join('') : '<div style="color:var(--txt2);font-size:14px">대기중인 가입 신청 없음</div>';
+
+  // 한도 변경 요청
+  const limitReqs = users.filter(u => u.limitRequest && u.status === 'approved');
+  const limitReqEl = document.getElementById('limitReqList');
+  const limitReqCount = document.getElementById('limitReqCount');
+  limitReqCount.textContent = limitReqs.length ? limitReqs.length + '건' : '';
+  limitReqCount.style.display = limitReqs.length ? '' : 'none';
+  limitReqEl.innerHTML = limitReqs.length ? limitReqs.map(u => `
+    <div class="list-item">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">${u.name||'-'} <span style="color:var(--txt2);font-size:13px">(${u.nickname})</span></div>
+        <div style="font-size:12px;color:var(--txt2)">현재 ${u.accountLimit||3}개 → <b style="color:var(--yellow)">${u.limitRequest.requestLimit}개로 변경 요청</b></div>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-sm btn-g" onclick="setLimit('${u.id}',${u.limitRequest.requestLimit})">✅ 승인</button>
+        <button class="btn btn-sm btn-r" onclick="denyLimitReq('${u.id}')">거절</button>
+      </div>
+    </div>`).join('') : '<div style="color:var(--txt2);font-size:14px">한도 변경 요청 없음</div>';
+
+  // 유저 목록 (approved/suspended)
+  const activeUsers = users.filter(u => u.status !== 'pending');
   const uEl = document.getElementById('userList');
-  uEl.innerHTML = Array.isArray(users) ? users.map(u => {
-    const sBadge = u.status === 'approved' ? '<span class="badge bg">사용중</span>' : u.status === 'suspended' ? '<span class="badge br">정지</span>' : '<span class="badge by">승인대기</span>';
+  const userCount = document.getElementById('userCount');
+  userCount.textContent = `(${activeUsers.length}명)`;
+  uEl.innerHTML = activeUsers.map(u => {
+    const sBadge = u.status === 'approved' ? '<span class="badge bg">사용중</span>' : '<span class="badge br">정지</span>';
     return `<div class="list-item">
       <div style="flex:1">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
-          <span style="font-weight:600;font-size:14px">${u.name || '-'}</span>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="font-weight:600;font-size:14px">${u.name||'-'}</span>
           <span style="color:var(--txt2);font-size:13px">(${u.nickname})</span>
-          <span class="badge ${u.role === 'admin' ? 'bb' : 'by'}">${u.role === 'admin' ? '관리자' : '멤버'}</span>
+          <span class="badge ${u.role==='admin'?'bb':'by'}">${u.role==='admin'?'관리자':'멤버'}</span>
           ${sBadge}
         </div>
-        <div style="font-size:12px;color:var(--txt2)">${new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입</div>
+        <div style="font-size:12px;color:var(--txt2);margin-top:2px">
+          한도: ${u.accountLimit||3}개 · ${new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입
+          ${u.expiresAt ? (() => {
+            const exp = new Date(u.expiresAt);
+            const now = new Date();
+            const diff = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+            if (diff < 0) return ' · <span style="color:var(--red);font-weight:600">⚠️ 기간만료</span>';
+            if (diff <= 5) return ` · <span style="color:var(--yellow);font-weight:600">만료 ${diff}일 전 (${exp.toLocaleDateString('ko-KR')})</span>`;
+            return ` · <span style="color:var(--txt2)">~${exp.toLocaleDateString('ko-KR')} (${diff}일 남음)</span>`;
+          })() : ''}
+        </div>
       </div>
       ${u.role !== 'admin' ? `
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-        ${u.status !== 'approved' ? `<button class="btn btn-sm btn-g" onclick="setStatus('${u.id}','approved')">승인</button>` : ''}
-        ${u.status === 'approved' ? `<button class="btn btn-sm btn-r" onclick="setStatus('${u.id}','suspended')">정지</button>` : ''}
-        ${u.status === 'suspended' ? `<button class="btn btn-sm" onclick="setStatus('${u.id}','approved')">활성화</button>` : ''}
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm ${(u.accountLimit||3)===3?'btn-p':''}" onclick="setLimit('${u.id}',3)">3개</button>
+          <button class="btn btn-sm ${(u.accountLimit||3)===6?'btn-p':''}" onclick="setLimit('${u.id}',6)">6개</button>
+          ${u.status==='approved'?`<button class="btn btn-sm btn-r" onclick="setStatus('${u.id}','suspended')">정지</button>`:`<button class="btn btn-sm btn-g" onclick="setStatus('${u.id}','approved',${u.accountLimit||3})">활성화</button>`}
+        </div>
+        <button class="btn btn-sm btn-g" onclick="extendUser('${u.id}')">+30일 연장</button>
         <button class="btn btn-sm btn-r" onclick="delUser('${u.id}')">삭제</button>
       </div>` : ''}
     </div>`;
-  }).join('') : '';
+  }).join('');
 }
 
 async function makeInvite() {
@@ -886,10 +1037,38 @@ async function makeInvite() {
   toast('초대코드 생성: ' + d.code); loadAdmin();
 }
 async function delInvite(code) { await api(`/api/invites/${code}`, { method: 'DELETE' }); loadAdmin(); toast('삭제됨'); }
-async function setStatus(id, status) {
-  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status } });
+async function denyLimitReq(id) {
+  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', clearLimitRequest: true } });
   if (d.error) return toast(d.error, 'err');
-  toast(status === 'approved' ? '승인됐어!' : status === 'suspended' ? '정지됐어!' : '변경됐어!'); loadAdmin();
+  toast('거절됐어!'); loadAdmin();
+}
+
+async function extendUser(id) {
+  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', extendDays: 30 } });
+  if (d.error) return toast(d.error, 'err');
+  toast('30일 연장됐어!'); loadAdmin();
+}
+async function setStatus(id, status, limit) {
+  const body = { status };
+  if (limit) body.accountLimit = limit;
+  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body });
+  if (d.error) return toast(d.error, 'err');
+  toast(status === 'approved' ? `승인됐어! (계정 ${limit||3}개)` : status === 'suspended' ? '정지됐어!' : '변경됐어!');
+  loadAdmin();
+}
+
+async function setLimit(id, limit) {
+  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', accountLimit: limit } });
+  if (d.error) return toast(d.error, 'err');
+  toast(`계정 한도 ${limit}개로 변경됐어!`); loadAdmin();
+}
+
+async function requestLimit(limit) {
+  const d = await api('/api/users/limit-request', { method: 'POST', body: { requestLimit: limit } });
+  if (d.error) return toast(d.error, 'err');
+  toast(`${limit}개로 변경 요청했어! 관리자 승인 대기중`);
+  document.getElementById('limitRequestStatus').textContent = `✅ ${limit}개로 변경 요청 완료 — 관리자 승인 대기중`;
+  document.getElementById('limitRequestStatus').style.color = 'var(--green)';
 }
 async function delUser(id) {
   if (!confirm('정말 삭제할까?')) return;
@@ -911,6 +1090,30 @@ function applyCoupangComment() {
   document.getElementById('commentText').value = result;
   document.getElementById('commentText').scrollIntoView({ behavior: 'smooth', block: 'center' });
   toast('댓글란에 적용됐어!');
+}
+
+async function checkExpiry() {
+  try {
+    const users = await api('/api/users');
+    const me = await api('/api/auth/me');
+    if (!Array.isArray(users)) return;
+    const myInfo = users.find(u => u.nickname === me.nickname);
+    if (!myInfo || !myInfo.expiresAt) return;
+    const exp = new Date(myInfo.expiresAt);
+    const now = new Date();
+    const diff = Math.ceil((exp - now) / (1000*60*60*24));
+    const card = document.getElementById('expireNoticeCard');
+    const text = document.getElementById('expireNoticeText');
+    if (!card || !text) return;
+    if (diff < 0) {
+      card.style.display = 'block';
+      text.innerHTML = `사용 기간이 <b>${exp.toLocaleDateString('ko-KR')}</b>에 만료됐어요.<br>계속 사용하려면 관리자에게 연락해서 <b>기간 연장 승인</b>을 문의해줘요.`;
+    } else if (diff <= 7) {
+      card.style.display = 'block';
+      card.style.borderColor = 'var(--yellow)';
+      text.innerHTML = `사용 기간이 <b>${diff}일 후 (${exp.toLocaleDateString('ko-KR')})</b>에 만료돼요.<br>기간 연장이 필요하면 관리자에게 미리 문의해줘요.`;
+    }
+  } catch(e) {}
 }
 
 init();
