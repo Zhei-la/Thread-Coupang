@@ -259,6 +259,11 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 
       <div class="card">
         <h2>발행</h2>
+        <div id="commentReserveWrap" style="display:none;margin-bottom:12px;padding:10px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr)">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">💬 댓글 예약 시간 (즉시발행 시)</div>
+          <div style="font-size:11px;color:var(--txt2);margin-bottom:6px">글은 지금 바로 올리고, 댓글은 이 시간에 올라가요</div>
+          <input type="datetime-local" id="commentReserveTime" />
+        </div>
         <div class="row">
           <button class="btn btn-g" onclick="pubNow()" style="flex:1">⚡ 즉시 발행</button>
           <button class="btn" onclick="openSched('post')" style="flex:1">📅 예약 발행</button>
@@ -416,11 +421,22 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 
 <!-- 예약 모달 -->
 <div class="modal-bg" id="schedModal">
-  <div class="modal">
+  <div class="modal" style="width:460px;max-width:95vw">
     <h3>📅 예약 발행</h3>
     <input type="hidden" id="schedType" value="post" />
-    <label class="label">발행 시간</label>
-    <input type="datetime-local" id="schedTime" style="margin-bottom:16px" />
+
+    <div style="margin-bottom:14px">
+      <label class="label">📝 글 발행 시간</label>
+      <input type="datetime-local" id="schedTime" />
+    </div>
+
+    <div id="commentSchedWrap" style="display:none;margin-bottom:14px;padding:12px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">💬 댓글 발행 시간 (선택)</div>
+      <div style="font-size:12px;color:var(--txt2);margin-bottom:8px">글 올라간 후 댓글 달릴 시간. 비우면 댓글 예약 안 됨.</div>
+      <input type="datetime-local" id="commentSchedTime" />
+      <div style="font-size:11px;color:var(--blue);margin-top:6px">💡 스팸 방지를 위해 글 발행 후 10분 이상 간격 권장</div>
+    </div>
+
     <div class="row">
       <button class="btn" onclick="closeModal('schedModal')" style="flex:1">취소</button>
       <button class="btn btn-g" onclick="doSched()" style="flex:1">예약 등록</button>
@@ -430,12 +446,22 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 
 <!-- 예약 수정 모달 -->
 <div class="modal-bg" id="editSchedModal">
-  <div class="modal">
+  <div class="modal" style="width:500px;max-width:95vw">
     <h3>✏️ 예약 수정</h3>
     <input type="hidden" id="editSchedId" />
     <div style="margin-bottom:12px">
       <label class="label">글 내용</label>
       <textarea id="editSchedText" style="min-height:100px"></textarea>
+    </div>
+    <div style="margin-bottom:12px">
+      <label class="label">댓글 내용 (선택)</label>
+      <textarea id="editSchedComment" style="min-height:60px" placeholder="댓글 없으면 비워줘"></textarea>
+    </div>
+    <div style="margin-bottom:12px">
+      <label class="label">사진 변경 (선택) <span style="font-size:11px;color:var(--txt2)">새 사진 올리면 기존 사진 대체돼</span></label>
+      <div class="upload-area" onclick="document.getElementById('editImgInput').click()" style="padding:12px">📷 사진 변경하기 (선택사항)</div>
+      <input type="file" id="editImgInput" multiple accept="image/*" style="display:none" onchange="handleEditImg(this)">
+      <div class="preview-list" id="editPreviewList" style="margin-top:8px"></div>
     </div>
     <div style="margin-bottom:16px">
       <label class="label">발행 시간</label>
@@ -700,8 +726,25 @@ async function genComment() {
     const d = await api('/api/generate', { method: 'POST', body: { topic, tone, type: 'comment' } });
     if (d.error) throw new Error(d.error);
     document.getElementById('commentText').value = d.text;
+    showCommentReserve();
     toast('댓글 생성 완료!');
   } catch(e) { toast(e.message, 'err'); }
+}
+
+function showCommentReserve() {
+  const commentText = document.getElementById('commentText').value.trim();
+  const wrap = document.getElementById('commentReserveWrap');
+  if (!wrap) return;
+  if (commentText) {
+    wrap.style.display = 'block';
+    // 기본값: 10분 뒤
+    const def = new Date(Date.now() + 10 * 60 * 1000);
+    const local = new Date(def.getTime() - def.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    document.getElementById('commentReserveTime').value = local;
+  } else {
+    wrap.style.display = 'none';
+    document.getElementById('commentReserveTime').value = '';
+  }
 }
 
 // ── 미디어 ──
@@ -751,20 +794,45 @@ async function pubNow() {
   const text = document.getElementById('postText').value.trim();
   if (!text) return toast('글을 작성해줘', 'err');
   const commentText = document.getElementById('commentText').value.trim();
+  const commentReserveTime = document.getElementById('commentReserveTime')?.value;
+
   const body = { accountId: accId, text };
-  // 댓글은 있을 때만 포함
-  if (commentText) body.commentText = commentText;
   if (mediaMode === 'photo' && imgUrls.length) body.imageUrls = imgUrls;
   if (mediaMode === 'video' && vidUrl) body.videoUrl = vidUrl;
+
+  // 댓글 예약 시간이 설정됐으면 → 글만 즉시발행, 댓글은 따로 예약
+  const useCommentReserve = commentText && commentReserveTime && new Date(commentReserveTime) > new Date();
+
+  if (!useCommentReserve && commentText) {
+    // 예약 없으면 댓글도 즉시 같이 발행
+    body.commentText = commentText;
+  }
+
   try {
     const d = await api('/api/publish', { method: 'POST', body });
     if (d.error) throw new Error(d.error);
-    toast(d.commentId ? '✅ 글 + 댓글 발행 완료!' : '✅ 발행 완료!');
+
+    // 댓글 예약 따로 등록
+    if (useCommentReserve) {
+      const dc = await api('/api/schedule', { method: 'POST', body: {
+        accountId: accId,
+        text: commentText,
+        type: 'comment',
+        scheduledAt: new Date(commentReserveTime).toISOString()
+      }});
+      if (dc.error) toast('글은 발행됐는데 댓글 예약 실패: ' + dc.error, 'err');
+      else toast('✅ 글 발행 완료! 💬 댓글은 ' + new Date(commentReserveTime).toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}) + '에 올라갈 예정이야');
+    } else {
+      toast(d.commentId ? '✅ 글 + 댓글 발행 완료!' : '✅ 발행 완료!');
+    }
+
     document.getElementById('postText').value = '';
     document.getElementById('commentText').value = '';
     imgUrls = []; imgFiles = []; vidUrl = '';
     document.getElementById('previewList').innerHTML = '';
     document.getElementById('vidPreview').innerHTML = '';
+    document.getElementById('commentReserveTime').value = '';
+    document.getElementById('commentReserveWrap').style.display = 'none';
   } catch(e) { toast(e.message, 'err'); }
 }
 
@@ -776,6 +844,21 @@ function openSched(type) {
   const def = new Date(Date.now() + 3600000).toISOString().slice(0, 16);
   const el = document.getElementById('schedTime');
   el.min = min; el.value = def;
+
+  // 댓글도 있으면 댓글 시간 설정란 표시
+  const commentText = document.getElementById('commentText').value.trim();
+  const commentWrap = document.getElementById('commentSchedWrap');
+  if (type === 'post' && commentText) {
+    commentWrap.style.display = 'block';
+    // 기본값: 글 발행 10분 후
+    const commentDef = new Date(Date.now() + 3600000 + 600000).toISOString().slice(0, 16);
+    document.getElementById('commentSchedTime').min = min;
+    document.getElementById('commentSchedTime').value = commentDef;
+  } else {
+    commentWrap.style.display = 'none';
+    document.getElementById('commentSchedTime').value = '';
+  }
+
   document.getElementById('schedModal').classList.add('open');
 }
 
@@ -786,30 +869,46 @@ async function doSched() {
   const scheduledAt = document.getElementById('schedTime').value;
   if (!scheduledAt) return toast('시간을 선택해줘', 'err');
 
-  let body = { accountId: accId, scheduledAt: new Date(scheduledAt).toISOString() };
-
   if (type === 'comment') {
-    // 댓글 예약 - 댓글 텍스트만
+    // 댓글만 단독 예약
     const text = document.getElementById('commentText').value.trim();
     if (!text) return toast('댓글을 먼저 생성해줘', 'err');
-    body.text = text;
-    body.type = 'comment';
+    const d = await api('/api/schedule', { method: 'POST', body: {
+      accountId: accId, text, type: 'comment',
+      scheduledAt: new Date(scheduledAt).toISOString()
+    }});
+    if (d.error) return toast(d.error, 'err');
+    toast('📅 댓글 예약 완료!');
   } else {
-    // 글 예약 - 글 텍스트 + 사진 + 댓글(있으면)
+    // 글 예약
     const text = document.getElementById('postText').value.trim();
     if (!text) return toast('글을 먼저 작성해줘', 'err');
-    body.text = text;
-    body.type = 'post';
-    body.imageUrls = imgUrls;
-    body.videoUrl = vidUrl;
-    // 댓글도 있으면 같이 예약
+    const d = await api('/api/schedule', { method: 'POST', body: {
+      accountId: accId, text, type: 'post',
+      imageUrls: imgUrls, videoUrl: vidUrl,
+      scheduledAt: new Date(scheduledAt).toISOString()
+    }});
+    if (d.error) return toast(d.error, 'err');
+    toast('📅 글 예약 완료!');
+
+    // 댓글 시간도 설정했으면 댓글 따로 예약
     const commentText = document.getElementById('commentText').value.trim();
-    if (commentText) body.commentText = commentText;
+    const commentSchedTime = document.getElementById('commentSchedTime').value;
+    if (commentText && commentSchedTime) {
+      if (new Date(commentSchedTime) <= new Date(scheduledAt)) {
+        toast('⚠️ 댓글 시간이 글 시간보다 늦어야 해!', 'err');
+      } else {
+        const dc = await api('/api/schedule', { method: 'POST', body: {
+          accountId: accId, text: commentText, type: 'comment',
+          scheduledAt: new Date(commentSchedTime).toISOString()
+        }});
+        if (dc.error) toast('댓글 예약 실패: ' + dc.error, 'err');
+        else toast('📅 글 + 댓글 각각 예약 완료!');
+      }
+    }
   }
 
-  const d = await api('/api/schedule', { method: 'POST', body });
-  if (d.error) return toast(d.error, 'err');
-  toast('📅 예약 등록 완료!'); closeModal('schedModal');
+  closeModal('schedModal');
 }
 
 // ── 예약 목록 ──
@@ -825,7 +924,9 @@ async function loadSched() {
           ${p.accountName} · ${new Date(p.scheduledAt).toLocaleString('ko-KR')}
           ${p.type === 'comment' ? '<span class="badge bb" style="margin-left:4px">댓글</span>' : ''}
         </div>
-        <div style="font-size:14px;line-height:1.5;margin-bottom:8px">${p.text.slice(0, 100)}${p.text.length > 100 ? '...' : ''}</div>
+        <div style="font-size:14px;line-height:1.5;margin-bottom:4px">${p.text.slice(0, 100)}${p.text.length > 100 ? '...' : ''}</div>
+        ${p.commentText ? `<div style="font-size:12px;color:var(--txt2);background:var(--sur2);border-radius:6px;padding:6px 8px;margin-bottom:8px">💬 댓글: ${p.commentText.slice(0,60)}${p.commentText.length>60?'...':''}</div>` : ''}
+        ${p.imageUrls && p.imageUrls.length ? `<div style="font-size:12px;color:var(--blue);margin-bottom:8px">🖼️ 이미지 ${p.imageUrls.length}장 포함</div>` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
           ${p.status === 'pending' ? `
             <button class="btn btn-sm" onclick="editSched('${p.id}')">✏️ 수정</button>
@@ -833,6 +934,7 @@ async function loadSched() {
             <button class="btn btn-sm btn-r" onclick="cancelSched('${p.id}')">✕ 취소</button>
           ` : ''}
           ${p.status === 'failed' ? `
+            <button class="btn btn-sm" onclick="editSched('${p.id}')">✏️ 수정</button>
             <button class="btn btn-sm btn-g" onclick="retryFailed('${p.id}')">🔄 재발행</button>
             <button class="btn btn-sm btn-r" onclick="cancelSched('${p.id}')">✕ 삭제</button>
           ` : ''}
@@ -863,11 +965,18 @@ async function pubNowSched(id) {
   } catch(e) { toast('발행 실패: ' + e.message, 'err'); }
 }
 
+let editImgUrls = [];
+
 async function editSched(id) {
   const posts = await api('/api/schedule');
   const p = posts.find(x => x.id === id); if (!p) return;
   document.getElementById('editSchedId').value = id;
   document.getElementById('editSchedText').value = p.text;
+  document.getElementById('editSchedComment').value = p.commentText || '';
+  editImgUrls = p.imageUrls || [];
+  // 기존 사진 미리보기
+  const prev = document.getElementById('editPreviewList');
+  prev.innerHTML = editImgUrls.map((u,i) => `<div class="preview-item"><img src="${u}" style="width:60px;height:60px;object-fit:cover;border-radius:6px"></div>`).join('');
   const min = new Date().toISOString().slice(0,16);
   const timeEl = document.getElementById('editSchedTime');
   timeEl.min = min;
@@ -875,14 +984,29 @@ async function editSched(id) {
   document.getElementById('editSchedModal').classList.add('open');
 }
 
+async function handleEditImg(input) {
+  const fd = new FormData();
+  Array.from(input.files).forEach(f => fd.append('images', f));
+  try {
+    const d = await fetch('/api/upload', { method: 'POST', headers: { 'x-session': session }, body: fd }).then(r => r.json());
+    if (d.urls) {
+      editImgUrls = d.urls;
+      const prev = document.getElementById('editPreviewList');
+      prev.innerHTML = editImgUrls.map(u => `<div class="preview-item"><img src="${u}" style="width:60px;height:60px;object-fit:cover;border-radius:6px"></div>`).join('');
+      toast('사진 업로드됨!');
+    }
+  } catch(e) { toast('사진 업로드 실패', 'err'); }
+}
+
 async function saveEditSched() {
   const id = document.getElementById('editSchedId').value;
   const text = document.getElementById('editSchedText').value.trim();
+  const commentText = document.getElementById('editSchedComment').value.trim();
   const scheduledAt = document.getElementById('editSchedTime').value;
   if (!text) return toast('글 내용을 입력해줘', 'err');
   if (!scheduledAt) return toast('시간을 선택해줘', 'err');
-  if (new Date(scheduledAt) <= new Date()) return toast('지나간 시간은 안 돼', 'err');
-  const d = await api(`/api/schedule/${id}`, { method: 'PUT', body: { text, scheduledAt: new Date(scheduledAt).toISOString() } });
+  const body = { text, scheduledAt: new Date(scheduledAt).toISOString(), imageUrls: editImgUrls, commentText };
+  const d = await api(`/api/schedule/${id}`, { method: 'PUT', body });
   if (d.error) return toast(d.error, 'err');
   closeModal('editSchedModal'); toast('수정됐어!'); loadSched();
 }
@@ -1258,6 +1382,7 @@ function applyCoupangComment() {
   // 댓글란에 바로 적용 + 스크롤해서 보이게
   document.getElementById('commentText').value = result;
   document.getElementById('commentText').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  showCommentReserve();
   toast('댓글란에 적용됐어!');
 }
 
