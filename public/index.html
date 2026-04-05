@@ -188,6 +188,25 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     <div class="page active" id="page-write">
       <h1>✏️ 글 작성</h1>
       <div class="card">
+        <h2>미디어 먼저 올리기 (선택) — 사진/영상 분석 후 글 생성</h2>
+        <div class="chips" style="margin-bottom:14px">
+          <div class="chip active" id="tabPhoto" onclick="switchMedia('photo')">📷 사진</div>
+          <div class="chip" id="tabVideo" onclick="switchMedia('video')">🎬 영상</div>
+        </div>
+        <div id="mediaPhoto">
+          <div class="upload-area" onclick="document.getElementById('imgInput').click()">📷 클릭해서 사진 추가 (여러 장)</div>
+          <input type="file" id="imgInput" multiple accept="image/*" style="display:none" onchange="handleImg(this)">
+          <div class="preview-list" id="previewList"></div>
+        </div>
+        <div id="mediaVideo" style="display:none">
+          <div class="upload-area" onclick="document.getElementById('vidInput').click()">🎬 클릭해서 영상 추가 (mp4)</div>
+          <input type="file" id="vidInput" accept="video/mp4" style="display:none" onchange="handleVid(this)">
+          <div id="vidPreview"></div>
+        </div>
+        <div id="imgAnalysisResult" style="display:none;margin-top:10px;padding:10px;background:var(--sur2);border-radius:8px;font-size:13px;color:var(--txt2)"></div>
+      </div>
+
+      <div class="card">
         <h2>주제 & 설정</h2>
         <label class="label">주제 선택 <span style="font-size:11px;color:var(--txt2)">(계정 관리에서 태그 추가)</span></label>
         <div class="chips" id="topicTags" style="margin-bottom:10px">
@@ -202,6 +221,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <div class="chip" onclick="pickTone(this)">유머</div>
           <div class="chip" onclick="pickTone(this)">감성</div>
           <div class="chip" onclick="pickTone(this)">도발</div>
+          <div class="chip" onclick="pickTone(this)">후킹글</div>
         </div>
         <button class="btn btn-p" onclick="genPost()" id="genBtn">🪄 글 생성</button>
       </div>
@@ -223,24 +243,6 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <button class="btn btn-sm" onclick="genComment()">🔄 재생성</button>
           <button class="btn btn-sm" onclick="copy('commentText')">📋 복사</button>
           <button class="btn btn-sm" onclick="openSched('comment')">📅 댓글 예약</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>미디어 첨부</h2>
-        <div class="chips" style="margin-bottom:14px">
-          <div class="chip active" id="tabPhoto" onclick="switchMedia('photo')">📷 사진</div>
-          <div class="chip" id="tabVideo" onclick="switchMedia('video')">🎬 영상</div>
-        </div>
-        <div id="mediaPhoto">
-          <div class="upload-area" onclick="document.getElementById('imgInput').click()">📷 클릭해서 사진 추가 (여러 장)</div>
-          <input type="file" id="imgInput" multiple accept="image/*" style="display:none" onchange="handleImg(this)">
-          <div class="preview-list" id="previewList"></div>
-        </div>
-        <div id="mediaVideo" style="display:none">
-          <div class="upload-area" onclick="document.getElementById('vidInput').click()">🎬 클릭해서 영상 추가 (mp4)</div>
-          <input type="file" id="vidInput" accept="video/mp4" style="display:none" onchange="handleVid(this)">
-          <div id="vidPreview"></div>
         </div>
       </div>
 
@@ -508,7 +510,22 @@ async function genPost() {
   const btn = document.getElementById('genBtn');
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span> 생성 중...';
   try {
-    const d = await api('/api/generate', { method: 'POST', body: { topic, tone, type: 'post' } });
+    // 이미지 있으면 먼저 분석
+    let imageDesc = '';
+    if (imgUrls.length > 0) {
+      btn.innerHTML = '<span class="spin"></span> 이미지 분석 중...';
+      try {
+        const ad = await api('/api/analyze-image', { method: 'POST', body: { imageUrl: imgUrls[0] } });
+        if (ad.desc) {
+          imageDesc = ad.desc;
+          const result = document.getElementById('imgAnalysisResult');
+          result.style.display = 'block';
+          result.textContent = '📸 이미지 분석: ' + imageDesc;
+        }
+      } catch(e) {}
+    }
+    btn.innerHTML = '<span class="spin"></span> 글 생성 중...';
+    const d = await api('/api/generate', { method: 'POST', body: { topic, tone, type: 'post', imageDesc } });
     if (d.error) throw new Error(d.error);
     document.getElementById('postText').value = d.text;
     toast('글 생성 완료!');
