@@ -36,6 +36,13 @@ function userDir(userId) {
   return dir;
 }
 function getAccounts(userId)  { return loadJSON(`${userDir(userId)}/accounts.json`, []); }
+function getSettings() { return loadJSON(`${DATA_ROOT}/settings.json`, { kakaoLink: '' }); }
+function saveSettings(data) { saveJSON(`${DATA_ROOT}/settings.json`, data); }
+
+// 일별 발행 횟수 추적
+function getTodayKey() { return new Date().toISOString().slice(0, 10); }
+function getPublishCount(userId) { return loadJSON(`${userDir(userId)}/publish_count.json`, {}); }
+function savePublishCount(userId, data) { saveJSON(`${userDir(userId)}/publish_count.json`, data); }
 function saveAccounts(userId, data) { saveJSON(`${userDir(userId)}/accounts.json`, data); }
 function getScheduled(userId) { return loadJSON(`${userDir(userId)}/scheduled.json`, []); }
 function saveScheduled(userId, data) { saveJSON(`${userDir(userId)}/scheduled.json`, data); }
@@ -173,10 +180,16 @@ app.post('/api/auth/register', rateLimit(5, 60000), (req, res) => {
     invite.lastUsedBy = nickname; invite.lastUsedAt = new Date().toISOString();
     invite.useCount = (invite.useCount || 0) + 1;
     saveJSON(`${DATA_ROOT}/invite_codes.json`, inviteCodes);
+    // 공동대표 코드로 가입 여부 기록
+    const settings = getSettings();
+    if (settings.partnerCode && inviteCode === settings.partnerCode) {
+      // joinedVia = 'partner' 로 기록 (user 생성 시 아래서 처리)
+      req.body._partnerJoin = true;
+    }
   }
 
   const status = role === 'admin' ? 'approved' : 'pending';
-  const user = { id: Date.now().toString(), nickname, name: req.body.name || '', passwordHash: hashPw(password), role, status, createdAt: new Date().toISOString() };
+  const user = { id: Date.now().toString(), nickname, name: req.body.name || '', passwordHash: hashPw(password), role, status, joinedVia: req.body._partnerJoin ? 'partner' : 'normal', createdAt: new Date().toISOString() };
   users.push(user);
   saveJSON(`${DATA_ROOT}/users.json`, users);
   if (user.status === 'pending') {
@@ -221,6 +234,16 @@ app.get('/api/auth/me', auth, (req, res) => {
 
 app.get('/api/invites', adminAuth, (req, res) => res.json(inviteCodes));
 
+// 설정 (카카오 링크 등)
+app.get('/api/settings', auth, (req, res) => res.json(getSettings()));
+app.put('/api/settings', adminAuth, (req, res) => {
+  const settings = getSettings();
+  if (req.body.kakaoLink !== undefined) settings.kakaoLink = req.body.kakaoLink;
+  if (req.body.partnerCode !== undefined) settings.partnerCode = req.body.partnerCode.toUpperCase();
+  saveSettings(settings);
+  res.json({ ok: true });
+});
+
 app.post('/api/invites', adminAuth, (req, res) => {
   // 기존 active 코드들 모두 사용완료로 변경
   inviteCodes.forEach(c => {
@@ -241,12 +264,23 @@ app.delete('/api/invites/:code', adminAuth, (req, res) => {
 
 // 유저 목록 (관리자)
 app.get('/api/users', adminAuth, (req, res) => {
-  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', accountLimit: u.accountLimit||3, limitRequest: u.limitRequest||null, extendRequest: u.extendRequest||null, approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt })));
+  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', plan: u.plan||'paid', accountLimit: u.accountLimit||3, dailyPublishLimit: u.dailyPublishLimit||null, limitRequest: u.limitRequest||null, extendRequest: u.extendRequest||null, upgradeRequest: u.upgradeRequest||null, joinedVia: u.joinedVia||'normal', approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt })));
 });
 
 app.delete('/api/users/:id', adminAuth, (req, res) => {
   if (req.params.id === req.userId) return res.status(400).json({ error: '본인 삭제 불가' });
   users = users.filter(u => u.id !== req.params.id);
+  saveJSON(`${DATA_ROOT}/users.json`, users);
+  res.json({ ok: true });
+});
+
+// 유료 전환 신청
+app.post('/api/users/upgrade-request', auth, (req, res) => {
+  const user = users.find(u => u.id === req.userId);
+  if (!user) return res.status(404).json({ error: '없음' });
+  if (user.plan !== 'free') return res.status(400).json({ error: '이미 유료 계정이야' });
+  if (user.upgradeRequest) return res.status(400).json({ error: '이미 신청 중이야' });
+  user.upgradeRequest = { requestedAt: new Date().toISOString() };
   saveJSON(`${DATA_ROOT}/users.json`, users);
   res.json({ ok: true });
 });
@@ -278,7 +312,13 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
   user.status = req.body.status;
   if (req.body.status === 'approved' && !user.approvedAt) {
     user.approvedAt = new Date().toISOString();
-    user.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const days = req.body.planDays || 30;
+    user.expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    user.plan = req.body.plan || 'paid'; // 'free' or 'paid'
+    if (req.body.plan === 'free') {
+      user.accountLimit = 1;
+      user.dailyPublishLimit = 2;
+    }
   }
   if (req.body.accountLimit) {
     user.accountLimit = req.body.accountLimit;
@@ -287,10 +327,21 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
   if (req.body.clearLimitRequest) user.limitRequest = null;
   if (req.body.extendDays) {
     const base = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
-    user.expiresAt = new Date(base.getTime() + req.body.extendDays * 24 * 60 * 60 * 1000).toISOString();
-    user.extendRequest = null; // 연장 요청 처리 완료
+    user.expiresAt = new Date(base.getTime() + Number(req.body.extendDays) * 24 * 60 * 60 * 1000).toISOString();
+    user.extendRequest = null;
   }
-  if (req.body.denyExtend) user.extendRequest = null; // 연장 거절
+  if (req.body.denyExtend) user.extendRequest = null;
+  if (req.body.approveUpgrade) {
+    user.plan = 'paid';
+    user.dailyPublishLimit = null; // 기본값(5개)으로 복원
+    user.upgradeRequest = null;
+    if (req.body.accountLimit) user.accountLimit = req.body.accountLimit;
+    // 30일 추가
+    const base = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
+    user.expiresAt = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    if (!user.approvedAt) user.approvedAt = new Date().toISOString();
+  }
+  if (req.body.denyUpgrade) user.upgradeRequest = null;
   saveJSON(`${DATA_ROOT}/users.json`, users);
   res.json({ ok: true });
 });
@@ -574,6 +625,17 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
   const accs = getAccounts(req.userId);
   const account = accs.find(a => a.id === accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
+
+  // 일별 발행 횟수 체크
+  const user = users.find(u => u.id === req.userId);
+  const dailyLimit = user?.dailyPublishLimit || 5; // 기본 5개, 무료는 2개
+  const today = getTodayKey();
+  const counts = getPublishCount(req.userId);
+  const todayCount = counts[today] || 0;
+  if (user?.role !== 'admin' && todayCount >= dailyLimit) {
+    return res.status(429).json({ error: `오늘 발행 한도(${dailyLimit}개)를 초과했어. 내일 다시 시도해줘.` });
+  }
+
   try {
     const postId = await publishToThreads(account.accessToken, text, imageUrls || [], videoUrl || '');
     let commentId = null;
@@ -581,6 +643,12 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
       await new Promise(r => setTimeout(r, 3000)); // 글 발행 후 3초 대기
       commentId = await replyToThread(account.accessToken, postId, commentText.trim());
     }
+    // 발행 횟수 기록
+    const countData = getPublishCount(req.userId);
+    const todayKey = getTodayKey();
+    countData[todayKey] = (countData[todayKey] || 0) + 1;
+    savePublishCount(req.userId, countData);
+
     res.json({ ok: true, postId, commentId });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
