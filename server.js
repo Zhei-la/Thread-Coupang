@@ -866,36 +866,68 @@ app.get('/api/keywords', auth, async (req, res) => {
 });
 
 // ══════════════════════════════════
-//  이미지/영상 업로드 (ImgBB)
+//  이미지/영상 업로드 (Cloudinary)
 // ══════════════════════════════════
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 const videoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
 
-const UPLOADS_DIR = `${DATA_ROOT}/uploads`;
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+async function uploadToCloudinary(buffer, filename, resourceType = 'image') {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!cloudName || !apiKey || !apiSecret) throw new Error('CLOUDINARY 환경변수 없음 (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)');
 
-// 영상은 서버에 직접 저장
-app.use('/uploads', (req, res) => {
-  const filePath = require('path').join(UPLOADS_DIR, req.path);
-  if (fs.existsSync(filePath)) res.sendFile(filePath);
-  else res.status(404).end();
-});
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = crypto.createHash('sha256')
+    .update(`timestamp=${timestamp}${apiSecret}`)
+    .digest('hex');
+
+  // FormData 직접 구성 (multipart)
+  const boundary = '----FormBoundary' + crypto.randomBytes(8).toString('hex');
+  const crlf = '\r\n';
+  const ext = filename.split('.').pop()?.toLowerCase() || (resourceType === 'video' ? 'mp4' : 'jpg');
+  const mimeType = resourceType === 'video' ? 'video/mp4' : `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+
+  let body = Buffer.alloc(0);
+  const addField = (name, value) => {
+    const part = Buffer.from(
+      `--${boundary}${crlf}Content-Disposition: form-data; name="${name}"${crlf}${crlf}${value}${crlf}`
+    );
+    body = Buffer.concat([body, part]);
+  };
+  const addFile = (name, fname, mime, data) => {
+    const header = Buffer.from(
+      `--${boundary}${crlf}Content-Disposition: form-data; name="${name}"; filename="${fname}"${crlf}Content-Type: ${mime}${crlf}${crlf}`
+    );
+    const footer = Buffer.from(crlf);
+    body = Buffer.concat([body, header, data, footer]);
+  };
+
+  addField('api_key', apiKey);
+  addField('timestamp', String(timestamp));
+  addField('signature', signature);
+  addFile('file', filename, mimeType, buffer);
+  body = Buffer.concat([body, Buffer.from(`--${boundary}--${crlf}`)]);
+
+  const url = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+    body
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  console.log('[CLOUDINARY] 업로드 성공:', d.secure_url);
+  return d.secure_url;
+}
 
 app.post('/api/upload', auth, upload.array('images', 10), async (req, res) => {
-  const apiKey = process.env.IMGBB_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'IMGBB_API_KEY 없음' });
   try {
     const urls = [];
     for (const file of req.files) {
-      const form = new URLSearchParams();
-      form.append('key', apiKey);
-      form.append('image', file.buffer.toString('base64'));
-      const r = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: form });
-      const d = await r.json();
-      console.log('[UPLOAD] ImgBB 응답:', d?.data?.display_url || d?.data?.url);
-      const imageUrl = d.data?.display_url || d.data?.url;
-      if (imageUrl) urls.push(imageUrl);
+      const url = await uploadToCloudinary(file.buffer, file.originalname, 'image');
+      urls.push(url);
     }
     res.json({ urls });
   } catch(e) {
@@ -904,15 +936,13 @@ app.post('/api/upload', auth, upload.array('images', 10), async (req, res) => {
   }
 });
 
-app.post('/api/upload-video', auth, videoUpload.single('video'), (req, res) => {
+app.post('/api/upload-video', auth, videoUpload.single('video'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: '영상 없음' });
-    const baseUrl = process.env.BASE_URL || 'https://zheiia-thread.up.railway.app';
-    const ext = req.file.originalname.split('.').pop() || 'mp4';
-    const filename = `${Date.now()}.${ext}`;
-    fs.writeFileSync(require('path').join(UPLOADS_DIR, filename), req.file.buffer);
-    res.json({ url: `${baseUrl}/uploads/${filename}` });
+    const url = await uploadToCloudinary(req.file.buffer, req.file.originalname, 'video');
+    res.json({ url });
   } catch(e) {
+    console.error('[UPLOAD-VIDEO] 에러:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
