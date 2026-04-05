@@ -99,9 +99,14 @@ app.post('/api/auth/register', (req, res) => {
     saveJSON(`${DATA_ROOT}/invite_codes.json`, inviteCodes);
   }
 
-  const user = { id: Date.now().toString(), nickname, passwordHash: hashPw(password), role, createdAt: new Date().toISOString() };
+  const status = role === 'admin' ? 'approved' : 'pending';
+  const user = { id: Date.now().toString(), nickname, name: req.body.name || '', passwordHash: hashPw(password), role, status, createdAt: new Date().toISOString() };
   users.push(user);
   saveJSON(`${DATA_ROOT}/users.json`, users);
+  if (user.status === 'pending') {
+    res.json({ pending: true, nickname: user.nickname });
+    return;
+  }
   const token = crypto.randomUUID();
   sessions[token] = user.id;
   res.json({ token, nickname: user.nickname, role: user.role });
@@ -112,6 +117,8 @@ app.post('/api/auth/login', (req, res) => {
   const { nickname, password } = req.body;
   const user = users.find(u => u.nickname === nickname && u.passwordHash === hashPw(password));
   if (!user) return res.status(401).json({ error: '닉네임 또는 비밀번호 오류' });
+  if (user.status === 'pending') return res.status(403).json({ error: 'pending' });
+  if (user.status === 'suspended') return res.status(403).json({ error: 'suspended' });
   const token = crypto.randomUUID();
   sessions[token] = user.id;
   res.json({ token, nickname: user.nickname, role: user.role });
@@ -151,7 +158,7 @@ app.delete('/api/invites/:code', adminAuth, (req, res) => {
 
 // 유저 목록 (관리자)
 app.get('/api/users', adminAuth, (req, res) => {
-  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, role: u.role, createdAt: u.createdAt })));
+  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', createdAt: u.createdAt })));
 });
 
 app.delete('/api/users/:id', adminAuth, (req, res) => {
