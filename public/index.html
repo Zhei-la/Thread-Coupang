@@ -330,11 +330,17 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       <div class="card" id="limitRequestCard">
         <h2>📩 계정 한도 변경 요청</h2>
         <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">관리자에게 계정 한도 변경을 요청할 수 있어요. 관리자가 승인하면 바꿔줘요.</div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;margin-bottom:16px">
           <button class="btn btn-sm" onclick="requestLimit(3)">3개로 변경 요청</button>
           <button class="btn btn-sm" onclick="requestLimit(6)">6개로 변경 요청</button>
         </div>
-        <div id="limitRequestStatus" style="margin-top:10px;font-size:13px;color:var(--txt2)"></div>
+        <div id="limitRequestStatus" style="margin-bottom:16px;font-size:13px;color:var(--txt2)"></div>
+        <div style="border-top:1px solid var(--bdr);padding-top:16px">
+          <h2 style="margin-bottom:8px">📅 사용기간 연장 신청</h2>
+          <div style="font-size:13px;color:var(--txt2);margin-bottom:10px" id="expireDaysLeft"></div>
+          <button class="btn btn-sm btn-p" onclick="requestExtend()" id="extendReqBtn">30일 연장 신청하기</button>
+          <div id="extendRequestStatus" style="margin-top:10px;font-size:13px;color:var(--txt2)"></div>
+        </div>
       </div>
     </div>
 
@@ -979,17 +985,24 @@ async function loadAdmin() {
   const limitReqCount = document.getElementById('limitReqCount');
   limitReqCount.textContent = limitReqs.length ? limitReqs.length + '건' : '';
   limitReqCount.style.display = limitReqs.length ? '' : 'none';
-  limitReqEl.innerHTML = limitReqs.length ? limitReqs.map(u => `
+  // 한도 변경 + 연장 신청 합쳐서 표시
+  const extendReqs = users.filter(u => u.extendRequest && u.status === 'approved');
+  const allReqs = [...limitReqs, ...extendReqs.filter(u => !limitReqs.find(l => l.id === u.id))];
+  const limitReqCount2 = document.getElementById('limitReqCount');
+  limitReqCount2.textContent = allReqs.length ? allReqs.length + '건' : '';
+  limitReqCount2.style.display = allReqs.length ? '' : 'none';
+  limitReqEl.innerHTML = allReqs.length ? allReqs.map(u => `
     <div class="list-item">
       <div style="flex:1">
         <div style="font-weight:600;font-size:14px;margin-bottom:4px">${u.name||'-'} <span style="color:var(--txt2);font-size:13px">(${u.nickname})</span></div>
-        <div style="font-size:12px;color:var(--txt2)">현재 ${u.accountLimit||3}개 → <b style="color:var(--yellow)">${u.limitRequest.requestLimit}개로 변경 요청</b></div>
+        ${u.limitRequest ? `<div style="font-size:12px;color:var(--txt2)">계정 한도: 현재 ${u.accountLimit||3}개 → <b style="color:var(--yellow)">${u.limitRequest.requestLimit}개로 변경 요청</b></div>` : ''}
+        ${u.extendRequest ? `<div style="font-size:12px;color:var(--blue)">📅 사용기간 30일 연장 신청</div>` : ''}
       </div>
-      <div style="display:flex;gap:4px">
-        <button class="btn btn-sm btn-g" onclick="setLimit('${u.id}',${u.limitRequest.requestLimit})">✅ 승인</button>
-        <button class="btn btn-sm btn-r" onclick="denyLimitReq('${u.id}')">거절</button>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${u.limitRequest ? `<button class="btn btn-sm btn-g" onclick="setLimit('${u.id}',${u.limitRequest.requestLimit})">✅ 한도 승인</button><button class="btn btn-sm btn-r" onclick="denyLimitReq('${u.id}')">거절</button>` : ''}
+        ${u.extendRequest ? `<button class="btn btn-sm btn-g" onclick="extendUser('${u.id}')">✅ 연장 승인</button><button class="btn btn-sm btn-r" onclick="denyExtend('${u.id}')">거절</button>` : ''}
       </div>
-    </div>`).join('') : '<div style="color:var(--txt2);font-size:14px">한도 변경 요청 없음</div>';
+    </div>`).join('') : '<div style="color:var(--txt2);font-size:14px">요청 없음</div>';
 
   // 유저 목록 (approved/suspended)
   const activeUsers = users.filter(u => u.status !== 'pending');
@@ -1007,22 +1020,21 @@ async function loadAdmin() {
           ${sBadge}
         </div>
         <div style="font-size:12px;color:var(--txt2);margin-top:2px">
-          한도: ${u.accountLimit||3}개 · ${new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입
+          계정 한도 ${u.accountLimit||3}개
           ${u.expiresAt ? (() => {
             const exp = new Date(u.expiresAt);
             const now = new Date();
-            const diff = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+            const diff = Math.ceil((exp - now) / (1000*60*60*24));
             if (diff < 0) return ' · <span style="color:var(--red);font-weight:600">⚠️ 기간만료</span>';
-            if (diff <= 5) return ` · <span style="color:var(--yellow);font-weight:600">만료 ${diff}일 전 (${exp.toLocaleDateString('ko-KR')})</span>`;
-            return ` · <span style="color:var(--txt2)">~${exp.toLocaleDateString('ko-KR')} (${diff}일 남음)</span>`;
-          })() : ''}
+            if (diff <= 5) return ` · <span style="color:var(--yellow);font-weight:600">⚠️ ${diff}일 남음 (${exp.toLocaleDateString('ko-KR')})</span>`;
+            return ` · <span style="color:var(--txt2)">${diff}일 남음 (~${exp.toLocaleDateString('ko-KR')})</span>`;
+          })() : ' · 사용기간 미설정'}
+          ${u.extendRequest ? ' · <span style="color:var(--yellow)">📩 연장 신청중</span>' : ''}
         </div>
       </div>
       ${u.role !== 'admin' ? `
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
         <div style="display:flex;gap:4px">
-          <button class="btn btn-sm ${(u.accountLimit||3)===3?'btn-p':''}" onclick="setLimit('${u.id}',3)">3개</button>
-          <button class="btn btn-sm ${(u.accountLimit||3)===6?'btn-p':''}" onclick="setLimit('${u.id}',6)">6개</button>
           ${u.status==='approved'?`<button class="btn btn-sm btn-r" onclick="setStatus('${u.id}','suspended')">정지</button>`:`<button class="btn btn-sm btn-g" onclick="setStatus('${u.id}','approved',${u.accountLimit||3})">활성화</button>`}
         </div>
         <button class="btn btn-sm btn-g" onclick="extendUser('${u.id}')">+30일 연장</button>
@@ -1048,6 +1060,21 @@ async function extendUser(id) {
   const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', extendDays: 30 } });
   if (d.error) return toast(d.error, 'err');
   toast('30일 연장됐어!'); loadAdmin();
+}
+
+async function denyExtend(id) {
+  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', denyExtend: true } });
+  if (d.error) return toast(d.error, 'err');
+  toast('연장 거절됐어!'); loadAdmin();
+}
+
+async function requestExtend() {
+  const d = await api('/api/users/limit-request', { method: 'POST', body: { requestExtend: true } });
+  if (d.error) return toast(d.error, 'err');
+  toast('연장 신청했어! 관리자 승인 대기중');
+  document.getElementById('extendRequestStatus').textContent = '✅ 연장 신청 완료 — 관리자 승인 대기중';
+  document.getElementById('extendRequestStatus').style.color = 'var(--green)';
+  document.getElementById('extendReqBtn').disabled = true;
 }
 async function setStatus(id, status, limit) {
   const body = { status };
@@ -1095,24 +1122,43 @@ function applyCoupangComment() {
 
 async function checkExpiry() {
   try {
-    const users = await api('/api/users');
     const me = await api('/api/auth/me');
-    if (!Array.isArray(users)) return;
-    const myInfo = users.find(u => u.nickname === me.nickname);
+    const allUsers = await api('/api/users');
+    if (!Array.isArray(allUsers)) return;
+    const myInfo = allUsers.find(u => u.nickname === me.nickname);
+
+    // 남은 일수 표시
+    const daysEl = document.getElementById('expireDaysLeft');
+    const extendBtn = document.getElementById('extendReqBtn');
+    const extendStatus = document.getElementById('extendRequestStatus');
+    if (myInfo?.expiresAt) {
+      const exp = new Date(myInfo.expiresAt);
+      const diff = Math.ceil((exp - new Date()) / (1000*60*60*24));
+      if (daysEl) {
+        if (diff < 0) daysEl.innerHTML = '<span style="color:var(--red)">⚠️ 사용 기간이 만료됐어요</span>';
+        else daysEl.innerHTML = `현재 사용기간: <b style="color:var(--txt)">${diff}일 남음</b> (~${exp.toLocaleDateString('ko-KR')})`;
+      }
+      if (myInfo.extendRequest) {
+        if (extendBtn) extendBtn.disabled = true;
+        if (extendStatus) { extendStatus.textContent = '✅ 연장 신청 완료 — 관리자 승인 대기중'; extendStatus.style.color = 'var(--green)'; }
+      }
+    } else {
+      if (daysEl) daysEl.textContent = '사용기간 정보 없음';
+    }
+
     if (!myInfo || !myInfo.expiresAt) return;
     const exp = new Date(myInfo.expiresAt);
-    const now = new Date();
-    const diff = Math.ceil((exp - now) / (1000*60*60*24));
+    const diff = Math.ceil((exp - new Date()) / (1000*60*60*24));
     const card = document.getElementById('expireNoticeCard');
     const text = document.getElementById('expireNoticeText');
     if (!card || !text) return;
     if (diff < 0) {
       card.style.display = 'block';
-      text.innerHTML = `사용 기간이 <b>${exp.toLocaleDateString('ko-KR')}</b>에 만료됐어요.<br>계속 사용하려면 관리자에게 연락해서 <b>기간 연장 승인</b>을 문의해줘요.`;
+      text.innerHTML = `사용 기간이 <b>${exp.toLocaleDateString('ko-KR')}</b>에 만료됐어요.<br>계속 사용하려면 아래에서 <b>30일 연장 신청</b>을 해줘요.`;
     } else if (diff <= 7) {
       card.style.display = 'block';
       card.style.borderColor = 'var(--yellow)';
-      text.innerHTML = `사용 기간이 <b>${diff}일 후 (${exp.toLocaleDateString('ko-KR')})</b>에 만료돼요.<br>기간 연장이 필요하면 관리자에게 미리 문의해줘요.`;
+      text.innerHTML = `사용 기간이 <b>${diff}일 후 (${exp.toLocaleDateString('ko-KR')})</b>에 만료돼요.<br>미리 <b>30일 연장 신청</b>을 해두는 걸 추천해요.`;
     }
   } catch(e) {}
 }
