@@ -5,213 +5,180 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Threads 자동화</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap');
-  :root {
-    --bg:#0a0a0a; --surface:#141414; --surface2:#1e1e1e;
-    --border:#2a2a2a; --text:#f0f0f0; --text2:#888;
-    --green:#22c55e; --red:#ef4444; --blue:#3b82f6; --yellow:#f59e0b;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap');
+:root {
+  --bg:#0a0a0a; --sur:#141414; --sur2:#1e1e1e;
+  --bdr:#2a2a2a; --txt:#f0f0f0; --txt2:#888;
+  --green:#22c55e; --red:#ef4444; --blue:#3b82f6; --yellow:#f59e0b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
 
-  /* ── 로그인/가입 화면 ── */
-  .auth-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
-  .auth-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:380px;}
-  .auth-logo{font-size:22px;font-weight:700;margin-bottom:8px;}
-  .auth-logo span{color:var(--text2);font-weight:400;}
-  .auth-sub{font-size:13px;color:var(--text2);margin-bottom:28px;}
-  .auth-tabs{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:24px;}
-  .auth-tab{flex:1;padding:9px;text-align:center;font-size:13px;cursor:pointer;color:var(--text2);background:var(--surface2);border:none;font-family:inherit;transition:all .15s;}
-  .auth-tab.active{background:var(--surface);color:var(--text);font-weight:600;}
-  .auth-panel{display:none;}
-  .auth-panel.active{display:block;}
-  .field{margin-bottom:14px;}
-  .field label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;}
-  .field input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-size:14px;font-family:inherit;outline:none;transition:border .15s;}
-  .field input:focus{border-color:#444;}
-  .auth-err{font-size:13px;color:var(--red);margin-bottom:12px;min-height:18px;}
+/* 로그인 */
+.auth-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.auth-box{background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:36px;width:100%;max-width:380px;}
+.auth-logo{font-size:22px;font-weight:700;margin-bottom:8px;}
+.auth-logo span{color:var(--txt2);font-weight:400;}
+.auth-sub{font-size:13px;color:var(--txt2);margin-bottom:24px;}
+.auth-tabs{display:flex;border:1px solid var(--bdr);border-radius:8px;overflow:hidden;margin-bottom:20px;}
+.auth-tab{flex:1;padding:9px;text-align:center;font-size:13px;cursor:pointer;color:var(--txt2);background:var(--sur2);border:none;font-family:inherit;transition:all .15s;}
+.auth-tab.active{background:var(--sur);color:var(--txt);font-weight:600;}
+.auth-panel{display:none;}
+.auth-panel.active{display:block;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;color:var(--txt2);margin-bottom:5px;}
+.auth-err{font-size:13px;color:var(--red);margin-bottom:10px;min-height:18px;}
+.auth-hint{font-size:13px;color:var(--green);margin-bottom:10px;min-height:18px;}
 
-  /* ── 앱 레이아웃 ── */
-  .app{display:none;min-height:100vh;}
-  .app.visible{display:flex;}
-  .sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;}
-  .logo{padding:0 20px 24px;font-size:18px;font-weight:700;letter-spacing:-.5px;border-bottom:1px solid var(--border);margin-bottom:16px;}
-  .logo span{color:var(--text2);font-weight:400;}
-  .nav-item{padding:10px 20px;cursor:pointer;font-size:14px;color:var(--text2);transition:all .15s;display:flex;align-items:center;gap:10px;}
-  .nav-item:hover{color:var(--text);background:var(--surface2);}
-  .nav-item.active{color:var(--text);background:var(--surface2);border-right:2px solid var(--text);}
-  .nav-admin{border-top:1px solid var(--border);margin-top:8px;padding-top:8px;}
-  .sidebar-bottom{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border);}
-  .user-info{font-size:13px;margin-bottom:10px;}
-  .user-nick{font-weight:600;}
-  .user-role{font-size:11px;color:var(--text2);}
-  .main{margin-left:220px;flex:1;padding:32px;max-width:900px;}
-  .page{display:none;}
-  .page.active{display:block;}
-  h1{font-size:22px;font-weight:700;margin-bottom:24px;}
-  h2{font-size:12px;font-weight:600;margin-bottom:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;}
-  .row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
-  select,input,textarea{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 14px;font-size:14px;font-family:inherit;outline:none;transition:border .15s;width:100%;}
-  select:focus,input:focus,textarea:focus{border-color:#444;}
-  select{cursor:pointer;}
-  textarea{resize:vertical;min-height:120px;line-height:1.6;}
-  .btn{padding:10px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;font-family:inherit;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;}
-  .btn:hover{background:#2a2a2a;border-color:#444;}
-  .btn-primary{background:var(--text);color:#000;border-color:var(--text);}
-  .btn-primary:hover{background:#ddd;}
-  .btn-green{background:var(--green);color:#000;border-color:var(--green);}
-  .btn-green:hover{background:#16a34a;}
-  .btn-red{background:transparent;color:var(--red);border-color:var(--red);}
-  .btn-sm{padding:6px 12px;font-size:13px;}
-  .btn:disabled{opacity:.4;cursor:not-allowed;}
-  .chip-group{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
-  .chip{padding:6px 14px;border-radius:100px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:13px;cursor:pointer;transition:all .15s;}
-  .chip:hover,.chip.active{border-color:var(--text);color:var(--text);}
-  .topic-chip{padding:6px 14px;border-radius:100px;border:1px solid rgba(59,130,246,.3);background:rgba(59,130,246,.08);color:#7cb4ff;font-size:13px;cursor:pointer;transition:all .15s;}
-  .topic-chip:hover,.topic-chip.active{border-color:var(--blue);background:rgba(59,130,246,.2);color:#fff;}
-  .label{font-size:13px;color:var(--text2);margin-bottom:6px;display:block;}
-  .upload-area{border:1px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border .15s;color:var(--text2);font-size:14px;}
-  .upload-area:hover{border-color:#555;color:var(--text);}
-  .image-preview-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
-  .image-preview-item{position:relative;}
-  .image-preview-item img{width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);}
-  .remove-img{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-  .badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
-  .badge-green{background:rgba(34,197,94,.15);color:var(--green);}
-  .badge-red{background:rgba(239,68,68,.15);color:var(--red);}
-  .badge-yellow{background:rgba(245,158,11,.15);color:var(--yellow);}
-  .badge-blue{background:rgba(59,130,246,.15);color:var(--blue);}
-  .post-actions{display:flex;gap:8px;margin-top:12px;}
-  .account-item{display:flex;align-items:flex-start;justify-content:space-between;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;gap:12px;}
-  .scheduled-item{display:flex;align-items:flex-start;justify-content:space-between;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;gap:12px;}
-  .insight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-  .insight-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;}
-  .insight-num{font-size:28px;font-weight:700;margin-bottom:4px;}
-  .insight-label{font-size:12px;color:var(--text2);}
-  .kw-tabs{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;}
-  .kw-tab{flex:1;padding:10px;text-align:center;font-size:13px;cursor:pointer;color:var(--text2);background:var(--surface2);border:none;font-family:inherit;transition:all .15s;}
-  .kw-tab.active{background:var(--surface);color:var(--text);font-weight:600;}
-  .kw-panel{display:none;}
-  .kw-panel.active{display:block;}
-  .kw-list{display:flex;flex-direction:column;gap:6px;}
-  .kw-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--surface2);border-radius:6px;font-size:13px;cursor:pointer;transition:background .15s;}
-  .kw-item:hover{background:#2a2a2a;}
-  .kw-rank{color:var(--text2);font-size:12px;min-width:24px;}
-  .kw-new{font-size:10px;color:var(--red);font-weight:700;margin-left:4px;}
-  .toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;font-size:14px;z-index:999;animation:slideUp .3s ease;max-width:300px;}
-  .toast.success{border-color:var(--green);}
-  .toast.error{border-color:var(--red);}
-  @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
-  .loading{display:inline-block;width:14px;height:14px;border:2px solid #333;border-top-color:#888;border-radius:50%;animation:spin .7s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;}
-  .modal-bg.open{display:flex;}
-  .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:420px;max-width:90vw;}
-  .modal h3{font-size:16px;font-weight:600;margin-bottom:16px;}
-  .tag-input-wrap{display:flex;gap:8px;margin-bottom:10px;}
-  .tag-list{display:flex;flex-wrap:wrap;gap:6px;min-height:28px;}
-  .tag-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);border-radius:100px;font-size:12px;color:#7cb4ff;}
-  .tag-pill button{background:none;border:none;color:#7cb4ff;cursor:pointer;font-size:12px;padding:0;opacity:.7;}
-  .tag-pill button:hover{opacity:1;}
-  .empty-hint{font-size:13px;color:var(--text2);padding:4px 0;}
-  .invite-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;}
-  .invite-code{font-family:monospace;font-size:16px;font-weight:700;letter-spacing:2px;color:var(--green);}
-  .user-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;}
+/* 앱 */
+.app{display:none;min-height:100vh;}
+.app.on{display:flex;}
+.sidebar{width:220px;min-height:100vh;background:var(--sur);border-right:1px solid var(--bdr);display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:50;}
+.logo{padding:0 20px 20px;font-size:18px;font-weight:700;border-bottom:1px solid var(--bdr);margin-bottom:12px;}
+.logo span{color:var(--txt2);font-weight:400;}
+.nav{padding:4px 0;}
+.nav-item{padding:10px 20px;cursor:pointer;font-size:14px;color:var(--txt2);transition:all .15s;display:flex;align-items:center;gap:10px;}
+.nav-item:hover{color:var(--txt);background:var(--sur2);}
+.nav-item.active{color:var(--txt);background:var(--sur2);border-right:2px solid var(--txt);}
+.nav-sep{border-top:1px solid var(--bdr);margin:8px 0;}
+.sidebar-foot{margin-top:auto;padding:16px 20px;border-top:1px solid var(--bdr);}
+.user-nick{font-weight:600;font-size:14px;margin-bottom:2px;}
+.user-role{font-size:11px;color:var(--txt2);margin-bottom:10px;}
+.main{margin-left:220px;flex:1;padding:32px;max-width:940px;}
+.page{display:none;}
+.page.active{display:block;}
+h1{font-size:22px;font-weight:700;margin-bottom:24px;}
+h2{font-size:11px;font-weight:600;margin-bottom:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;}
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:20px;margin-bottom:16px;}
 
-  /* ── 모바일 반응형 ── */
-  .hamburger{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:18px;}
-  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:149;}
-  @media(max-width:768px){
-    .hamburger{display:block;}
-    .sidebar{transform:translateX(-100%);transition:transform .25s;z-index:150;}
-    .sidebar.open{transform:translateX(0);}
-    .sidebar-overlay.open{display:block;}
-    .main{margin-left:0;padding:16px;padding-top:56px;}
-  }
-  /* ── 키워드 스타일 ── */
-  .kw-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
-  .kw-section-title{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-  .kw-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
-  .kw-row:last-child{border-bottom:none;}
-  .kw-num{font-size:14px;font-weight:700;color:var(--green);min-width:28px;}
-  .kw-num.top3{color:var(--green);}
-  .kw-num.normal{color:var(--text2);}
-  .kw-name{font-size:14px;flex:1;cursor:pointer;}
-  .kw-name:hover{color:var(--blue);}
-  .kw-badge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;}
-  .kw-badge.hot{background:rgba(239,68,68,.15);color:var(--red);}
-  .kw-badge.new{background:rgba(34,197,94,.15);color:var(--green);}
-  .kw-badge.up{color:var(--yellow);font-size:13px;}
-  /* ── 인사이트 스타일 ── */
-  .insight-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
-  .insight-date{font-size:13px;color:var(--text2);}
-  .insight-stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px;}
-  @media(max-width:480px){.insight-stat-grid{grid-template-columns:1fr 1fr;}}
-  .insight-stat{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;}
-  .insight-stat-num{font-size:26px;font-weight:700;color:var(--green);margin-bottom:4px;}
-  .insight-stat-label{font-size:12px;color:var(--text2);}
-  @media(max-width:768px){
-    .kw-grid{grid-template-columns:1fr !important;}
-  }
+/* 입력 */
+input,select,textarea{background:var(--sur2);border:1px solid var(--bdr);color:var(--txt);border-radius:8px;padding:10px 14px;font-size:14px;font-family:inherit;outline:none;transition:border .15s;width:100%;}
+input:focus,select:focus,textarea:focus{border-color:#444;}
+select{cursor:pointer;}
+textarea{resize:vertical;min-height:120px;line-height:1.6;}
+.label{font-size:13px;color:var(--txt2);margin-bottom:6px;display:block;}
+
+/* 버튼 */
+.btn{padding:10px 18px;border-radius:8px;border:1px solid var(--bdr);background:var(--sur2);color:var(--txt);font-size:14px;font-family:inherit;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn:hover{background:#2a2a2a;border-color:#444;}
+.btn-p{background:var(--txt);color:#000;border-color:var(--txt);}
+.btn-p:hover{background:#ddd;}
+.btn-g{background:var(--green);color:#000;border-color:var(--green);}
+.btn-g:hover{background:#16a34a;}
+.btn-r{background:transparent;color:var(--red);border-color:var(--red);}
+.btn-sm{padding:6px 12px;font-size:13px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+
+/* 칩 */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.chip{padding:6px 14px;border-radius:100px;border:1px solid var(--bdr);background:var(--sur2);color:var(--txt2);font-size:13px;cursor:pointer;transition:all .15s;}
+.chip:hover,.chip.active{border-color:var(--txt);color:var(--txt);}
+.topic-chip{padding:6px 14px;border-radius:100px;border:1px solid rgba(59,130,246,.3);background:rgba(59,130,246,.08);color:#7cb4ff;font-size:13px;cursor:pointer;transition:all .15s;}
+.topic-chip:hover,.topic-chip.active{border-color:var(--blue);background:rgba(59,130,246,.2);color:#fff;}
+
+/* 미디어 */
+.upload-area{border:1px dashed var(--bdr);border-radius:8px;padding:20px;text-align:center;cursor:pointer;color:var(--txt2);font-size:14px;transition:border .15s;}
+.upload-area:hover{border-color:#555;color:var(--txt);}
+.preview-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.preview-item{position:relative;}
+.preview-item img{width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--bdr);}
+.remove-img{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;}
+
+/* 뱃지 */
+.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600;}
+.bg{background:rgba(34,197,94,.15);color:var(--green);}
+.br{background:rgba(239,68,68,.15);color:var(--red);}
+.by{background:rgba(245,158,11,.15);color:var(--yellow);}
+.bb{background:rgba(59,130,246,.15);color:var(--blue);}
+
+/* 카드 아이템 */
+.list-item{display:flex;align-items:flex-start;justify-content:space-between;padding:14px;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;margin-bottom:8px;gap:12px;}
+
+/* 태그 */
+.tag-wrap{display:flex;gap:8px;margin-bottom:10px;}
+.tag-list{display:flex;flex-wrap:wrap;gap:6px;min-height:28px;}
+.tag-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);border-radius:100px;font-size:12px;color:#7cb4ff;}
+.tag-pill button{background:none;border:none;color:#7cb4ff;cursor:pointer;font-size:12px;padding:0;opacity:.7;}
+.tag-pill button:hover{opacity:1;}
+
+/* 토스트 */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:14px 20px;font-size:14px;z-index:999;animation:up .3s ease;max-width:300px;}
+.toast.ok{border-color:var(--green);}
+.toast.err{border-color:var(--red);}
+@keyframes up{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* 로딩 */
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #333;border-top-color:#888;border-radius:50%;animation:rot .7s linear infinite;}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* 모달 */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:100;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--sur);border:1px solid var(--bdr);border-radius:14px;padding:24px;width:420px;max-width:90vw;}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:16px;}
+
+/* 모바일 */
+.ham{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--sur);border:1px solid var(--bdr);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:18px;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49;}
+@media(max-width:768px){
+  .ham{display:block;}
+  .sidebar{transform:translateX(-100%);transition:transform .25s;z-index:150;}
+  .sidebar.open{transform:translateX(0);}
+  .overlay.open{display:block;}
+  .main{margin-left:0;padding:16px;padding-top:56px;}
+}
 </style>
 </head>
 <body>
 
-<!-- ══ 로그인/가입 화면 ══ -->
+<!-- 로그인/가입 -->
 <div class="auth-wrap" id="authWrap">
   <div class="auth-box">
     <div class="auth-logo">Threads<span>Auto</span></div>
-    <div class="auth-sub">계속하려면 로그인하거나 초대코드로 가입해줘</div>
-
+    <div class="auth-sub">로그인하거나 초대코드로 가입해줘</div>
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('login',this)">로그인</button>
-      <button class="auth-tab" onclick="switchAuthTab('register',this)">가입</button>
+      <button class="auth-tab active" onclick="switchTab('login',this)">로그인</button>
+      <button class="auth-tab" onclick="switchTab('reg',this)">가입</button>
     </div>
-
-    <!-- 로그인 -->
     <div class="auth-panel active" id="panel-login">
-      <div class="field"><label>닉네임</label><input type="text" id="loginNick" placeholder="닉네임" /></div>
-      <div class="field"><label>비밀번호</label><input type="password" id="loginPw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()" /></div>
+      <div class="field"><label>닉네임</label><input id="loginNick" placeholder="닉네임" /></div>
+      <div class="field"><label>비밀번호</label><input id="loginPw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()" /></div>
       <div class="auth-err" id="loginErr"></div>
-      <button class="btn btn-primary" style="width:100%" onclick="doLogin()">로그인</button>
+      <button class="btn btn-p" style="width:100%" onclick="doLogin()">로그인</button>
     </div>
-
-    <!-- 가입 -->
-    <div class="auth-panel" id="panel-register">
-      <div class="field" id="inviteField"><label>초대코드</label><input type="text" id="regCode" placeholder="초대코드 8자리" style="text-transform:uppercase" /></div>
-      <div class="field"><label>이름 (실명)</label><input type="text" id="regName" placeholder="홍길동" /></div>
-      <div class="field"><label>닉네임</label><input type="text" id="regNick" placeholder="닉네임" /></div>
-      <div class="field"><label>비밀번호</label><input type="password" id="regPw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doRegister()" /></div>
+    <div class="auth-panel" id="panel-reg">
+      <div class="field" id="inviteField"><label>초대코드</label><input id="regCode" placeholder="초대코드 8자리" style="text-transform:uppercase" /></div>
+      <div class="field"><label>이름 (실명)</label><input id="regName" placeholder="홍길동" /></div>
+      <div class="field"><label>닉네임</label><input id="regNick" placeholder="닉네임" /></div>
+      <div class="field"><label>비밀번호</label><input id="regPw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doReg()" /></div>
       <div class="auth-err" id="regErr"></div>
-      <button class="btn btn-primary" style="width:100%" onclick="doRegister()">가입하기</button>
+      <div class="auth-hint" id="regHint"></div>
+      <button class="btn btn-p" style="width:100%" onclick="doReg()">가입하기</button>
     </div>
   </div>
 </div>
 
-<button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-<!-- ══ 앱 본체 ══ -->
-<div class="app" id="appWrap">
-  <aside class="sidebar">
-    <div class="logo">Threads<span>Auto</span></div>
-    <nav>
-      <div class="nav-item active" onclick="showPage('write',this)">✏️ 글 작성</div>
-      <div class="nav-item" onclick="showPage('schedule',this)">📅 예약 목록</div>
+<!-- 앱 -->
+<button class="ham" onclick="toggleSidebar()">☰</button>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
-      <div class="nav-item" onclick="showPage('accounts',this)">👤 계정 관리</div>
-      <div class="nav-admin" id="adminNav" style="display:none">
-        <div class="nav-item" onclick="showPage('admin',this)">⚙️ 관리자</div>
-      </div>
+<div class="app" id="appWrap">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo">Threads<span>Auto</span></div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="go('write',this)">✏️ 글 작성</div>
+      <div class="nav-item" onclick="go('schedule',this)">📅 예약 목록</div>
+      <div class="nav-item" onclick="go('accounts',this)">👤 계정 관리</div>
+      <div class="nav-sep" id="adminSep" style="display:none"></div>
+      <div class="nav-item" id="adminNav" style="display:none" onclick="go('admin',this)">⚙️ 관리자</div>
     </nav>
-    <div class="sidebar-bottom">
-      <div class="user-info">
-        <div class="user-nick" id="sideNick"></div>
-        <div class="user-role" id="sideRole"></div>
-      </div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">계정 선택</div>
-      <select id="globalAccount" onchange="onAccountChange()" style="margin-bottom:10px"></select>
-      <button class="btn btn-sm btn-red" style="width:100%" onclick="doLogout()">로그아웃</button>
+    <div class="sidebar-foot">
+      <div class="user-nick" id="sideNick"></div>
+      <div class="user-role" id="sideRole"></div>
+      <div class="label" style="margin-bottom:6px">계정 선택</div>
+      <select id="globalAcc" onchange="onAccChange()" style="margin-bottom:10px"></select>
+      <button class="btn btn-r btn-sm" style="width:100%" onclick="doLogout()">로그아웃</button>
     </div>
   </aside>
 
@@ -222,61 +189,66 @@
       <h1>✏️ 글 작성</h1>
       <div class="card">
         <h2>주제 & 설정</h2>
-        <label class="label">주제 선택 <span style="font-size:11px;color:var(--text2)">(계정 관리에서 태그 추가 가능)</span></label>
-        <div class="chip-group" id="topicTagGroup" style="margin-bottom:10px">
-          <span class="empty-hint">계정을 선택하면 주제 태그가 표시돼요</span>
+        <label class="label">주제 선택 <span style="font-size:11px;color:var(--txt2)">(계정 관리에서 태그 추가)</span></label>
+        <div class="chips" id="topicTags" style="margin-bottom:10px">
+          <span style="font-size:13px;color:var(--txt2)">계정을 선택하면 주제 태그가 표시돼요</span>
         </div>
         <label class="label">직접 입력</label>
-        <div style="margin-bottom:12px"><input type="text" id="topic" placeholder="예: 요즘 물가 미침, AI 최신 소식" /></div>
+        <div style="margin-bottom:12px"><input id="topic" placeholder="예: 요즘 물가 미침, AI 최신 소식" /></div>
         <label class="label">말투 (반말 고정)</label>
-        <div class="chip-group" id="toneGroup">
-          <div class="chip active" onclick="selectToneChip(this)">일상</div>
-          <div class="chip" onclick="selectToneChip(this)">정보</div>
-          <div class="chip" onclick="selectToneChip(this)">유머</div>
-          <div class="chip" onclick="selectToneChip(this)">감성</div>
-          <div class="chip" onclick="selectToneChip(this)">도발</div>
+        <div class="chips" id="toneChips">
+          <div class="chip active" onclick="pickTone(this)">일상</div>
+          <div class="chip" onclick="pickTone(this)">정보</div>
+          <div class="chip" onclick="pickTone(this)">유머</div>
+          <div class="chip" onclick="pickTone(this)">감성</div>
+          <div class="chip" onclick="pickTone(this)">도발</div>
         </div>
-        <button class="btn btn-primary" onclick="generatePost()" id="genBtn">🪄 글 생성</button>
+        <button class="btn btn-p" onclick="genPost()" id="genBtn">🪄 글 생성</button>
       </div>
+
       <div class="card">
         <h2>생성된 글</h2>
         <textarea id="postText" placeholder="글이 여기 생성됩니다..."></textarea>
-        <div class="post-actions">
-          <button class="btn btn-sm" onclick="generatePost()">🔄 재생성</button>
-          <button class="btn btn-sm" onclick="copyText('postText')">📋 복사</button>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-sm" onclick="genPost()">🔄 재생성</button>
+          <button class="btn btn-sm" onclick="copy('postText')">📋 복사</button>
         </div>
       </div>
+
       <div class="card">
         <h2>댓글 자동 생성</h2>
         <textarea id="commentText" placeholder="댓글이 여기 생성됩니다..."></textarea>
-        <div class="post-actions">
-          <button class="btn btn-sm" onclick="generateComment()">🪄 댓글 생성</button>
-          <button class="btn btn-sm" onclick="generateComment()">🔄 재생성</button>
-          <button class="btn btn-sm" onclick="copyText('commentText')">📋 복사</button>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-sm" onclick="genComment()">🪄 댓글 생성</button>
+          <button class="btn btn-sm" onclick="genComment()">🔄 재생성</button>
+          <button class="btn btn-sm" onclick="copy('commentText')">📋 복사</button>
+          <button class="btn btn-sm" onclick="openSched('comment')">📅 댓글 예약</button>
         </div>
       </div>
+
       <div class="card">
         <h2>미디어 첨부</h2>
-        <div class="chip-group" style="margin-bottom:14px">
-          <div class="chip active" id="tabPhoto" onclick="switchMediaTab('photo')">📷 사진</div>
-          <div class="chip" id="tabVideo" onclick="switchMediaTab('video')">🎬 영상</div>
+        <div class="chips" style="margin-bottom:14px">
+          <div class="chip active" id="tabPhoto" onclick="switchMedia('photo')">📷 사진</div>
+          <div class="chip" id="tabVideo" onclick="switchMedia('video')">🎬 영상</div>
         </div>
         <div id="mediaPhoto">
-          <div class="upload-area" onclick="document.getElementById('fileInput').click()">📷 클릭해서 사진 추가 (여러 장 가능)</div>
-          <input type="file" id="fileInput" multiple accept="image/*" style="display:none" onchange="handleImages(this)">
-          <div class="image-preview-list" id="previewList"></div>
+          <div class="upload-area" onclick="document.getElementById('imgInput').click()">📷 클릭해서 사진 추가 (여러 장)</div>
+          <input type="file" id="imgInput" multiple accept="image/*" style="display:none" onchange="handleImg(this)">
+          <div class="preview-list" id="previewList"></div>
         </div>
         <div id="mediaVideo" style="display:none">
-          <div class="upload-area" onclick="document.getElementById('videoInput').click()">🎬 클릭해서 영상 추가 (mp4, 최대 5분)</div>
-          <input type="file" id="videoInput" accept="video/mp4,video/quicktime" style="display:none" onchange="handleVideo(this)">
-          <div id="videoPreview" style="margin-top:10px"></div>
+          <div class="upload-area" onclick="document.getElementById('vidInput').click()">🎬 클릭해서 영상 추가 (mp4)</div>
+          <input type="file" id="vidInput" accept="video/mp4" style="display:none" onchange="handleVid(this)">
+          <div id="vidPreview"></div>
         </div>
       </div>
+
       <div class="card">
         <h2>발행</h2>
         <div class="row">
-          <button class="btn btn-green" onclick="publishNow()" style="flex:1">⚡ 즉시 발행</button>
-          <button class="btn" onclick="openScheduleModal()" style="flex:1">📅 예약 발행</button>
+          <button class="btn btn-g" onclick="pubNow()" style="flex:1">⚡ 즉시 발행</button>
+          <button class="btn" onclick="openSched('post')" style="flex:1">📅 예약 발행</button>
         </div>
       </div>
     </div>
@@ -284,38 +256,27 @@
     <!-- 예약 목록 -->
     <div class="page" id="page-schedule">
       <h1>📅 예약 목록</h1>
-      <div id="scheduleList"><span class="loading"></span></div>
+      <div id="schedList"><span class="spin"></span></div>
     </div>
-
-    <!-- 인사이트 -->
-    <div class="page" id="page-insights">
-      <div class="insight-header">
-        <h1 style="margin-bottom:0">📊 인사이트</h1>
-        <button class="btn btn-sm" onclick="loadInsights()">🔄 새로고침</button>
-      </div>
-      <div id="insightsContent">
-        <div style="color:var(--text2);font-size:14px;margin-bottom:12px">계정을 선택하면 자동으로 불러와요.</div>
-        <button class="btn btn-primary" onclick="loadInsights()">📊 불러오기</button>
-      </div>
 
     <!-- 계정 관리 -->
     <div class="page" id="page-accounts">
       <h1>👤 계정 관리</h1>
       <div class="card">
         <h2>Threads 계정 추가</h2>
-        <div style="margin-bottom:12px"><label class="label">계정 이름</label><input type="text" id="newAccName" placeholder="예: 메인 계정" /></div>
-        <div style="margin-bottom:12px"><label class="label">장기 액세스 토큰</label><input type="text" id="newAccToken" placeholder="THAAMr..." /></div>
+        <div style="margin-bottom:12px"><label class="label">계정 이름</label><input id="accName" placeholder="예: 메인 계정" /></div>
+        <div style="margin-bottom:12px"><label class="label">장기 액세스 토큰</label><input id="accToken" placeholder="THAAMr..." /></div>
         <div style="margin-bottom:16px">
-          <label class="label">주제 태그 <span style="color:var(--text2);font-size:11px">입력 후 Enter</span></label>
-          <div class="tag-input-wrap">
-            <input type="text" id="newTagInput" placeholder="예: AI, 바이브코딩" style="flex:1" onkeydown="if(event.key==='Enter'){addNewTag();event.preventDefault()}" />
-            <button class="btn btn-sm" onclick="addNewTag()">+ 추가</button>
+          <label class="label">주제 태그 <span style="color:var(--txt2);font-size:11px">입력 후 Enter</span></label>
+          <div class="tag-wrap">
+            <input id="tagInput" placeholder="예: AI, 쿠팡, 여행" style="flex:1" onkeydown="if(event.key==='Enter'){addTag();event.preventDefault()}" />
+            <button class="btn btn-sm" onclick="addTag()">+ 추가</button>
           </div>
-          <div class="tag-list" id="newTagList"></div>
+          <div class="tag-list" id="tagList"></div>
         </div>
-        <button class="btn btn-primary" onclick="addAccount()">+ 계정 추가</button>
+        <button class="btn btn-p" onclick="addAcc()">+ 계정 추가</button>
       </div>
-      <div class="card"><h2>등록된 계정</h2><div id="accountList"></div></div>
+      <div class="card"><h2>등록된 계정</h2><div id="accList"></div></div>
     </div>
 
     <!-- 관리자 -->
@@ -323,7 +284,7 @@
       <h1>⚙️ 관리자</h1>
       <div class="card">
         <h2>초대코드 관리</h2>
-        <button class="btn btn-primary" onclick="createInvite()" style="margin-bottom:16px">🔑 초대코드 생성</button>
+        <button class="btn btn-p" onclick="makeInvite()" style="margin-bottom:16px">🔑 초대코드 생성</button>
         <div id="inviteList"></div>
       </div>
       <div class="card">
@@ -335,45 +296,46 @@
   </main>
 </div>
 
-<!-- 모달들 -->
-<div class="modal-bg" id="scheduleModal">
+<!-- 예약 모달 -->
+<div class="modal-bg" id="schedModal">
   <div class="modal">
     <h3>📅 예약 발행</h3>
+    <input type="hidden" id="schedType" value="post" />
     <label class="label">발행 시간</label>
-    <input type="datetime-local" id="scheduleTime" style="margin-bottom:16px" />
-    <input type="hidden" id="scheduleType" value="post" />
+    <input type="datetime-local" id="schedTime" style="margin-bottom:16px" />
     <div class="row">
-      <button class="btn" onclick="closeModal('scheduleModal')" style="flex:1">취소</button>
-      <button class="btn btn-green" onclick="schedulePost()" style="flex:1">예약 등록</button>
+      <button class="btn" onclick="closeModal('schedModal')" style="flex:1">취소</button>
+      <button class="btn btn-g" onclick="doSched()" style="flex:1">예약 등록</button>
     </div>
   </div>
 </div>
 
-<div class="modal-bg" id="editTagModal">
+<!-- 태그 편집 모달 -->
+<div class="modal-bg" id="tagModal">
   <div class="modal">
     <h3>✏️ 주제 태그 편집</h3>
     <input type="hidden" id="editAccId" />
-    <div class="tag-input-wrap">
-      <input type="text" id="editTagInput" placeholder="태그 입력 후 Enter" style="flex:1" onkeydown="if(event.key==='Enter'){addEditTag();event.preventDefault()}" />
+    <div class="tag-wrap">
+      <input id="editTagInput" placeholder="태그 입력 후 Enter" style="flex:1" onkeydown="if(event.key==='Enter'){addEditTag();event.preventDefault()}" />
       <button class="btn btn-sm" onclick="addEditTag()">+ 추가</button>
     </div>
     <div class="tag-list" id="editTagList" style="margin-bottom:16px"></div>
     <div class="row">
-      <button class="btn" onclick="closeModal('editTagModal')" style="flex:1">취소</button>
-      <button class="btn btn-primary" onclick="saveEditTags()" style="flex:1">저장</button>
+      <button class="btn" onclick="closeModal('tagModal')" style="flex:1">취소</button>
+      <button class="btn btn-p" onclick="saveEditTags()" style="flex:1">저장</button>
     </div>
   </div>
 </div>
 
 <script>
 // ── 상태 ──
-let session = localStorage.getItem('session') || '';
-let myRole = '';
-let selectedTone = '일상';
+let session = localStorage.getItem('sess') || '';
+let tone = '일상';
 let mediaMode = 'photo';
-let uploadedImageUrls = [], uploadedFiles = [], uploadedVideoUrl = '';
+let imgUrls = [], imgFiles = [], vidUrl = '';
 let newTags = [], editTags = [];
 
+// ── API ──
 function api(path, opts={}) {
   opts.headers = opts.headers || {};
   opts.headers['x-session'] = session;
@@ -384,501 +346,444 @@ function api(path, opts={}) {
   return fetch(path, opts).then(r => r.json());
 }
 
-function toast(msg, type='success') {
+// ── 토스트 ──
+function toast(msg, type='ok') {
   const el = document.createElement('div');
-  el.className=`toast ${type}`; el.textContent=msg;
-  document.body.appendChild(el); setTimeout(()=>el.remove(), 3000);
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
 }
 
-// ── 인증 ──
-function switchAuthTab(tab, el) {
-  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.auth-panel').forEach(p=>p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('panel-'+tab).classList.add('active');
+// ── 모달 ──
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── 사이드바 ──
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
 }
 
-// checkSetup은 아래에 정의됨
-
-async function doLogin() {
-  const nickname = document.getElementById('loginNick').value.trim();
-  const password = document.getElementById('loginPw').value;
-  document.getElementById('loginErr').textContent = '';
-  const d = await api('/api/auth/login', { method:'POST', body:{nickname,password} });
-  if (d.error) {
-    if (d.error === 'pending') {
-      document.getElementById('loginErr').textContent = '⏳ 관리자 승인 대기 중이야. 승인 후 사용 가능해.';
-    } else if (d.error === 'suspended') {
-      document.getElementById('loginErr').textContent = '🚫 사용이 정지된 계정이야. 관리자에게 문의해줘.';
-    } else {
-      document.getElementById('loginErr').textContent = d.error;
-    }
-    return;
-  }
-  session = d.token;
-  localStorage.setItem('session', session);
-  enterApp(d);
-}
-
-async function doRegister() {
-  const inviteCode = document.getElementById('regCode').value.trim().toUpperCase();
-  const name = document.getElementById('regName').value.trim();
-  const nickname = document.getElementById('regNick').value.trim();
-  const password = document.getElementById('regPw').value;
-  document.getElementById('regErr').textContent = '';
-  if(!name) { document.getElementById('regErr').textContent = '이름을 입력해줘'; return; }
-  const d = await api('/api/auth/register', { method:'POST', body:{nickname,password,inviteCode,name} });
-  if (d.error) { document.getElementById('regErr').textContent = d.error; return; }
-  if (d.pending) {
-    document.getElementById('regErr').style.color = 'var(--green)';
-    document.getElementById('regErr').textContent = '✅ 가입 완료! 관리자 승인 후 로그인 가능해.';
-    document.getElementById('regNick').value='';
-    document.getElementById('regPw').value='';
-    document.getElementById('regCode').value='';
-    document.getElementById('regName').value='';
-    return;
-  }
-  session = d.token;
-  localStorage.setItem('session', session);
-  enterApp(d);
-}
-
-async function doLogout() {
-  await api('/api/auth/logout', {method:'POST'});
-  localStorage.removeItem('session');
-  session=''; myRole='';
-  showAuth();
-}
-
-function showAuth() {
-  document.getElementById('authWrap').style.display='flex';
-  document.getElementById('appWrap').classList.remove('visible');
-}
-
-function enterApp(user) {
-  myRole = user.role;
-  document.getElementById('authWrap').style.display='none';
-  document.getElementById('appWrap').classList.add('visible');
-  document.getElementById('sideNick').textContent = user.nickname;
-  document.getElementById('sideRole').textContent = user.role === 'admin' ? '관리자' : '멤버';
-  if (user.role === 'admin') document.getElementById('adminNav').style.display='block';
-  loadAccounts();
-  // 저장된 페이지로 복원
-  const savedPage = localStorage.getItem('currentPage') || 'write';
-  showPage(savedPage);
-}
-
-// ── 페이지 전환 ──
-function showPage(name, el) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+name).classList.add('active');
-  if(el) el.classList.add('active');
-  else {
-    // el 없을 때 nav-item 직접 찾아서 활성화
-    document.querySelectorAll('.nav-item').forEach(n=>{
-      if(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'"+name+"'")) n.classList.add('active');
-    });
-  }
-  localStorage.setItem('currentPage', name);
-  if(name==='schedule') loadSchedule();
-  if(name==='keywords') loadKeywords();
-  if(name==='accounts') loadAccounts();
-  if(name==='admin') loadAdmin();
+// ── 페이지 이동 ──
+function go(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  else document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + name + "'")) n.classList.add('active');
+  });
+  localStorage.setItem('page', name);
+  if (name === 'schedule') loadSched();
+  if (name === 'accounts') loadAccs();
+  if (name === 'admin') loadAdmin();
   closeSidebar();
 }
 
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-// ── 계정 변경 ──
-async function onAccountChange() {
-  const accountId = document.getElementById('globalAccount').value;
-  const group = document.getElementById('topicTagGroup');
-  if (!accountId) { group.innerHTML='<span class="empty-hint">계정을 선택하면 주제 태그가 표시돼요</span>'; return; }
-  const accs = await api('/api/accounts');
-  const acc = accs.find(a=>a.id===accountId);
-  const tags = acc?.topics||[];
-  if (!tags.length) { group.innerHTML='<span class="empty-hint">주제 태그 없음 — 계정 관리에서 추가해줘</span>'; return; }
-  group.innerHTML = tags.map(t=>`<div class="topic-chip" onclick="selectTopicTag(this,'${t}')">${t}</div>`).join('');
-}
-
-function selectTopicTag(el, tag) {
-  document.querySelectorAll('#topicTagGroup .topic-chip').forEach(c=>c.classList.remove('active'));
+// ── 인증 탭 ──
+function switchTab(tab, el) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.auth-panel').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('topic').value = tag;
-}
-
-function selectToneChip(el) {
-  document.querySelectorAll('#toneGroup .chip').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active'); selectedTone=el.textContent;
-}
-
-// ── 글/댓글 생성 ──
-async function generatePost() {
-  const topic = document.getElementById('topic').value.trim();
-  if (!topic) return toast('주제를 입력해줘','error');
-  const btn=document.getElementById('genBtn');
-  btn.disabled=true; btn.innerHTML='<span class="loading"></span> 생성 중...';
-  try {
-    const d = await api('/api/generate',{method:'POST',body:{topic,tone:selectedTone,type:'post'}});
-    if(d.error) throw new Error(d.error);
-    document.getElementById('postText').value=d.text; toast('글 생성 완료!');
-  } catch(e){toast(e.message,'error');}
-  btn.disabled=false; btn.innerHTML='🪄 글 생성';
-}
-
-async function generateComment() {
-  const topic=document.getElementById('topic').value.trim()||'일상';
-  try {
-    const d=await api('/api/generate',{method:'POST',body:{topic,tone:selectedTone,type:'comment'}});
-    if(d.error) throw new Error(d.error);
-    document.getElementById('commentText').value=d.text; toast('댓글 생성 완료!');
-  } catch(e){toast(e.message,'error');}
-}
-
-// ── 미디어 ──
-function switchMediaTab(tab) {
-  mediaMode=tab;
-  document.getElementById('tabPhoto').classList.toggle('active',tab==='photo');
-  document.getElementById('tabVideo').classList.toggle('active',tab==='video');
-  document.getElementById('mediaPhoto').style.display=tab==='photo'?'':'none';
-  document.getElementById('mediaVideo').style.display=tab==='video'?'':'none';
-}
-
-async function handleImages(input) {
-  for(const file of Array.from(input.files)) {
-    uploadedFiles.push(file); addImagePreview(URL.createObjectURL(file),uploadedFiles.length-1);
-  }
-  const fd=new FormData(); Array.from(input.files).forEach(f=>fd.append('images',f));
-  try { const d=await fetch('/api/upload',{method:'POST',headers:{'x-session':session},body:fd}).then(r=>r.json()); if(d.urls) uploadedImageUrls.push(...d.urls); } catch(e){}
-}
-
-async function handleVideo(input) {
-  const file=input.files[0]; if(!file) return;
-  document.getElementById('videoPreview').innerHTML=`<video src="${URL.createObjectURL(file)}" controls style="max-width:100%;border-radius:8px;border:1px solid var(--border);margin-top:8px"></video>`;
-  const fd=new FormData(); fd.append('video',file);
-  try { const d=await fetch('/api/upload-video',{method:'POST',headers:{'x-session':session},body:fd}).then(r=>r.json()); if(d.url){uploadedVideoUrl=d.url;toast('영상 업로드 완료!');} } catch(e){toast('영상 업로드 실패','error');}
-}
-
-function addImagePreview(url,idx) {
-  const item=document.createElement('div'); item.className='image-preview-item'; item.dataset.idx=idx;
-  item.innerHTML=`<img src="${url}"><button class="remove-img" onclick="removeImage(${idx})">✕</button>`;
-  document.getElementById('previewList').appendChild(item);
-}
-function removeImage(idx){uploadedFiles.splice(idx,1);uploadedImageUrls.splice(idx,1);document.querySelector(`[data-idx="${idx}"]`)?.remove();}
-
-// ── 발행 ──
-async function publishNow() {
-  const accountId=document.getElementById('globalAccount').value;
-  if(!accountId) return toast('계정을 선택해줘','error');
-  const text=document.getElementById('postText').value.trim();
-  if(!text) return toast('글을 작성해줘','error');
-  const body={accountId,text};
-  if(mediaMode==='photo') body.imageUrls=uploadedImageUrls;
-  if(mediaMode==='video') body.videoUrl=uploadedVideoUrl;
-  try {
-    const d=await api('/api/publish',{method:'POST',body});
-    if(d.error) throw new Error(d.error);
-    toast('✅ 발행 완료!');
-    document.getElementById('postText').value='';
-    uploadedImageUrls=[];uploadedFiles=[];uploadedVideoUrl='';
-    document.getElementById('previewList').innerHTML='';
-    document.getElementById('videoPreview').innerHTML='';
-  } catch(e){toast(e.message,'error');}
-}
-
-function openScheduleModal(type='post') {
-  const textId = type === 'comment' ? 'commentText' : 'postText';
-  if(!document.getElementById(textId).value.trim()) return toast(type==='comment'?'댓글을 먼저 생성해줘':'글을 먼저 작성해줘','error');
-  document.getElementById('scheduleType').value = type;
-  const now = new Date();
-  const min = now.toISOString().slice(0,16);
-  const def = new Date(Date.now()+3600000).toISOString().slice(0,16);
-  const timeEl = document.getElementById('scheduleTime');
-  timeEl.min = min;
-  timeEl.value = def;
-  document.getElementById('scheduleModal').classList.add('open');
-}
-
-async function schedulePost() {
-  const accountId=document.getElementById('globalAccount').value;
-  if(!accountId) return toast('계정을 선택해줘','error');
-  const type=document.getElementById('scheduleType').value;
-  const textId = type === 'comment' ? 'commentText' : 'postText';
-  const text=document.getElementById(textId).value.trim();
-  const scheduledAt=document.getElementById('scheduleTime').value;
-  if(!scheduledAt) return toast('시간을 선택해줘','error');
-  const d=await api('/api/schedule',{method:'POST',body:{accountId,text,type,imageUrls:type==='post'?uploadedImageUrls:[],scheduledAt:new Date(scheduledAt).toISOString()}});
-  if(d.error) return toast(d.error,'error');
-  toast('📅 예약 등록 완료!'); closeModal('scheduleModal');
-}
-
-// ── 예약 목록 ──
-async function loadSchedule() {
-  const posts=await api('/api/schedule');
-  const el=document.getElementById('scheduleList');
-  if(!posts.length){el.innerHTML='<div style="color:var(--text2);font-size:14px">예약된 글 없음</div>';return;}
-  el.innerHTML=[...posts].reverse().map(p=>`
-    <div class="scheduled-item">
-      <div style="flex:1">
-        <div style="font-size:13px;color:var(--text2);margin-bottom:4px">
-          ${p.accountName} · ${new Date(p.scheduledAt).toLocaleString('ko-KR')}
-          ${p.type==='comment'?'<span class="badge badge-blue" style="margin-left:4px">댓글</span>':''}
-        </div>
-        <div style="font-size:14px;line-height:1.5;margin-bottom:8px">${p.text.slice(0,100)}${p.text.length>100?'...':''}</div>
-        ${p.status==='pending'?`
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-sm" onclick="editSchedule('${p.id}')">✏️ 수정</button>
-          <button class="btn btn-sm btn-green" onclick="publishNowScheduled('${p.id}')">⚡ 즉시발행</button>
-          <button class="btn btn-sm btn-red" onclick="cancelSchedule('${p.id}')">취소</button>
-        </div>`:''}
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-        <span class="badge ${p.status==='done'?'badge-green':p.status==='failed'?'badge-red':'badge-yellow'}">${p.status==='done'?'발행됨':p.status==='failed'?'실패':'대기중'}</span>
-      </div>
-    </div>`).join('');
-}
-async function cancelSchedule(id){await api(`/api/schedule/${id}`,{method:'DELETE'});loadSchedule();toast('예약 취소됨');}
-
-async function publishNowScheduled(id){
-  const d=await api(`/api/schedule/${id}/publish-now`,{method:'POST'});
-  if(d.error) return toast(d.error,'error');
-  toast('✅ 즉시 발행 완료!'); loadSchedule();
-}
-
-async function editSchedule(id){
-  const posts = await api('/api/schedule');
-  const p = posts.find(x=>x.id===id);
-  if(!p) return;
-  const newText = prompt('글 내용 수정:', p.text);
-  if(newText===null) return;
-  const now = new Date();
-  const newTime = prompt('발행 시간 수정 (형식: YYYY-MM-DDTHH:MM)\n(현재 이후 시간 입력)', p.scheduledAt.slice(0,16));
-  if(newTime===null) return;
-  if(new Date(newTime) <= now) return toast('지나간 시간은 설정 불가','error');
-  const d = await api(`/api/schedule/${id}`,{method:'PUT',body:{text:newText,scheduledAt:new Date(newTime).toISOString()}});
-  if(d.error) return toast(d.error,'error');
-  toast('수정됐어!'); loadSchedule();
-}
-
-// ── 인사이트 ──
-async function loadInsights() {
-  const accountId=document.getElementById('globalAccount').value;
-  if(!accountId) return toast('계정을 선택해줘','error');
-  const el=document.getElementById('insightsContent');
-  el.innerHTML='<span class="loading"></span>';
-  const d=await api(`/api/insights/${accountId}`);
-  if(d.error){
-    el.innerHTML=`<div style="color:var(--red);font-size:14px;margin-bottom:12px">${d.error}</div><button class="btn" onclick="loadInsights()">다시 시도</button>`;
-    return;
-  }
-  const today = new Date().toLocaleDateString('ko-KR');
-  const username = typeof d.username === 'string' ? d.username : '-';
-  const userId = String(d.id || '-');
-  el.innerHTML=`
-    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">📅 ${today} 기준</div>
-    <div class="insight-stat-grid">
-      <div class="insight-stat">
-        <div class="insight-stat-num">@${username}</div>
-        <div class="insight-stat-label">🧵 계정명</div>
-      </div>
-      <div class="insight-stat">
-        <div class="insight-stat-num" style="font-size:18px">${userId}</div>
-        <div class="insight-stat-label">🆔 사용자 ID</div>
-      </div>
-    </div>
-    <div style="font-size:13px;color:var(--text2);margin-top:12px">💡 팔로워/조회수는 Threads 앱에서 확인해줘 (API 제한)</div>`;
-}
-
-// ── 키워드 ──
-function switchKwTab(tab,el){
-  document.querySelectorAll('.kw-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.kw-panel').forEach(p=>p.classList.remove('active'));
-  el.classList.add('active'); document.getElementById('kw-'+tab).classList.add('active');
-}
-async function loadKeywords() {
-  const d=await api('/api/keywords');
-  renderKw('googleKw',d.google||[]); renderKw('naverKw',d.naver||[]); renderKw('threadsKw',d.threads||[]);
-}
-function renderKw(elId,keywords) {
-  const el=document.getElementById(elId);
-  if(!keywords.length){el.innerHTML='<div style="color:var(--text2);font-size:13px;padding:8px">데이터 없음</div>';return;}
-  el.innerHTML=keywords.map((kw,i)=>{
-    const text=typeof kw==='string'?kw:kw.text; const isNew=kw.isNew||false;
-    return `<div class="kw-item" onclick="useKeyword('${text.replace(/'/g,"\\'")}')">
-      <span><span class="kw-rank">${i+1}</span> ${text}${isNew?'<span class="kw-new">NEW</span>':''}</span>
-      <span style="font-size:11px;color:var(--text2)">주제로 →</span></div>`;
-  }).join('');
-}
-function useKeyword(kw){
-  document.getElementById('topic').value=kw;
-  showPage('write',document.querySelector('.nav-item'));
-  document.querySelectorAll('.nav-item').forEach((n,i)=>i===0?n.classList.add('active'):n.classList.remove('active'));
-  toast(`"${kw}" 주제로 설정됨`);
-}
-
-// ── 계정 관리 ──
-async function loadAccounts() {
-  const accs=await api('/api/accounts');
-  const sel=document.getElementById('globalAccount');
-  const curVal=sel.value;
-  sel.innerHTML='<option value="">계정 선택</option>'+accs.map(a=>`<option value="${a.id}">${a.name}</option>`).join('');
-  if(curVal) sel.value=curVal;
-  const list=document.getElementById('accountList');
-  if(!list) return;
-  if(!accs.length){list.innerHTML='<div style="color:var(--text2);font-size:14px">등록된 계정 없음</div>';return;}
-  list.innerHTML=accs.map(a=>`
-    <div class="account-item">
-      <div style="flex:1">
-        <div style="font-weight:600;font-size:14px;margin-bottom:4px">${a.name}</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${a.accessToken.slice(0,24)}...</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">${(a.topics||[]).length?(a.topics||[]).map(t=>`<span class="tag-pill">${t}</span>`).join(''):'<span style="font-size:12px;color:var(--text2)">주제 태그 없음</span>'}</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-        <button class="btn btn-sm" onclick='openEditTagModal("${a.id}",${JSON.stringify(a.topics||[])})'>태그 편집</button>
-        <button class="btn btn-sm btn-red" onclick="deleteAccount('${a.id}')">삭제</button>
-      </div>
-    </div>`).join('');
-}
-
-async function addAccount() {
-  const name=document.getElementById('newAccName').value.trim();
-  const accessToken=document.getElementById('newAccToken').value.trim();
-  if(!name||!accessToken) return toast('이름과 토큰 입력해줘','error');
-  const d=await api('/api/accounts',{method:'POST',body:{name,accessToken,topics:newTags}});
-  if(d.error) return toast(d.error,'error');
-  document.getElementById('newAccName').value='';
-  document.getElementById('newAccToken').value='';
-  newTags=[]; renderNewTags(); loadAccounts(); toast('계정 추가됨!');
-}
-
-async function deleteAccount(id){
-  if(!confirm('정말 삭제할까?')) return;
-  await api(`/api/accounts/${id}`,{method:'DELETE'}); loadAccounts(); toast('계정 삭제됨');
-}
-
-function addNewTag(){
-  const input=document.getElementById('newTagInput'); const val=input.value.trim();
-  if(!val||newTags.includes(val)){input.value='';return;} newTags.push(val); renderNewTags(); input.value='';
-}
-function renderNewTags(){document.getElementById('newTagList').innerHTML=newTags.map((t,i)=>`<span class="tag-pill">${t}<button onclick="removeNewTag(${i})">✕</button></span>`).join('');}
-function removeNewTag(i){newTags.splice(i,1);renderNewTags();}
-
-function openEditTagModal(id,tags){
-  document.getElementById('editAccId').value=id;
-  editTags=Array.isArray(tags)?[...tags]:[]; renderEditTags();
-  document.getElementById('editTagModal').classList.add('open');
-}
-function addEditTag(){
-  const input=document.getElementById('editTagInput'); const val=input.value.trim();
-  if(!val||editTags.includes(val)){input.value='';return;} editTags.push(val); renderEditTags(); input.value='';
-}
-function renderEditTags(){document.getElementById('editTagList').innerHTML=editTags.map((t,i)=>`<span class="tag-pill">${t}<button onclick="removeEditTag(${i})">✕</button></span>`).join('');}
-function removeEditTag(i){editTags.splice(i,1);renderEditTags();}
-async function saveEditTags(){
-  const id=document.getElementById('editAccId').value;
-  await api(`/api/accounts/${id}/topics`,{method:'PUT',body:{topics:editTags}});
-  closeModal('editTagModal'); loadAccounts(); onAccountChange(); toast('주제 태그 저장됨!');
-}
-
-// ── 관리자 ──
-async function loadAdmin(){
-  // 초대코드
-  const invites=await api('/api/invites');
-  const iEl=document.getElementById('inviteList');
-  iEl.innerHTML=invites.length?invites.map(c=>`
-    <div class="invite-item">
-      <div>
-        <div class="invite-code">${c.code}</div>
-        <div style="font-size:12px;color:var(--text2);margin-top:3px">${c.used?`사용됨 (${c.usedBy})`:'미사용'} · ${new Date(c.createdAt).toLocaleDateString('ko-KR')}</div>
-      </div>
-      ${!c.used?`<button class="btn btn-sm btn-red" onclick="deleteInvite('${c.code}')">삭제</button>`:'<span class="badge badge-green">사용됨</span>'}
-    </div>`).join(''):'<div style="color:var(--text2);font-size:14px">초대코드 없음</div>';
-
-  // 유저 목록
-  const usrs=await api('/api/users');
-  const uEl=document.getElementById('userList');
-  uEl.innerHTML=usrs.map(u=>{
-    const statusBadge = u.status==='approved' ? '<span class="badge badge-green">사용중</span>' :
-                        u.status==='suspended' ? '<span class="badge badge-red">정지</span>' :
-                        '<span class="badge badge-yellow">승인대기</span>';
-    const statusBtns = u.role!=='admin' ? `
-      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-        ${u.status!=='approved'?`<button class="btn btn-sm btn-green" onclick="setUserStatus('${u.id}','approved')">승인</button>`:''}
-        ${u.status!=='suspended'?`<button class="btn btn-sm btn-red" onclick="setUserStatus('${u.id}','suspended')">정지</button>`:''}
-        ${u.status==='suspended'?`<button class="btn btn-sm" onclick="setUserStatus('${u.id}','approved')">활성화</button>`:''}
-        <button class="btn btn-sm btn-red" onclick="deleteUser('${u.id}')">삭제</button>
-      </div>` : '';
-    return `<div class="user-item">
-      <div style="flex:1">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <span style="font-weight:600;font-size:14px">${u.name||'-'}</span>
-          <span style="color:var(--text2);font-size:13px">(${u.nickname})</span>
-          <span class="badge ${u.role==='admin'?'badge-blue':'badge-yellow'}">${u.role==='admin'?'관리자':'멤버'}</span>
-          ${statusBadge}
-        </div>
-        <div style="font-size:12px;color:var(--text2)">${new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입</div>
-      </div>
-      ${statusBtns}
-    </div>`;
-  }).join('');
-}
-
-async function createInvite(){
-  const d=await api('/api/invites',{method:'POST'});
-  if(d.error) return toast(d.error,'error');
-  toast(`초대코드 생성: ${d.code}`); loadAdmin();
-}
-async function deleteInvite(code){
-  await api(`/api/invites/${code}`,{method:'DELETE'}); loadAdmin(); toast('초대코드 삭제됨');
-}
-async function deleteUser(id){
-  if(!confirm('정말 이 유저를 삭제할까?')) return;
-  await api(`/api/users/${id}`,{method:'DELETE'}); loadAdmin(); toast('유저 삭제됨');
-}
-
-async function setUserStatus(id, status){
-  const labels = {approved:'승인', suspended:'정지', pending:'대기'};
-  const d = await api(`/api/users/${id}/status`,{method:'PUT',body:{status}});
-  if(d.error) return toast(d.error,'error');
-  toast(labels[status]+'됐어!'); loadAdmin();
-}
-
-function copyText(id){navigator.clipboard.writeText(document.getElementById(id).value).then(()=>toast('복사됨!'));}
-
-function toggleSidebar(){
-  document.getElementById('hamburger').closest('body').querySelector('.sidebar').classList.toggle('open');
-  document.getElementById('sidebarOverlay').classList.toggle('open');
-}
-function closeSidebar(){
-  document.querySelector('.sidebar').classList.remove('open');
-  document.getElementById('sidebarOverlay').classList.remove('open');
+  document.getElementById('panel-' + tab).classList.add('active');
 }
 
 // ── 초기화 ──
-async function checkSetup() {
-  // 첫 번째 유저인지 확인 (가입 탭 UI 분기)
+async function init() {
+  // 첫 유저 확인
   try {
     const r = await fetch('/api/auth/is-first');
     const d = await r.json();
     if (d.isFirst) {
       document.getElementById('inviteField').style.display = 'none';
-      document.querySelector('#panel-register .auth-sub-hint')?.remove();
-      // 안내 문구 추가
-      const hint = document.createElement('div');
-      hint.style.cssText = 'font-size:13px;color:var(--green);margin-bottom:14px;';
-      hint.textContent = '첫 번째 가입 — 관리자 계정으로 생성돼요';
-      document.getElementById('panel-register').insertBefore(hint, document.getElementById('inviteField').nextSibling);
+      document.getElementById('regHint').textContent = '첫 번째 가입 — 관리자 계정으로 생성돼요';
     }
   } catch(e) {}
 
   if (!session) { showAuth(); return; }
-  const r = await fetch('/api/auth/me', {headers:{'x-session': session}});
-  if (r.status === 401) { showAuth(); return; }
+  const r = await fetch('/api/auth/me', { headers: { 'x-session': session } });
+  if (r.status === 401) { session = ''; localStorage.removeItem('sess'); showAuth(); return; }
   const d = await r.json();
   enterApp(d);
 }
-checkSetup();
+
+function showAuth() {
+  document.getElementById('authWrap').style.display = 'flex';
+  document.getElementById('appWrap').classList.remove('on');
+}
+
+function enterApp(user) {
+  document.getElementById('authWrap').style.display = 'none';
+  document.getElementById('appWrap').classList.add('on');
+  document.getElementById('sideNick').textContent = user.nickname;
+  document.getElementById('sideRole').textContent = user.role === 'admin' ? '관리자' : '멤버';
+  if (user.role === 'admin') {
+    document.getElementById('adminNav').style.display = 'block';
+    document.getElementById('adminSep').style.display = 'block';
+  }
+  loadAccs();
+  const saved = localStorage.getItem('page') || 'write';
+  go(saved);
+}
+
+async function doLogin() {
+  const nickname = document.getElementById('loginNick').value.trim();
+  const password = document.getElementById('loginPw').value;
+  document.getElementById('loginErr').textContent = '';
+  const d = await api('/api/auth/login', { method: 'POST', body: { nickname, password } });
+  if (d.error) {
+    document.getElementById('loginErr').textContent =
+      d.error === 'pending' ? '⏳ 관리자 승인 대기 중이야' :
+      d.error === 'suspended' ? '🚫 사용 정지된 계정이야' : d.error;
+    return;
+  }
+  session = d.token;
+  localStorage.setItem('sess', session);
+  enterApp(d);
+}
+
+async function doReg() {
+  const inviteCode = document.getElementById('regCode').value.trim().toUpperCase();
+  const name = document.getElementById('regName').value.trim();
+  const nickname = document.getElementById('regNick').value.trim();
+  const password = document.getElementById('regPw').value;
+  document.getElementById('regErr').textContent = '';
+  document.getElementById('regHint').textContent = '';
+  if (!name) { document.getElementById('regErr').textContent = '이름을 입력해줘'; return; }
+  const d = await api('/api/auth/register', { method: 'POST', body: { nickname, password, inviteCode, name } });
+  if (d.error) { document.getElementById('regErr').textContent = d.error; return; }
+  if (d.pending) {
+    document.getElementById('regHint').textContent = '✅ 가입 완료! 관리자 승인 후 로그인 가능해.';
+    document.getElementById('regName').value = '';
+    document.getElementById('regNick').value = '';
+    document.getElementById('regPw').value = '';
+    document.getElementById('regCode').value = '';
+    return;
+  }
+  session = d.token;
+  localStorage.setItem('sess', session);
+  enterApp(d);
+}
+
+async function doLogout() {
+  await api('/api/auth/logout', { method: 'POST' });
+  session = '';
+  localStorage.removeItem('sess');
+  localStorage.removeItem('page');
+  showAuth();
+}
+
+// ── 계정 선택 → 주제 태그 ──
+async function onAccChange() {
+  const accId = document.getElementById('globalAcc').value;
+  const group = document.getElementById('topicTags');
+  if (!accId) { group.innerHTML = '<span style="font-size:13px;color:var(--txt2)">계정을 선택하면 주제 태그가 표시돼요</span>'; return; }
+  const accs = await api('/api/accounts');
+  const acc = accs.find(a => a.id === accId);
+  const tags = acc?.topics || [];
+  if (!tags.length) { group.innerHTML = '<span style="font-size:13px;color:var(--txt2)">주제 태그 없음 — 계정 관리에서 추가해줘</span>'; return; }
+  group.innerHTML = tags.map(t => `<div class="topic-chip" onclick="pickTopic(this,'${t}')">${t}</div>`).join('');
+}
+
+function pickTopic(el, tag) {
+  document.querySelectorAll('#topicTags .topic-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('topic').value = tag;
+}
+
+function pickTone(el) {
+  document.querySelectorAll('#toneChips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  tone = el.textContent;
+}
+
+// ── 글/댓글 생성 ──
+async function genPost() {
+  const topic = document.getElementById('topic').value.trim();
+  if (!topic) return toast('주제를 입력해줘', 'err');
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> 생성 중...';
+  try {
+    const d = await api('/api/generate', { method: 'POST', body: { topic, tone, type: 'post' } });
+    if (d.error) throw new Error(d.error);
+    document.getElementById('postText').value = d.text;
+    toast('글 생성 완료!');
+  } catch(e) { toast(e.message, 'err'); }
+  btn.disabled = false; btn.innerHTML = '🪄 글 생성';
+}
+
+async function genComment() {
+  const topic = document.getElementById('topic').value.trim() || '일상';
+  try {
+    const d = await api('/api/generate', { method: 'POST', body: { topic, tone, type: 'comment' } });
+    if (d.error) throw new Error(d.error);
+    document.getElementById('commentText').value = d.text;
+    toast('댓글 생성 완료!');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ── 미디어 ──
+function switchMedia(tab) {
+  mediaMode = tab;
+  document.getElementById('tabPhoto').classList.toggle('active', tab === 'photo');
+  document.getElementById('tabVideo').classList.toggle('active', tab === 'video');
+  document.getElementById('mediaPhoto').style.display = tab === 'photo' ? '' : 'none';
+  document.getElementById('mediaVideo').style.display = tab === 'video' ? '' : 'none';
+}
+
+async function handleImg(input) {
+  for (const f of Array.from(input.files)) {
+    imgFiles.push(f);
+    const item = document.createElement('div');
+    item.className = 'preview-item'; item.dataset.idx = imgFiles.length - 1;
+    item.innerHTML = `<img src="${URL.createObjectURL(f)}"><button class="remove-img" onclick="removeImg(${imgFiles.length-1})">✕</button>`;
+    document.getElementById('previewList').appendChild(item);
+  }
+  const fd = new FormData();
+  Array.from(input.files).forEach(f => fd.append('images', f));
+  try {
+    const d = await fetch('/api/upload', { method: 'POST', headers: { 'x-session': session }, body: fd }).then(r => r.json());
+    if (d.urls) imgUrls.push(...d.urls);
+  } catch(e) {}
+}
+
+function removeImg(idx) {
+  imgFiles.splice(idx, 1); imgUrls.splice(idx, 1);
+  document.querySelector(`[data-idx="${idx}"]`)?.remove();
+}
+
+async function handleVid(input) {
+  const f = input.files[0]; if (!f) return;
+  document.getElementById('vidPreview').innerHTML = `<video src="${URL.createObjectURL(f)}" controls style="max-width:100%;border-radius:8px;margin-top:8px"></video>`;
+  const fd = new FormData(); fd.append('video', f);
+  try {
+    const d = await fetch('/api/upload-video', { method: 'POST', headers: { 'x-session': session }, body: fd }).then(r => r.json());
+    if (d.url) { vidUrl = d.url; toast('영상 업로드 완료!'); }
+  } catch(e) { toast('영상 업로드 실패', 'err'); }
+}
+
+// ── 발행 ──
+async function pubNow() {
+  const accId = document.getElementById('globalAcc').value;
+  if (!accId) return toast('계정을 선택해줘', 'err');
+  const text = document.getElementById('postText').value.trim();
+  if (!text) return toast('글을 작성해줘', 'err');
+  const commentText = document.getElementById('commentText').value.trim();
+  const body = { accountId: accId, text, commentText };
+  if (mediaMode === 'photo') body.imageUrls = imgUrls;
+  if (mediaMode === 'video') body.videoUrl = vidUrl;
+  try {
+    const d = await api('/api/publish', { method: 'POST', body });
+    if (d.error) throw new Error(d.error);
+    toast(d.commentId ? '✅ 글 + 댓글 발행 완료!' : '✅ 발행 완료!');
+    document.getElementById('postText').value = '';
+    document.getElementById('commentText').value = '';
+    imgUrls = []; imgFiles = []; vidUrl = '';
+    document.getElementById('previewList').innerHTML = '';
+    document.getElementById('vidPreview').innerHTML = '';
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function openSched(type) {
+  const textId = type === 'comment' ? 'commentText' : 'postText';
+  if (!document.getElementById(textId).value.trim()) return toast(type === 'comment' ? '댓글을 먼저 생성해줘' : '글을 먼저 작성해줘', 'err');
+  document.getElementById('schedType').value = type;
+  const min = new Date().toISOString().slice(0, 16);
+  const def = new Date(Date.now() + 3600000).toISOString().slice(0, 16);
+  const el = document.getElementById('schedTime');
+  el.min = min; el.value = def;
+  document.getElementById('schedModal').classList.add('open');
+}
+
+async function doSched() {
+  const accId = document.getElementById('globalAcc').value;
+  if (!accId) return toast('계정을 선택해줘', 'err');
+  const type = document.getElementById('schedType').value;
+  const text = document.getElementById(type === 'comment' ? 'commentText' : 'postText').value.trim();
+  const scheduledAt = document.getElementById('schedTime').value;
+  if (!scheduledAt) return toast('시간을 선택해줘', 'err');
+  const commentText = document.getElementById('commentText').value.trim();
+  const d = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text, type, commentText, imageUrls: type === 'post' ? imgUrls : [], scheduledAt: new Date(scheduledAt).toISOString() } });
+  if (d.error) return toast(d.error, 'err');
+  toast('📅 예약 등록 완료!'); closeModal('schedModal');
+}
+
+// ── 예약 목록 ──
+async function loadSched() {
+  const posts = await api('/api/schedule');
+  const el = document.getElementById('schedList');
+  if (!Array.isArray(posts) || !posts.length) { el.innerHTML = '<div style="color:var(--txt2);font-size:14px">예약된 글 없음</div>'; return; }
+  el.innerHTML = [...posts].reverse().map(p => `
+    <div class="list-item">
+      <div style="flex:1">
+        <div style="font-size:13px;color:var(--txt2);margin-bottom:4px">
+          ${p.accountName} · ${new Date(p.scheduledAt).toLocaleString('ko-KR')}
+          ${p.type === 'comment' ? '<span class="badge bb" style="margin-left:4px">댓글</span>' : ''}
+        </div>
+        <div style="font-size:14px;line-height:1.5;margin-bottom:8px">${p.text.slice(0, 100)}${p.text.length > 100 ? '...' : ''}</div>
+        ${p.status === 'pending' ? `
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="editSched('${p.id}')">✏️ 수정</button>
+          <button class="btn btn-sm btn-g" onclick="pubNowSched('${p.id}')">⚡ 즉시발행</button>
+          <button class="btn btn-sm btn-r" onclick="cancelSched('${p.id}')">취소</button>
+        </div>` : ''}
+      </div>
+      <span class="badge ${p.status === 'done' ? 'bg' : p.status === 'failed' ? 'br' : 'by'}">${p.status === 'done' ? '발행됨' : p.status === 'failed' ? '실패' : '대기중'}</span>
+    </div>`).join('');
+}
+
+async function cancelSched(id) { await api(`/api/schedule/${id}`, { method: 'DELETE' }); loadSched(); toast('예약 취소됨'); }
+
+async function pubNowSched(id) {
+  const d = await api(`/api/schedule/${id}/publish-now`, { method: 'POST' });
+  if (d.error) return toast(d.error, 'err');
+  toast('✅ 즉시 발행 완료!'); loadSched();
+}
+
+async function editSched(id) {
+  const posts = await api('/api/schedule');
+  const p = posts.find(x => x.id === id); if (!p) return;
+  const newText = prompt('글 내용 수정:', p.text); if (newText === null) return;
+  const newTime = prompt('발행 시간 (YYYY-MM-DDTHH:MM):', p.scheduledAt.slice(0, 16)); if (newTime === null) return;
+  if (new Date(newTime) <= new Date()) return toast('지나간 시간은 안 돼', 'err');
+  const d = await api(`/api/schedule/${id}`, { method: 'PUT', body: { text: newText, scheduledAt: new Date(newTime).toISOString() } });
+  if (d.error) return toast(d.error, 'err');
+  toast('수정됐어!'); loadSched();
+}
+
+// ── 계정 관리 ──
+async function loadAccs() {
+  const accs = await api('/api/accounts');
+  const sel = document.getElementById('globalAcc');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">계정 선택</option>' + (Array.isArray(accs) ? accs : []).map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+  if (cur) sel.value = cur;
+
+  const list = document.getElementById('accList');
+  if (!list) return;
+  if (!Array.isArray(accs) || !accs.length) { list.innerHTML = '<div style="color:var(--txt2);font-size:14px">등록된 계정 없음</div>'; return; }
+  list.innerHTML = accs.map(a => `
+    <div class="list-item">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">${a.name}</div>
+        <div style="font-size:12px;color:var(--txt2);margin-bottom:8px">${a.accessToken.slice(0, 24)}...</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${(a.topics || []).length ? a.topics.map(t => `<span class="tag-pill">${t}</span>`).join('') : '<span style="font-size:12px;color:var(--txt2)">주제 태그 없음</span>'}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <button class="btn btn-sm" onclick='openTagModal("${a.id}",${JSON.stringify(a.topics||[])})'>태그 편집</button>
+        <button class="btn btn-sm btn-r" onclick="delAcc('${a.id}')">삭제</button>
+      </div>
+    </div>`).join('');
+}
+
+async function addAcc() {
+  const name = document.getElementById('accName').value.trim();
+  const accessToken = document.getElementById('accToken').value.trim();
+  if (!name || !accessToken) return toast('이름과 토큰 입력해줘', 'err');
+  const d = await api('/api/accounts', { method: 'POST', body: { name, accessToken, topics: newTags } });
+  if (d.error) return toast(d.error, 'err');
+  document.getElementById('accName').value = '';
+  document.getElementById('accToken').value = '';
+  newTags = []; renderNewTags(); loadAccs(); toast('계정 추가됨!');
+}
+
+async function delAcc(id) {
+  if (!confirm('정말 삭제할까?')) return;
+  await api(`/api/accounts/${id}`, { method: 'DELETE' }); loadAccs(); toast('계정 삭제됨');
+}
+
+function addTag() {
+  const input = document.getElementById('tagInput');
+  const val = input.value.trim();
+  if (!val || newTags.includes(val)) { input.value = ''; return; }
+  newTags.push(val); renderNewTags(); input.value = '';
+}
+function renderNewTags() {
+  document.getElementById('tagList').innerHTML = newTags.map((t, i) => `<span class="tag-pill">${t}<button onclick="newTags.splice(${i},1);renderNewTags()">✕</button></span>`).join('');
+}
+
+function openTagModal(id, tags) {
+  document.getElementById('editAccId').value = id;
+  editTags = Array.isArray(tags) ? [...tags] : [];
+  renderEditTags();
+  document.getElementById('tagModal').classList.add('open');
+}
+function addEditTag() {
+  const input = document.getElementById('editTagInput');
+  const val = input.value.trim();
+  if (!val || editTags.includes(val)) { input.value = ''; return; }
+  editTags.push(val); renderEditTags(); input.value = '';
+}
+function renderEditTags() {
+  document.getElementById('editTagList').innerHTML = editTags.map((t, i) => `<span class="tag-pill">${t}<button onclick="editTags.splice(${i},1);renderEditTags()">✕</button></span>`).join('');
+}
+async function saveEditTags() {
+  const id = document.getElementById('editAccId').value;
+  await api(`/api/accounts/${id}/topics`, { method: 'PUT', body: { topics: editTags } });
+  closeModal('tagModal'); loadAccs(); onAccChange(); toast('태그 저장됨!');
+}
+
+// ── 관리자 ──
+async function loadAdmin() {
+  const invites = await api('/api/invites');
+  const iEl = document.getElementById('inviteList');
+  iEl.innerHTML = Array.isArray(invites) && invites.length ? invites.map(c => `
+    <div class="list-item">
+      <div>
+        <div style="font-family:monospace;font-size:16px;font-weight:700;letter-spacing:2px;color:var(--green)">${c.code}</div>
+        <div style="font-size:12px;color:var(--txt2);margin-top:3px">${c.used ? `사용됨 (${c.usedBy})` : '미사용'} · ${new Date(c.createdAt).toLocaleDateString('ko-KR')}</div>
+      </div>
+      ${!c.used ? `<button class="btn btn-sm btn-r" onclick="delInvite('${c.code}')">삭제</button>` : `<span class="badge bg">사용됨</span>`}
+    </div>`).join('') : '<div style="color:var(--txt2);font-size:14px">초대코드 없음</div>';
+
+  const users = await api('/api/users');
+  const uEl = document.getElementById('userList');
+  uEl.innerHTML = Array.isArray(users) ? users.map(u => {
+    const sBadge = u.status === 'approved' ? '<span class="badge bg">사용중</span>' : u.status === 'suspended' ? '<span class="badge br">정지</span>' : '<span class="badge by">승인대기</span>';
+    return `<div class="list-item">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="font-weight:600;font-size:14px">${u.name || '-'}</span>
+          <span style="color:var(--txt2);font-size:13px">(${u.nickname})</span>
+          <span class="badge ${u.role === 'admin' ? 'bb' : 'by'}">${u.role === 'admin' ? '관리자' : '멤버'}</span>
+          ${sBadge}
+        </div>
+        <div style="font-size:12px;color:var(--txt2)">${new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입</div>
+      </div>
+      ${u.role !== 'admin' ? `
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        ${u.status !== 'approved' ? `<button class="btn btn-sm btn-g" onclick="setStatus('${u.id}','approved')">승인</button>` : ''}
+        ${u.status === 'approved' ? `<button class="btn btn-sm btn-r" onclick="setStatus('${u.id}','suspended')">정지</button>` : ''}
+        ${u.status === 'suspended' ? `<button class="btn btn-sm" onclick="setStatus('${u.id}','approved')">활성화</button>` : ''}
+        <button class="btn btn-sm btn-r" onclick="delUser('${u.id}')">삭제</button>
+      </div>` : ''}
+    </div>`;
+  }).join('') : '';
+}
+
+async function makeInvite() {
+  const d = await api('/api/invites', { method: 'POST' });
+  if (d.error) return toast(d.error, 'err');
+  toast('초대코드 생성: ' + d.code); loadAdmin();
+}
+async function delInvite(code) { await api(`/api/invites/${code}`, { method: 'DELETE' }); loadAdmin(); toast('삭제됨'); }
+async function setStatus(id, status) {
+  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status } });
+  if (d.error) return toast(d.error, 'err');
+  toast(status === 'approved' ? '승인됐어!' : status === 'suspended' ? '정지됐어!' : '변경됐어!'); loadAdmin();
+}
+async function delUser(id) {
+  if (!confirm('정말 삭제할까?')) return;
+  await api(`/api/users/${id}`, { method: 'DELETE' }); loadAdmin(); toast('삭제됨');
+}
+
+function copy(id) { navigator.clipboard.writeText(document.getElementById(id).value).then(() => toast('복사됨!')); }
+
+init();
 </script>
 </body>
 </html>
