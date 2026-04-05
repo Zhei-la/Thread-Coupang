@@ -212,8 +212,8 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div class="chips" id="topicTags" style="margin-bottom:10px">
           <span style="font-size:13px;color:var(--txt2)">계정을 선택하면 주제 태그가 표시돼요</span>
         </div>
-        <label class="label">직접 입력</label>
-        <div style="margin-bottom:12px"><input id="topic" placeholder="예: 요즘 물가 미침, AI 최신 소식" /></div>
+        <label class="label">제품명 / 주제 입력 <span style="font-size:11px;color:var(--txt2)">제품명을 적으면 제품에 어울리는 후킹 글을 작성해줘요 (글에 제품명은 넣지 않음)</span></label>
+        <div style="margin-bottom:12px"><input id="topic" placeholder="예: 닭강정, 강아지 간식, 공기청정기" /></div>
         <label class="label">말투 (반말 고정)</label>
         <div class="chips" id="toneChips">
           <div class="chip active" onclick="pickTone(this)">리스트형</div>
@@ -549,9 +549,11 @@ function pickTone(el) {
   document.querySelectorAll('#toneChips .chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
   tone = el.textContent;
-  // 쿠팡 선택시 링크카드 표시
+  // 쿠팡 선택시 링크카드 + 적용 버튼 표시
   const card = document.getElementById('coupangLinkCard');
+  const applyBtn = document.getElementById('coupangApplyBtn');
   if (card) card.style.display = tone === '쿠팡' ? 'block' : 'none';
+  if (applyBtn) applyBtn.style.display = tone === '쿠팡' ? 'inline-flex' : 'none';
 }
 
 // ── 글/댓글 생성 ──
