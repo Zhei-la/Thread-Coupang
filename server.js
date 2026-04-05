@@ -258,7 +258,7 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'GROQ_API_KEY 없음' });
 
-  const imgContext = imageDesc ? `\n[참고할 이미지/영상 내용]: ${imageDesc}` : '';
+  const imgContext = imageDesc ? `\n[이미지 분석 결과 - 이 상품/내용으로 글 작성]: ${imageDesc}` : '';
 
   const tonePrompts = {
     '리스트형': `너는 리스트형 SNS 콘텐츠 작성자다.
@@ -319,39 +319,22 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
 생각보다 너무 괜찮았음
 이래서 사람들이 찾는 건가 싶더라`,
 
-    '쿠팡': `너는 쿠팡 구매 유도형 SNS 콘텐츠 작성자다.
+    '쿠팡': `쿠팡 구매 유도 SNS 글. 무조건 짧게. 1~3줄이면 충분.
 
-[핵심 목표]
-짧고 강하게. 읽는 순간 사고 싶게 만들어야 한다.
-
-[절대 규칙]
-- 글은 최대 3~5줄. 짧으면 1~2줄도 OK
-- 첫 문장에서 바로 어그로 (설명 금지)
-- 실제 경험처럼 써야 함 (광고 느낌 절대 금지)
-- "가성비", "추천", "좋은 제품" 같은 뻔한 말 금지
-- 이모지 금지
-- 반말
-- 줄바꿈 활용해서 가독성 좋게
-
-[상황별 예시 — 이 느낌으로 작성]
-음식/야식: 남편이 야식 만들어 달래서 만들어줬더니 맨날 이것만 찾는다 골치아프네
-디저트: 지인이 먹고있는거 뺏어 먹었다가 두박스나 시킴 진짜 개맛있다
-강아지 용품: 우리 강아지 산책시킬때 이거 안하면 산책 안나감
-강아지 간식: 사료에 이거 하나 넣으면 완뚝임
-아기 음식/용품: 우리 딸래미 밥먹을때 이거 없으면 절대 밥 안먹음
-아기 용품: 이거 하나면 애기 보는거 개쉬움
+[예시 — 이 길이와 느낌으로]
+음식: 남편이 야식 만들어 달래서 만들어줬더니 맨날 이것만 찾는다 골치아프네
+디저트: 지인 것 뺏어먹었다가 두박스 시킴 진짜 개맛있다
+강아지: 사료에 이거 하나 넣으면 완뚝임
+아기: 우리 딸래미 이거 없으면 밥 절대 안먹음
 생활용품: 이거 사고 나서 삶의 질이 달라졌네
-기타: 주제에 맞는 현실적인 상황을 직접 만들어서 작성
 
-[출력 구조]
-1줄: 어그로 / 공감 유발 상황
-1~2줄: 자연스럽게 장점 노출 (설명 말고 경험으로)
-1줄: 행동 유도 (자연스럽게)
-
-[주의]
-- 예시 문장 그대로 복붙 금지
-- 매번 다른 패턴으로 작성
-- 주제에 맞는 상황을 스스로 창작할 것`
+[규칙]
+- 1~3줄 엄수. 절대 길게 쓰지 말 것
+- 첫 줄에 바로 어그로
+- 경험담처럼 (광고 절대 금지)
+- 뻔한 말 금지: 가성비, 추천, 좋은제품
+- 이모지 금지, 반말
+- 예시 복붙 금지, 주제에 맞게 새로 창작`
   };
 
   const toneInstruction = tonePrompts[tone] || tonePrompts['일상'];
@@ -405,30 +388,39 @@ app.post('/api/analyze-image', auth, async (req, res) => {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'GROQ_API_KEY 없음' });
   if (!imageUrl) return res.status(400).json({ error: 'imageUrl 필요' });
-  try {
-    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: 'llama-4-scout-17b-16e-instruct',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: imageUrl } },
-            { type: 'text', text: '이 이미지를 한국어로 간단히 설명해줘. SNS 글 작성에 참고할 수 있도록 주요 내용, 분위기, 특징을 2~3문장으로.' }
-          ]
-        }],
-        max_tokens: 200
-      })
-    });
-    const data = await r.json();
-    if (data.error) throw new Error(data.error.message);
-    const desc = data.choices?.[0]?.message?.content || '';
-    res.json({ desc });
-  } catch(e) {
-    console.log('이미지 분석 실패:', e.message);
-    res.json({ desc: '' }); // 실패해도 글 생성은 진행
+
+  // Groq에서 지원하는 vision 모델 순서대로 시도
+  const visionModels = [
+    'meta-llama/llama-4-scout-17b-16e-instruct',
+    'meta-llama/llama-4-scout-17b-16e-instruct',
+    'llava-v1.5-7b-4096-preview'
+  ];
+
+  for (const model of visionModels) {
+    try {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image_url', image_url: { url: imageUrl } },
+              { type: 'text', text: '이 이미지에서 보이는 것을 한국어로 짧게 설명해줘. 상품이면 상품명과 특징, 음식이면 종류와 느낌, 동물이면 종류와 행동. 1~2문장으로 핵심만.' }
+            ]
+          }],
+          max_tokens: 150
+        })
+      });
+      const data = await r.json();
+      if (data.error) { console.log(model, '실패:', data.error.message); continue; }
+      const desc = data.choices?.[0]?.message?.content || '';
+      console.log('이미지 분석 성공:', model, desc);
+      return res.json({ desc });
+    } catch(e) { console.log(model, '에러:', e.message); }
   }
+  res.json({ desc: '' });
 });
 
 // ══════════════════════════════════
@@ -565,12 +557,16 @@ app.post('/api/schedule/:id/publish-now', auth, async (req, res) => {
 
 // 예약 발행 실행 (1분마다)
 cron.schedule('* * * * *', async () => {
-  if (!fs.existsSync('./data')) return;
-  const userDirs = fs.readdirSync('./data');
+  const dataDir = `${DATA_ROOT}/users`;
+  if (!fs.existsSync(dataDir)) return;
+  const userDirs = fs.readdirSync(dataDir);
+  console.log(`[CRON] 실행 - 유저 ${userDirs.length}명 확인`);
   for (const userId of userDirs) {
-    const posts = getScheduled(userId);
+    let posts = getScheduled(userId);
     const now = new Date();
     const pending = posts.filter(p => p.status === 'pending' && new Date(p.scheduledAt) <= now);
+    if (!pending.length) continue;
+    console.log(`[CRON] 유저 ${userId} - 발행 대기 ${pending.length}건`);
     for (const post of pending) {
       const accs = getAccounts(userId);
       const account = accs.find(a => a.id === post.accountId);
@@ -586,9 +582,15 @@ cron.schedule('* * * * *', async () => {
           }
         }
         post.status = 'done';
+        console.log(`[CRON] 발행 성공:`, post.id);
       } catch(e) { post.status = 'failed'; post.error = e.message; }
     }
-    if (pending.length > 0) saveScheduled(userId, posts);
+    if (pending.length > 0) {
+      // done/failed 항목 중 1시간 지난 것 자동 삭제
+      const cutoff = Date.now() - 60 * 60 * 1000;
+      posts = posts.filter(p => p.status === 'pending' || new Date(p.scheduledAt).getTime() > cutoff);
+      saveScheduled(userId, posts);
+    }
   }
 });
 
