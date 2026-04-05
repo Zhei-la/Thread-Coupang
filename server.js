@@ -259,14 +259,38 @@ async function publishToThreads(accessToken, text, imageUrls = [], videoUrl = ''
   return pubData.id;
 }
 
+// 댓글 달기 함수
+async function replyToThread(accessToken, postId, commentText) {
+  const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ media_type: 'TEXT', text: commentText, reply_to_id: postId, access_token: accessToken })
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  const containerId = d.id;
+  await new Promise(r => setTimeout(r, 2000));
+  const pub = await fetch(`https://graph.threads.net/v1.0/me/threads_publish`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: containerId, access_token: accessToken })
+  });
+  const pubData = await pub.json();
+  if (pubData.error) throw new Error(pubData.error.message);
+  return pubData.id;
+}
+
 app.post('/api/publish', auth, async (req, res) => {
-  const { accountId, text, imageUrls, videoUrl } = req.body;
+  const { accountId, text, imageUrls, videoUrl, commentText } = req.body;
   const accs = getAccounts(req.userId);
   const account = accs.find(a => a.id === accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
   try {
     const postId = await publishToThreads(account.accessToken, text, imageUrls || [], videoUrl || '');
-    res.json({ ok: true, postId });
+    let commentId = null;
+    if (commentText && commentText.trim()) {
+      await new Promise(r => setTimeout(r, 3000)); // 글 발행 후 3초 대기
+      commentId = await replyToThread(account.accessToken, postId, commentText.trim());
+    }
+    res.json({ ok: true, postId, commentId });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -275,12 +299,12 @@ app.post('/api/publish', auth, async (req, res) => {
 // ══════════════════════════════════
 
 app.post('/api/schedule', auth, (req, res) => {
-  const { accountId, text, imageUrls, scheduledAt } = req.body;
+  const { accountId, text, imageUrls, scheduledAt, commentText } = req.body;
   const accs = getAccounts(req.userId);
   const account = accs.find(a => a.id === accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
   const posts = getScheduled(req.userId);
-  const post = { id: Date.now().toString(), accountId, accountName: account.name, text, imageUrls: imageUrls || [], scheduledAt, status: 'pending', createdAt: new Date().toISOString() };
+  const post = { id: Date.now().toString(), accountId, accountName: account.name, text, type: req.body.type || 'post', imageUrls: imageUrls || [], commentText: commentText || '', scheduledAt, status: 'pending', createdAt: new Date().toISOString() };
   posts.push(post);
   saveScheduled(req.userId, posts);
   res.json(post);
@@ -295,6 +319,40 @@ app.delete('/api/schedule/:id', auth, (req, res) => {
   res.json({ ok: true });
 });
 
+
+// 예약 수정 (텍스트, 시간 변경)
+app.put('/api/schedule/:id', auth, (req, res) => {
+  const posts = getScheduled(req.userId);
+  const post = posts.find(p => p.id === req.params.id);
+  if (!post) return res.status(404).json({ error: '없음' });
+  if (post.status !== 'pending') return res.status(400).json({ error: '이미 발행된 글은 수정 불가' });
+  if (req.body.text) post.text = req.body.text;
+  if (req.body.scheduledAt) post.scheduledAt = req.body.scheduledAt;
+  saveScheduled(req.userId, posts);
+  res.json(post);
+});
+
+// 예약 즉시 발행
+app.post('/api/schedule/:id/publish-now', auth, async (req, res) => {
+  const posts = getScheduled(req.userId);
+  const post = posts.find(p => p.id === req.params.id);
+  if (!post) return res.status(404).json({ error: '없음' });
+  if (post.status !== 'pending') return res.status(400).json({ error: '이미 발행됨' });
+  const accs = getAccounts(req.userId);
+  const account = accs.find(a => a.id === post.accountId);
+  if (!account) return res.status(404).json({ error: '계정 없음' });
+  try {
+    await publishToThreads(account.accessToken, post.text, post.imageUrls || []);
+    post.status = 'done';
+    saveScheduled(req.userId, posts);
+    res.json({ ok: true });
+  } catch(e) {
+    post.status = 'failed'; post.error = e.message;
+    saveScheduled(req.userId, posts);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // 예약 발행 실행 (1분마다)
 cron.schedule('* * * * *', async () => {
   if (!fs.existsSync('./data')) return;
@@ -307,8 +365,18 @@ cron.schedule('* * * * *', async () => {
       const accs = getAccounts(userId);
       const account = accs.find(a => a.id === post.accountId);
       if (!account) { post.status = 'failed'; continue; }
-      try { await publishToThreads(account.accessToken, post.text, post.imageUrls); post.status = 'done'; }
-      catch(e) { post.status = 'failed'; post.error = e.message; }
+      try {
+        if (post.type === 'comment' && post.replyToId) {
+          await replyToThread(account.accessToken, post.replyToId, post.text);
+        } else {
+          const postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || []);
+          if (post.commentText) {
+            await new Promise(r => setTimeout(r, 3000));
+            await replyToThread(account.accessToken, postId, post.commentText);
+          }
+        }
+        post.status = 'done';
+      } catch(e) { post.status = 'failed'; post.error = e.message; }
     }
     if (pending.length > 0) saveScheduled(userId, posts);
   }
@@ -323,7 +391,7 @@ app.get('/api/insights/:accountId', auth, async (req, res) => {
   const account = accs.find(a => a.id === req.params.accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
   try {
-    const r = await fetch(`https://graph.threads.net/v1.0/me?fields=id,username,followers_count&access_token=${account.accessToken}`);
+    const r = await fetch(`https://graph.threads.net/v1.0/me?fields=id,username,followers_count,threads_profile_audience_gender_age,threads_biography&access_token=${account.accessToken}`);
     res.json(await r.json());
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
