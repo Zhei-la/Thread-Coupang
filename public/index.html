@@ -738,20 +738,19 @@ async function loadSched() {
 async function cancelSched(id) { await api(`/api/schedule/${id}`, { method: 'DELETE' }); loadSched(); toast('삭제됨'); }
 
 async function retryFailed(id) {
-  // 상태를 pending으로 되돌리고 즉시 발행
-  const posts = await api('/api/schedule');
-  const p = posts.find(x => x.id === id);
-  if (!p) return;
-  // 즉시 발행 시도
-  const d = await api(`/api/schedule/${id}/publish-now`, { method: 'POST' });
-  if (d.error) return toast('재발행 실패: ' + d.error, 'err');
-  toast('✅ 재발행 완료!'); loadSched();
+  try {
+    const d = await api(`/api/schedule/${id}/publish-now`, { method: 'POST' });
+    if (d.error) return toast('재발행 실패: ' + d.error, 'err');
+    toast('✅ 재발행 완료!'); loadSched();
+  } catch(e) { toast('재발행 실패: ' + e.message, 'err'); }
 }
 
 async function pubNowSched(id) {
-  const d = await api(`/api/schedule/${id}/publish-now`, { method: 'POST' });
-  if (d.error) return toast(d.error, 'err');
-  toast('✅ 즉시 발행 완료!'); loadSched();
+  try {
+    const d = await api(`/api/schedule/${id}/publish-now`, { method: 'POST' });
+    if (d.error) return toast(d.error, 'err');
+    toast('✅ 즉시 발행 완료!'); loadSched();
+  } catch(e) { toast('발행 실패: ' + e.message, 'err'); }
 }
 
 async function editSched(id) {
