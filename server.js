@@ -205,16 +205,26 @@ app.put('/api/accounts/:id/topics', auth, (req, res) => {
 // ══════════════════════════════════
 
 app.post('/api/generate', auth, async (req, res) => {
-  const { topic, tone, type } = req.body;
+  const { topic, tone, type, imageDesc } = req.body;
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'GROQ_API_KEY 없음' });
 
-  const toneMap = { '일상': '친구한테 말하듯 편하고 자연스럽게', '정보': '유용한 정보를 쉽게 설명하듯', '유머': '재치있고 웃긴 느낌으로', '감성': '감성적이고 공감되는 느낌으로', '도발': '자극적이고 관심끄는 느낌으로' };
+  const toneMap = {
+    '일상': '친구한테 카톡 보내듯 편하고 자연스럽게',
+    '정보': '유용한 정보를 쉽고 친근하게',
+    '유머': '재치있고 웃기게',
+    '감성': '감성적이고 공감되게',
+    '도발': '자극적이고 관심끄는 느낌으로',
+    '후킹글': '쿠팡에서 구매하고 싶게 만드는 강력한 어그로성 후킹 카피라이팅 스타일로. 제품의 혜택과 urgency를 강조하고 클릭하고 싶게 만들어'
+  };
   const toneDesc = toneMap[tone] || '자연스럽게';
+  const imgContext = imageDesc ? `\n참고 이미지/영상 내용: ${imageDesc}` : '';
+
+  const systemMsg = `당신은 한국 SNS 콘텐츠 작가입니다. 반드시 한국어로만 작성하세요. 영어나 다른 언어 절대 금지. 이모지 절대 사용 금지.`;
 
   const prompt = type === 'comment'
-    ? `스레드(Threads SNS)에 달 댓글을 1개만 작성해줘.\n주제: ${topic}\n조건:\n- 반드시 반말로\n- ${toneDesc}\n- 이모지 절대 사용 금지\n- 형식적 표현 금지\n- 존댓말 절대 금지\n- 짧고 자연스럽게 (1~2문장)\n- 댓글 텍스트만 출력`
-    : `스레드(Threads SNS)에 올릴 게시글을 작성해줘.\n주제: ${topic}\n조건:\n- 반드시 반말로\n- ${toneDesc}\n- 이모지 절대 사용 금지\n- 형식적 표현 금지\n- 존댓말 절대 금지\n- SNS 자연스러운 구어체\n- 500자 이내\n- 게시글 텍스트만 출력`;
+    ? `스레드(Threads SNS) 댓글 1개만 작성해줘.${imgContext}\n주제: ${topic}\n\n규칙:\n- 반드시 한국어로만\n- 반말로\n- ${toneDesc}\n- 이모지 절대 금지\n- 존댓말 금지\n- 1~2문장\n- 댓글 텍스트만 출력 (설명 없이)`
+    : `스레드(Threads SNS) 게시글을 작성해줘.${imgContext}\n주제: ${topic}\n\n규칙:\n- 반드시 한국어로만 (영어 절대 금지)\n- 반말로\n- ${toneDesc}\n- 이모지 절대 금지\n- 존댓말 금지\n- 스레드 특성에 맞게 짧은 문장들로 줄바꿈 활용\n- 문장과 문장 사이 빈 줄 하나 넣기\n- 전체 300~500자\n- 게시글 텍스트만 출력 (설명 없이)`;
 
   try {
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -222,17 +232,51 @@ app.post('/api/generate', auth, async (req, res) => {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.9,
-        max_tokens: 500
+        messages: [
+          { role: 'system', content: systemMsg },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.85,
+        max_tokens: 600
       })
     });
     const data = await r.json();
-    console.log('Groq 응답 상태:', r.status);
     if (data.error) throw new Error(data.error.message);
-    const text = data.choices?.[0]?.message?.content || '';
-    res.json({ text: text.trim() });
+    const text = (data.choices?.[0]?.message?.content || '').trim();
+    res.json({ text });
   } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// 이미지 분석 (Groq vision)
+app.post('/api/analyze-image', auth, async (req, res) => {
+  const { imageUrl } = req.body;
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'GROQ_API_KEY 없음' });
+  if (!imageUrl) return res.status(400).json({ error: 'imageUrl 필요' });
+  try {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'llama-4-scout-17b-16e-instruct',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: imageUrl } },
+            { type: 'text', text: '이 이미지를 한국어로 간단히 설명해줘. SNS 글 작성에 참고할 수 있도록 주요 내용, 분위기, 특징을 2~3문장으로.' }
+          ]
+        }],
+        max_tokens: 200
+      })
+    });
+    const data = await r.json();
+    if (data.error) throw new Error(data.error.message);
+    const desc = data.choices?.[0]?.message?.content || '';
+    res.json({ desc });
+  } catch(e) {
+    console.log('이미지 분석 실패:', e.message);
+    res.json({ desc: '' }); // 실패해도 글 생성은 진행
+  }
 });
 
 // ══════════════════════════════════
