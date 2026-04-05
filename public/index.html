@@ -248,19 +248,10 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       </div>
 
       <div class="card" id="coupangLinkCard" style="display:none">
-        <h2>🛒 쿠팡 고정댓글 생성</h2>
-        <label class="label">쿠팡 링크 입력 <span style="font-size:11px;color:var(--txt2)">(여러 개면 줄바꿈으로 구분)</span></label>
-        <textarea id="coupangLinks" placeholder="https://coupang.com/..." style="min-height:80px"></textarea>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-sm btn-p" onclick="genCoupangComment()">🪄 댓글에 적용</button>
-        </div>
-        <div style="margin-top:10px;display:none" id="coupangCommentWrap">
-          <label class="label">생성된 고정댓글</label>
-          <textarea id="coupangCommentText" style="min-height:120px" readonly></textarea>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="btn btn-sm btn-g" onclick="useCoupangComment()">댓글란에 적용</button>
-          </div>
-        </div>
+        <h2>🛒 쿠팡 링크</h2>
+        <label class="label">쿠팡 링크 입력 <span style="font-size:11px;color:var(--txt2)">링크 입력 후 댓글 적용 버튼 클릭</span></label>
+        <input id="coupangLinks" placeholder="https://coupang.com/vp/products/..." style="margin-bottom:10px" />
+        <button class="btn btn-p btn-sm" onclick="applyCoupangComment()">✅ 댓글에 적용</button>
       </div>
 
       <div class="card">
