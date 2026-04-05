@@ -216,12 +216,13 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div style="margin-bottom:12px"><input id="topic" placeholder="예: 요즘 물가 미침, AI 최신 소식" /></div>
         <label class="label">말투 (반말 고정)</label>
         <div class="chips" id="toneChips">
-          <div class="chip active" onclick="pickTone(this)">일상</div>
-          <div class="chip" onclick="pickTone(this)">정보</div>
-          <div class="chip" onclick="pickTone(this)">유머</div>
-          <div class="chip" onclick="pickTone(this)">감성</div>
-          <div class="chip" onclick="pickTone(this)">도발</div>
-          <div class="chip" onclick="pickTone(this)">후킹글</div>
+          <div class="chip active" onclick="pickTone(this)">리스트형</div>
+          <div class="chip" onclick="pickTone(this)">정보성</div>
+          <div class="chip" onclick="pickTone(this)">리뷰형</div>
+          <div class="chip" onclick="pickTone(this)">일상</div>
+          <div class="chip" onclick="pickTone(this)">공감형</div>
+          <div class="chip" onclick="pickTone(this)">스토리형</div>
+          <div class="chip" onclick="pickTone(this)">쿠팡</div>
         </div>
         <button class="btn btn-p" onclick="genPost()" id="genBtn">🪄 글 생성</button>
       </div>
@@ -332,7 +333,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 <script>
 // ── 상태 ──
 let session = localStorage.getItem('sess') || '';
-let tone = '일상';
+let tone = '리스트형';
 let mediaMode = 'photo';
 let imgUrls = [], imgFiles = [], vidUrl = '';
 let newTags = [], editTags = [];
