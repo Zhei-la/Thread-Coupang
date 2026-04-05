@@ -376,16 +376,7 @@ function switchAuthTab(tab, el) {
   document.getElementById('panel-'+tab).classList.add('active');
 }
 
-async function checkSetup() {
-  // 유저가 0명이면 최초 설정 화면
-  const r = await fetch('/api/auth/me', {headers:{'x-session': session}});
-  if (r.status === 401) {
-    // 세션 없음 - 로그인 화면
-    showAuth(); return;
-  }
-  const d = await r.json();
-  enterApp(d);
-}
+// checkSetup은 아래에 정의됨
 
 async function doLogin() {
   const nickname = document.getElementById('loginNick').value.trim();
@@ -792,6 +783,7 @@ async function checkSetup() {
   const d = await r.json();
   enterApp(d);
 }
+checkSetup();
 </script>
 </body>
 </html>
