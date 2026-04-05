@@ -698,9 +698,12 @@ app.put('/api/schedule/:id', auth, (req, res) => {
   const posts = getScheduled(req.userId);
   const post = posts.find(p => p.id === req.params.id);
   if (!post) return res.status(404).json({ error: '없음' });
-  if (post.status !== 'pending') return res.status(400).json({ error: '이미 발행된 글은 수정 불가' });
+  if (post.status === 'done') return res.status(400).json({ error: '이미 발행된 글은 수정 불가' });
+  post.status = 'pending'; // 실패 상태도 수정 가능
   if (req.body.text) post.text = req.body.text;
   if (req.body.scheduledAt) post.scheduledAt = req.body.scheduledAt;
+  if (req.body.imageUrls !== undefined) post.imageUrls = req.body.imageUrls;
+  if (req.body.commentText !== undefined) post.commentText = req.body.commentText;
   saveScheduled(req.userId, posts);
   res.json(post);
 });
@@ -716,7 +719,17 @@ app.post('/api/schedule/:id/publish-now', auth, async (req, res) => {
   const account = accs.find(a => a.id === post.accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
   try {
-    await publishToThreads(account.accessToken, post.text, post.imageUrls || []);
+    let postId;
+    try {
+      postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrl || '');
+    } catch(imgErr) {
+      console.log('[PUBLISH-NOW] 이미지 실패, 텍스트만 재시도:', imgErr.message);
+      postId = await publishToThreads(account.accessToken, post.text, [], '');
+    }
+    if (post.commentText && post.commentText.trim()) {
+      await new Promise(r => setTimeout(r, 3000));
+      await replyToThread(account.accessToken, postId, post.commentText.trim());
+    }
     post.status = 'done';
     saveScheduled(req.userId, posts);
     res.json({ ok: true });
@@ -747,11 +760,21 @@ cron.schedule('* * * * *', async () => {
         // 댓글 전용 예약
         if (post.type === 'comment') {
           if (post.replyToId) {
+            // 특정 글에 댓글
             await replyToThread(account.accessToken, post.replyToId, post.text);
+          } else {
+            // replyToId 없으면 일반 글로 발행
+            await publishToThreads(account.accessToken, post.text, [], '');
           }
         } else {
-          // 글 발행
-          const postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrl || '');
+          // 글 발행 (이미지는 URL 만료 가능성 있어서 실패하면 텍스트만 발행)
+          let postId;
+          try {
+            postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrl || '');
+          } catch(imgErr) {
+            console.log(`[CRON] 이미지 발행 실패, 텍스트만 재시도:`, imgErr.message);
+            postId = await publishToThreads(account.accessToken, post.text, [], '');
+          }
           // 댓글이 있으면 글 발행 후 댓글 달기
           if (post.commentText && post.commentText.trim()) {
             await new Promise(r => setTimeout(r, 3000));
@@ -760,7 +783,7 @@ cron.schedule('* * * * *', async () => {
         }
         post.status = 'done';
         changed = true;
-        console.log(`[CRON] 발행 성공:`, post.id);
+        console.log(`[CRON] 발행 성공:`, post.id, '댓글:', post.commentText ? '있음' : '없음');
       } catch(e) {
         post.status = 'failed';
         post.error = e.message;
@@ -835,10 +858,16 @@ app.post('/api/upload', auth, upload.array('images', 10), async (req, res) => {
       form.append('image', file.buffer.toString('base64'));
       const r = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: form });
       const d = await r.json();
-      if (d.data?.url) urls.push(d.data.url);
+      console.log('[UPLOAD] ImgBB 응답:', JSON.stringify(d?.data?.url), d?.data?.display_url);
+      // Threads는 직접 접근 가능한 URL이어야 함 - display_url 사용
+      const imageUrl = d.data?.display_url || d.data?.url;
+      if (imageUrl) urls.push(imageUrl);
     }
     res.json({ urls });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) {
+    console.error('[UPLOAD] 에러:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 const videoUpload = multer({ storage: multer.diskStorage({
