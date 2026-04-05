@@ -27,7 +27,8 @@ function saveJSON(file, data) {
 // ── 데이터 저장소 ──
 let users       = loadJSON(`${DATA_ROOT}/users.json`, []);
 let inviteCodes = loadJSON(`${DATA_ROOT}/invite_codes.json`, []);
-let sessions    = {};
+// sessions는 loadSessions() 이후 아래에서 초기화됨
+let sessions    = {}; // 임시, 아래 init에서 덮어씀
 
 function userDir(userId) {
   const dir = `${DATA_ROOT}/users/${userId}`;
@@ -42,29 +43,51 @@ function saveScheduled(userId, data) { saveJSON(`${userDir(userId)}/scheduled.js
 // ── 비밀번호 해시 ──
 function hashPw(pw) { return crypto.createHash('sha256').update(pw + 'threads_salt_2025').digest('hex'); }
 
-// ── 세션 저장소 (만료시간 포함) ──
-// sessions: { token: { userId, expiresAt } }
+// ── 세션 저장소 (파일 영속 + 만료시간) ──
 const SESSION_TTL = 3 * 24 * 60 * 60 * 1000; // 3일
+const SESSIONS_FILE = `${DATA_ROOT}/sessions.json`;
+
+// 파일에서 세션 복원
+function loadSessions() {
+  try {
+    if (!fs.existsSync(SESSIONS_FILE)) return {};
+    const data = JSON.parse(fs.readFileSync(SESSIONS_FILE));
+    // 만료된 세션 제거 후 반환
+    const now = Date.now();
+    const valid = {};
+    for (const [token, s] of Object.entries(data)) {
+      if (s.expiresAt > now) valid[token] = s;
+    }
+    return valid;
+  } catch(e) { return {}; }
+}
+
+function saveSessions() {
+  try { fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2)); } catch(e) {}
+}
 
 function createSession(userId) {
   const token = crypto.randomUUID();
   sessions[token] = { userId, expiresAt: Date.now() + SESSION_TTL };
+  saveSessions();
   return token;
 }
 
 function getSession(token) {
   const s = sessions[token];
   if (!s) return null;
-  if (Date.now() > s.expiresAt) { delete sessions[token]; return null; }
+  if (Date.now() > s.expiresAt) { delete sessions[token]; saveSessions(); return null; }
   return s;
 }
 
 // 만료 세션 정리 (1시간마다)
 setInterval(() => {
   const now = Date.now();
+  let changed = false;
   for (const [token, s] of Object.entries(sessions)) {
-    if (now > s.expiresAt) delete sessions[token];
+    if (now > s.expiresAt) { delete sessions[token]; changed = true; }
   }
+  if (changed) saveSessions();
 }, 60 * 60 * 1000);
 
 // ── Rate Limiting ──
@@ -177,6 +200,7 @@ app.post('/api/auth/login', rateLimit(10, 60000), (req, res) => {
 app.post('/api/auth/logout', auth, (req, res) => {
   const token = req.headers['x-session'];
   delete sessions[token];
+  saveSessions();
   res.json({ ok: true });
 });
 
@@ -683,6 +707,10 @@ app.post('/api/upload-video', auth, videoUpload.single('video'), (req, res) => {
   const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT||3000}`;
   res.json({ url: `${baseUrl}/uploads/${req.file.filename}` });
 });
+
+// 서버 시작 시 세션 파일 로드
+sessions = loadSessions();
+console.log(`세션 복원: ${Object.keys(sessions).length}개`);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`서버 실행중: ${PORT}`));
