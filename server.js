@@ -241,7 +241,7 @@ app.delete('/api/invites/:code', adminAuth, (req, res) => {
 
 // 유저 목록 (관리자)
 app.get('/api/users', adminAuth, (req, res) => {
-  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', accountLimit: u.accountLimit||3, limitRequest: u.limitRequest||null, approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt })));
+  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', accountLimit: u.accountLimit||3, limitRequest: u.limitRequest||null, extendRequest: u.extendRequest||null, approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt })));
 });
 
 app.delete('/api/users/:id', adminAuth, (req, res) => {
@@ -255,7 +255,14 @@ app.delete('/api/users/:id', adminAuth, (req, res) => {
 app.post('/api/users/limit-request', auth, (req, res) => {
   const user = users.find(u => u.id === req.userId);
   if (!user) return res.status(404).json({ error: '없음' });
-  const { requestLimit } = req.body;
+  const { requestLimit, requestExtend } = req.body;
+  if (requestExtend) {
+    // 기간 연장 신청
+    if (user.extendRequest) return res.status(400).json({ error: '이미 연장 신청 중이야' });
+    user.extendRequest = { requestedAt: new Date().toISOString() };
+    saveJSON(`${DATA_ROOT}/users.json`, users);
+    return res.json({ ok: true });
+  }
   if (![3, 6].includes(requestLimit)) return res.status(400).json({ error: '3 또는 6만 가능' });
   if (user.accountLimit === requestLimit) return res.status(400).json({ error: '이미 해당 한도야' });
   user.limitRequest = { requestLimit, requestedAt: new Date().toISOString() };
@@ -270,7 +277,6 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
   if (user.role === 'admin') return res.status(400).json({ error: '관리자 상태 변경 불가' });
   user.status = req.body.status;
   if (req.body.status === 'approved' && !user.approvedAt) {
-    // 최초 승인 시 30일 사용기간 설정
     user.approvedAt = new Date().toISOString();
     user.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   }
@@ -280,10 +286,11 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
   }
   if (req.body.clearLimitRequest) user.limitRequest = null;
   if (req.body.extendDays) {
-    // 기간 연장
-    const base = user.expiresAt ? new Date(user.expiresAt) : new Date();
+    const base = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
     user.expiresAt = new Date(base.getTime() + req.body.extendDays * 24 * 60 * 60 * 1000).toISOString();
+    user.extendRequest = null; // 연장 요청 처리 완료
   }
+  if (req.body.denyExtend) user.extendRequest = null; // 연장 거절
   saveJSON(`${DATA_ROOT}/users.json`, users);
   res.json({ ok: true });
 });
