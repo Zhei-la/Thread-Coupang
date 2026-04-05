@@ -177,6 +177,7 @@
     <!-- 가입 -->
     <div class="auth-panel" id="panel-register">
       <div class="field" id="inviteField"><label>초대코드</label><input type="text" id="regCode" placeholder="초대코드 8자리" style="text-transform:uppercase" /></div>
+      <div class="field"><label>이름 (실명)</label><input type="text" id="regName" placeholder="홍길동" /></div>
       <div class="field"><label>닉네임</label><input type="text" id="regNick" placeholder="닉네임" /></div>
       <div class="field"><label>비밀번호</label><input type="password" id="regPw" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doRegister()" /></div>
       <div class="auth-err" id="regErr"></div>
@@ -424,7 +425,16 @@ async function doLogin() {
   const password = document.getElementById('loginPw').value;
   document.getElementById('loginErr').textContent = '';
   const d = await api('/api/auth/login', { method:'POST', body:{nickname,password} });
-  if (d.error) { document.getElementById('loginErr').textContent = d.error; return; }
+  if (d.error) {
+    if (d.error === 'pending') {
+      document.getElementById('loginErr').textContent = '⏳ 관리자 승인 대기 중이야. 승인 후 사용 가능해.';
+    } else if (d.error === 'suspended') {
+      document.getElementById('loginErr').textContent = '🚫 사용이 정지된 계정이야. 관리자에게 문의해줘.';
+    } else {
+      document.getElementById('loginErr').textContent = d.error;
+    }
+    return;
+  }
   session = d.token;
   localStorage.setItem('session', session);
   enterApp(d);
@@ -432,11 +442,22 @@ async function doLogin() {
 
 async function doRegister() {
   const inviteCode = document.getElementById('regCode').value.trim().toUpperCase();
+  const name = document.getElementById('regName').value.trim();
   const nickname = document.getElementById('regNick').value.trim();
   const password = document.getElementById('regPw').value;
   document.getElementById('regErr').textContent = '';
-  const d = await api('/api/auth/register', { method:'POST', body:{nickname,password,inviteCode} });
+  if(!name) { document.getElementById('regErr').textContent = '이름을 입력해줘'; return; }
+  const d = await api('/api/auth/register', { method:'POST', body:{nickname,password,inviteCode,name} });
   if (d.error) { document.getElementById('regErr').textContent = d.error; return; }
+  if (d.pending) {
+    document.getElementById('regErr').style.color = 'var(--green)';
+    document.getElementById('regErr').textContent = '✅ 가입 완료! 관리자 승인 후 로그인 가능해.';
+    document.getElementById('regNick').value='';
+    document.getElementById('regPw').value='';
+    document.getElementById('regCode').value='';
+    document.getElementById('regName').value='';
+    return;
+  }
   session = d.token;
   localStorage.setItem('session', session);
   enterApp(d);
@@ -462,7 +483,9 @@ function enterApp(user) {
   document.getElementById('sideRole').textContent = user.role === 'admin' ? '관리자' : '멤버';
   if (user.role === 'admin') document.getElementById('adminNav').style.display='block';
   loadAccounts();
-  loadKeywords();
+  // 저장된 페이지로 복원
+  const savedPage = localStorage.getItem('currentPage') || 'write';
+  showPage(savedPage);
 }
 
 // ── 페이지 전환 ──
@@ -471,6 +494,13 @@ function showPage(name, el) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   if(el) el.classList.add('active');
+  else {
+    // el 없을 때 nav-item 직접 찾아서 활성화
+    document.querySelectorAll('.nav-item').forEach(n=>{
+      if(n.getAttribute('onclick') && n.getAttribute('onclick').includes("'"+name+"'")) n.classList.add('active');
+    });
+  }
+  localStorage.setItem('currentPage', name);
   if(name==='schedule') loadSchedule();
   if(name==='keywords') loadKeywords();
   if(name==='accounts') loadAccounts();
@@ -793,15 +823,30 @@ async function loadAdmin(){
   // 유저 목록
   const usrs=await api('/api/users');
   const uEl=document.getElementById('userList');
-  uEl.innerHTML=usrs.map(u=>`
-    <div class="user-item">
-      <div>
-        <span style="font-weight:600;font-size:14px">${u.nickname}</span>
-        <span class="badge ${u.role==='admin'?'badge-blue':'badge-yellow'}" style="margin-left:8px">${u.role==='admin'?'관리자':'멤버'}</span>
-        <div style="font-size:12px;color:var(--text2);margin-top:3px">${new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입</div>
+  uEl.innerHTML=usrs.map(u=>{
+    const statusBadge = u.status==='approved' ? '<span class="badge badge-green">사용중</span>' :
+                        u.status==='suspended' ? '<span class="badge badge-red">정지</span>' :
+                        '<span class="badge badge-yellow">승인대기</span>';
+    const statusBtns = u.role!=='admin' ? `
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        ${u.status!=='approved'?`<button class="btn btn-sm btn-green" onclick="setUserStatus('${u.id}','approved')">승인</button>`:''}
+        ${u.status!=='suspended'?`<button class="btn btn-sm btn-red" onclick="setUserStatus('${u.id}','suspended')">정지</button>`:''}
+        ${u.status==='suspended'?`<button class="btn btn-sm" onclick="setUserStatus('${u.id}','approved')">활성화</button>`:''}
+        <button class="btn btn-sm btn-red" onclick="deleteUser('${u.id}')">삭제</button>
+      </div>` : '';
+    return `<div class="user-item">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-weight:600;font-size:14px">${u.name||'-'}</span>
+          <span style="color:var(--text2);font-size:13px">(${u.nickname})</span>
+          <span class="badge ${u.role==='admin'?'badge-blue':'badge-yellow'}">${u.role==='admin'?'관리자':'멤버'}</span>
+          ${statusBadge}
+        </div>
+        <div style="font-size:12px;color:var(--text2)">${new Date(u.createdAt).toLocaleDateString('ko-KR')} 가입</div>
       </div>
-      ${u.role!=='admin'?`<button class="btn btn-sm btn-red" onclick="deleteUser('${u.id}')">삭제</button>`:''}
-    </div>`).join('');
+      ${statusBtns}
+    </div>`;
+  }).join('');
 }
 
 async function createInvite(){
@@ -815,6 +860,13 @@ async function deleteInvite(code){
 async function deleteUser(id){
   if(!confirm('정말 이 유저를 삭제할까?')) return;
   await api(`/api/users/${id}`,{method:'DELETE'}); loadAdmin(); toast('유저 삭제됨');
+}
+
+async function setUserStatus(id, status){
+  const labels = {approved:'승인', suspended:'정지', pending:'대기'};
+  const d = await api(`/api/users/${id}/status`,{method:'PUT',body:{status}});
+  if(d.error) return toast(d.error,'error');
+  toast(labels[status]+'됐어!'); loadAdmin();
 }
 
 function copyText(id){navigator.clipboard.writeText(document.getElementById(id).value).then(()=>toast('복사됨!'));}
