@@ -676,7 +676,7 @@ app.post('/api/schedule', auth, (req, res) => {
   const account = accs.find(a => a.id === accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
   const posts = getScheduled(req.userId);
-  const post = { id: Date.now().toString(), accountId, accountName: account.name, text, type: req.body.type || 'post', imageUrls: imageUrls || [], commentText: commentText || '', scheduledAt, status: 'pending', createdAt: new Date().toISOString() };
+  const post = { id: Date.now().toString(), accountId, accountName: account.name, text, type: req.body.type || 'post', imageUrls: imageUrls || [], commentText: commentText || '', replyToId: req.body.replyToId || null, scheduledAt, status: 'pending', createdAt: new Date().toISOString() };
   posts.push(post);
   saveScheduled(req.userId, posts);
   res.json(post);
@@ -719,6 +719,18 @@ app.post('/api/schedule/:id/publish-now', auth, async (req, res) => {
   const account = accs.find(a => a.id === post.accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
   try {
+    if (post.type === 'comment') {
+      // 댓글 즉시발행 - 최근 게시글에 달기
+      const feedRes = await fetch(`https://graph.threads.net/v1.0/me/threads?fields=id&limit=1&access_token=${account.accessToken}`);
+      const feedData = await feedRes.json();
+      const latestPostId = feedData.data?.[0]?.id;
+      if (!latestPostId) throw new Error('댓글 달 게시글 없음');
+      const targetId = post.replyToId || latestPostId;
+      await replyToThread(account.accessToken, targetId, post.text);
+      post.status = 'done';
+      saveScheduled(req.userId, posts);
+      return res.json({ ok: true });
+    }
     let postId;
     try {
       postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrl || '');
@@ -760,11 +772,23 @@ cron.schedule('* * * * *', async () => {
         // 댓글 전용 예약
         if (post.type === 'comment') {
           if (post.replyToId) {
-            // 특정 글에 댓글
+            // 특정 글 ID에 댓글
             await replyToThread(account.accessToken, post.replyToId, post.text);
           } else {
-            // replyToId 없으면 일반 글로 발행
-            await publishToThreads(account.accessToken, post.text, [], '');
+            // replyToId 없으면 → 해당 계정의 가장 최근 게시글에 댓글
+            try {
+              const feedRes = await fetch(`https://graph.threads.net/v1.0/me/threads?fields=id&limit=1&access_token=${account.accessToken}`);
+              const feedData = await feedRes.json();
+              const latestPostId = feedData.data?.[0]?.id;
+              if (latestPostId) {
+                console.log(`[CRON] 최근 게시글 ${latestPostId}에 댓글 달기`);
+                await replyToThread(account.accessToken, latestPostId, post.text);
+              } else {
+                throw new Error('최근 게시글 없음');
+              }
+            } catch(e) {
+              throw new Error('댓글 달 게시글 없음: ' + e.message);
+            }
           }
         } else {
           // 글 발행 (이미지는 URL 만료 가능성 있어서 실패하면 텍스트만 발행)
@@ -842,10 +866,21 @@ app.get('/api/keywords', auth, async (req, res) => {
 });
 
 // ══════════════════════════════════
-//  이미지/영상 업로드
+//  이미지/영상 업로드 (ImgBB)
 // ══════════════════════════════════
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+const videoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
+
+const UPLOADS_DIR = `${DATA_ROOT}/uploads`;
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// 영상은 서버에 직접 저장
+app.use('/uploads', (req, res) => {
+  const filePath = require('path').join(UPLOADS_DIR, req.path);
+  if (fs.existsSync(filePath)) res.sendFile(filePath);
+  else res.status(404).end();
+});
 
 app.post('/api/upload', auth, upload.array('images', 10), async (req, res) => {
   const apiKey = process.env.IMGBB_API_KEY;
@@ -858,8 +893,7 @@ app.post('/api/upload', auth, upload.array('images', 10), async (req, res) => {
       form.append('image', file.buffer.toString('base64'));
       const r = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: form });
       const d = await r.json();
-      console.log('[UPLOAD] ImgBB 응답:', JSON.stringify(d?.data?.url), d?.data?.display_url);
-      // Threads는 직접 접근 가능한 URL이어야 함 - display_url 사용
+      console.log('[UPLOAD] ImgBB 응답:', d?.data?.display_url || d?.data?.url);
       const imageUrl = d.data?.display_url || d.data?.url;
       if (imageUrl) urls.push(imageUrl);
     }
@@ -870,17 +904,17 @@ app.post('/api/upload', auth, upload.array('images', 10), async (req, res) => {
   }
 });
 
-const videoUpload = multer({ storage: multer.diskStorage({
-  destination: (req, file, cb) => { const dir='./uploads'; if(!fs.existsSync(dir)) fs.mkdirSync(dir); cb(null,dir); },
-  filename: (req, file, cb) => cb(null, Date.now()+'_'+file.originalname)
-}), limits: { fileSize: 1024*1024*1024 } });
-
-app.use('/uploads', express.static('uploads'));
-
 app.post('/api/upload-video', auth, videoUpload.single('video'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: '영상 없음' });
-  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT||3000}`;
-  res.json({ url: `${baseUrl}/uploads/${req.file.filename}` });
+  try {
+    if (!req.file) return res.status(400).json({ error: '영상 없음' });
+    const baseUrl = process.env.BASE_URL || 'https://zheiia-thread.up.railway.app';
+    const ext = req.file.originalname.split('.').pop() || 'mp4';
+    const filename = `${Date.now()}.${ext}`;
+    fs.writeFileSync(require('path').join(UPLOADS_DIR, filename), req.file.buffer);
+    res.json({ url: `${baseUrl}/uploads/${filename}` });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // 서버 시작 시 세션 파일 로드
