@@ -10,22 +10,27 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ── 데이터 루트 경로 (Railway Volume 마운트) ──
+const DATA_ROOT = process.env.DATA_PATH || '/app/data';
+if (!fs.existsSync(DATA_ROOT)) fs.mkdirSync(DATA_ROOT, { recursive: true });
+
 // ── 파일 헬퍼 ──
 function loadJSON(file, def) {
   try { return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file)) : def; } catch(e) { return def; }
 }
 function saveJSON(file, data) {
+  const dir = require('path').dirname(file);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
 // ── 데이터 저장소 ──
-let users        = loadJSON('./users.json', []);          // [{id, nickname, passwordHash, role, createdAt}]
-let inviteCodes  = loadJSON('./invite_codes.json', []);   // [{code, createdBy, used, usedBy}]
-let sessions     = {};                                     // {sessionToken: userId} (메모리)
+let users       = loadJSON(`${DATA_ROOT}/users.json`, []);
+let inviteCodes = loadJSON(`${DATA_ROOT}/invite_codes.json`, []);
+let sessions    = {};
 
-// 유저별 데이터는 ./data/{userId}/accounts.json, scheduled.json 으로 분리
 function userDir(userId) {
-  const dir = `./data/${userId}`;
+  const dir = `${DATA_ROOT}/users/${userId}`;
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -69,7 +74,7 @@ app.post('/api/auth/setup', (req, res) => {
   if (!nickname || !password) return res.status(400).json({ error: '닉네임/비밀번호 필요' });
   const user = { id: Date.now().toString(), nickname, passwordHash: hashPw(password), role: 'admin', createdAt: new Date().toISOString() };
   users.push(user);
-  saveJSON('./users.json', users);
+  saveJSON(`${DATA_ROOT}/users.json`, users);
   const token = crypto.randomUUID();
   sessions[token] = user.id;
   res.json({ token, nickname: user.nickname, role: user.role });
@@ -91,12 +96,12 @@ app.post('/api/auth/register', (req, res) => {
     const invite = inviteCodes.find(c => c.code === inviteCode && !c.used);
     if (!invite) return res.status(400).json({ error: '유효하지 않은 초대코드' });
     invite.used = true; invite.usedBy = nickname; invite.usedAt = new Date().toISOString();
-    saveJSON('./invite_codes.json', inviteCodes);
+    saveJSON(`${DATA_ROOT}/invite_codes.json`, inviteCodes);
   }
 
   const user = { id: Date.now().toString(), nickname, passwordHash: hashPw(password), role, createdAt: new Date().toISOString() };
   users.push(user);
-  saveJSON('./users.json', users);
+  saveJSON(`${DATA_ROOT}/users.json`, users);
   const token = crypto.randomUUID();
   sessions[token] = user.id;
   res.json({ token, nickname: user.nickname, role: user.role });
@@ -134,13 +139,13 @@ app.post('/api/invites', adminAuth, (req, res) => {
   const code = crypto.randomBytes(4).toString('hex').toUpperCase(); // 예: A3F2B1C4
   const invite = { code, createdBy: req.user.nickname, used: false, createdAt: new Date().toISOString() };
   inviteCodes.push(invite);
-  saveJSON('./invite_codes.json', inviteCodes);
+  saveJSON(`${DATA_ROOT}/invite_codes.json`, inviteCodes);
   res.json(invite);
 });
 
 app.delete('/api/invites/:code', adminAuth, (req, res) => {
   inviteCodes = inviteCodes.filter(c => c.code !== req.params.code);
-  saveJSON('./invite_codes.json', inviteCodes);
+  saveJSON(`${DATA_ROOT}/invite_codes.json`, inviteCodes);
   res.json({ ok: true });
 });
 
@@ -152,7 +157,7 @@ app.get('/api/users', adminAuth, (req, res) => {
 app.delete('/api/users/:id', adminAuth, (req, res) => {
   if (req.params.id === req.userId) return res.status(400).json({ error: '본인 삭제 불가' });
   users = users.filter(u => u.id !== req.params.id);
-  saveJSON('./users.json', users);
+  saveJSON(`${DATA_ROOT}/users.json`, users);
   res.json({ ok: true });
 });
 
@@ -205,7 +210,7 @@ app.post('/api/generate', auth, async (req, res) => {
     : `스레드(Threads SNS)에 올릴 게시글을 작성해줘.\n주제: ${topic}\n조건:\n- 반드시 반말로\n- ${toneDesc}\n- 이모지 절대 사용 금지\n- "첫째", "둘째", "결론적으로" 같은 형식적 표현 금지\n- ~합니다, ~해요 같은 존댓말 절대 금지\n- SNS 특유의 자연스러운 구어체\n- 500자 이내\n- 다른 설명 없이 게시글 텍스트만 출력`;
 
   try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.9, maxOutputTokens: 500 } })
     });
