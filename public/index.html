@@ -426,6 +426,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 // ── 상태 ──
 let session = localStorage.getItem('sess') || '';
 let tone = '리스트형';
+let myRole = '';
 let mediaMode = 'photo';
 let imgUrls = [], imgFiles = [], vidUrl = '';
 let newTags = [], editTags = [];
@@ -519,11 +520,12 @@ function showAuth() {
 }
 
 function enterApp(user) {
+  myRole = user.role;
   document.getElementById('authWrap').style.display = 'none';
   document.getElementById('appWrap').classList.add('on');
   document.getElementById('sideNick').textContent = user.nickname;
   document.getElementById('sideRole').textContent = user.role === 'admin' ? '관리자' : '멤버';
-  if (user.role === 'admin') {
+  if (myRole === 'admin') {
     document.getElementById('adminNav').style.display = 'block';
     document.getElementById('adminSep').style.display = 'block';
     const limitCard = document.getElementById('limitRequestCard');
@@ -531,7 +533,6 @@ function enterApp(user) {
     const expCard = document.getElementById('expireNoticeCard');
     if (expCard) expCard.style.display = 'none';
   } else {
-    // 만료일 체크
     checkExpiry();
   }
   loadAccs();
@@ -853,7 +854,7 @@ async function loadAccs() {
 
   // 계정 수 뱃지 표시
   const badge = document.getElementById('accLimitBadge');
-  const isAdmin = document.getElementById('sideRole').textContent === '관리자';
+  const isAdmin = myRole === 'admin';
   // 계정 한도 확인
   try {
     const me = await api('/api/auth/me');
