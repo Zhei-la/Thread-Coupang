@@ -522,6 +522,7 @@ app.delete('/api/schedule/:id', auth, (req, res) => {
 });
 
 
+
 // 예약 수정 (텍스트, 시간 변경)
 app.put('/api/schedule/:id', auth, (req, res) => {
   const posts = getScheduled(req.userId);
@@ -539,7 +540,8 @@ app.post('/api/schedule/:id/publish-now', auth, async (req, res) => {
   const posts = getScheduled(req.userId);
   const post = posts.find(p => p.id === req.params.id);
   if (!post) return res.status(404).json({ error: '없음' });
-  if (post.status !== 'pending') return res.status(400).json({ error: '이미 발행됨' });
+  if (post.status === 'done') return res.status(400).json({ error: '이미 발행됨' });
+  post.status = 'pending'; // 실패 상태도 재시도 가능
   const accs = getAccounts(req.userId);
   const account = accs.find(a => a.id === post.accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
