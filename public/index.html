@@ -324,7 +324,15 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 
       <div class="card" id="expireNoticeCard" style="display:none;border-color:var(--red)">
         <h2 style="color:var(--red)">⏰ 사용 기간 만료 안내</h2>
-        <div style="font-size:13px;line-height:1.7" id="expireNoticeText"></div>
+        <div style="font-size:13px;line-height:1.7;margin-bottom:12px" id="expireNoticeText"></div>
+        <button class="btn btn-sm btn-p" onclick="openKakaoLink()" id="contactBtn" style="display:none">💬 관리자에게 문의하기</button>
+      </div>
+
+      <div class="card" id="freePlanCard" style="display:none;border-color:var(--blue)">
+        <h2 style="color:var(--blue)">🆓 무료 체험 중</h2>
+        <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">현재 무료 체험 계정이에요. 유료로 전환하면 더 많은 기능을 쓸 수 있어요.</div>
+        <button class="btn btn-sm btn-p" onclick="requestUpgrade()" id="upgradeBtn">💎 유료 전환 신청하기</button>
+        <div id="upgradeStatus" style="margin-top:8px;font-size:13px;color:var(--txt2)"></div>
       </div>
 
       <div class="card" id="limitRequestCard">
@@ -369,7 +377,36 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       </div>
 
       <div class="card">
-        <h2>👥 유저 목록 <span id="userCount" style="font-size:12px;color:var(--txt2);font-weight:400"></span></h2>
+        <h2>📢 유료 전환 신청 <span id="upgradeCount" class="badge bb"></span></h2>
+        <div id="upgradeList"><div style="color:var(--txt2);font-size:14px">유료 전환 신청 없음</div></div>
+      </div>
+
+      <div class="card">
+        <h2>🔗 관리자 문의 링크 설정</h2>
+        <div style="font-size:13px;color:var(--txt2);margin-bottom:10px">유저가 문의하기 클릭 시 연결되는 링크 (카카오 오픈채팅 등)</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <input id="kakaoLinkInput" placeholder="https://open.kakao.com/..." style="flex:1" />
+          <button class="btn btn-sm btn-p" onclick="saveKakaoLink()">저장</button>
+        </div>
+        <div id="kakaoLinkStatus" style="margin-bottom:16px;font-size:12px;color:var(--txt2)"></div>
+        <div style="border-top:1px solid var(--bdr);padding-top:16px">
+          <h2 style="margin-bottom:8px">🤝 엑시온 코드 설정</h2>
+          <div style="font-size:13px;color:var(--txt2);margin-bottom:10px">이 코드로 가입한 유저는 엑시온 유저로 분류돼서 따로 관리할 수 있어요</div>
+          <div style="display:flex;gap:8px">
+            <input id="partnerCodeInput" placeholder="예: PARTNER01" style="flex:1;text-transform:uppercase" />
+            <button class="btn btn-sm btn-p" onclick="savePartnerCode()">저장</button>
+          </div>
+          <div id="partnerCodeStatus" style="margin-top:8px;font-size:12px;color:var(--txt2)"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🤝 엑시온 유저 목록 <span id="partnerUserCount" style="font-size:12px;color:var(--blue);font-weight:400"></span></h2>
+        <div id="partnerUserList"><div style="color:var(--txt2);font-size:14px">엑시온 코드로 가입한 유저 없음</div></div>
+      </div>
+
+      <div class="card">
+        <h2>👥 일반 유저 목록 <span id="userCount" style="font-size:12px;color:var(--txt2);font-weight:400"></span></h2>
         <div id="userList"></div>
       </div>
     </div>
@@ -1005,10 +1042,83 @@ async function loadAdmin() {
     </div>`).join('') : '<div style="color:var(--txt2);font-size:14px">요청 없음</div>';
 
   // 유저 목록 (approved/suspended)
-  const activeUsers = users.filter(u => u.status !== 'pending');
+  // 유료 전환 신청
+  const upgradeReqs = users.filter(u => u.upgradeRequest && u.plan === 'free');
+  const upgradeEl = document.getElementById('upgradeList');
+  const upgradeCount = document.getElementById('upgradeCount');
+  if (upgradeCount) { upgradeCount.textContent = upgradeReqs.length ? upgradeReqs.length + '건' : ''; upgradeCount.style.display = upgradeReqs.length ? '' : 'none'; }
+  if (upgradeEl) upgradeEl.innerHTML = upgradeReqs.length ? upgradeReqs.map(u => `
+    <div class="list-item">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:14px;margin-bottom:4px">${u.name||'-'} <span style="color:var(--txt2);font-size:13px">(${u.nickname})</span></div>
+        <div style="font-size:12px;color:var(--txt2)">무료 7일 체험 → 유료 전환 신청</div>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-sm btn-g" onclick="approveUpgrade('${u.id}')">✅ 유료 승인 3개</button>
+        <button class="btn btn-sm btn-g" onclick="approveUpgrade6('${u.id}')">✅ 유료 승인 6개</button>
+        <button class="btn btn-sm btn-r" onclick="denyUpgrade('${u.id}')">거절</button>
+      </div>
+    </div>`).join('') : '<div style="color:var(--txt2);font-size:14px">유료 전환 신청 없음</div>';
+
+  // 설정 로드 (카카오 링크 + 파트너 코드)
+  try {
+    const settings = await api('/api/settings');
+    const kakaoInput = document.getElementById('kakaoLinkInput');
+    if (kakaoInput && settings.kakaoLink) {
+      kakaoInput.value = settings.kakaoLink;
+      document.getElementById('kakaoLinkStatus').textContent = '현재: ' + settings.kakaoLink;
+    }
+    const partnerInput = document.getElementById('partnerCodeInput');
+    if (partnerInput && settings.partnerCode) {
+      partnerInput.value = settings.partnerCode;
+      document.getElementById('partnerCodeStatus').textContent = '현재 코드: ' + settings.partnerCode;
+    }
+  } catch(e) {}
+
+  // 공동대표 유저 분리
+  const allActive = users.filter(u => u.status !== 'pending');
+  const partnerUsers = allActive.filter(u => u.joinedVia === 'partner');
+  const normalUsers = allActive.filter(u => u.joinedVia !== 'partner');
+
+  const renderUserItem = (u) => {
+    const sBadge = u.status === 'approved' ? '<span class="badge bg">사용중</span>' : '<span class="badge br">정지</span>';
+    const planBadge = u.plan === 'free' ? '<span class="badge bb">무료</span>' : '';
+    return `<div class="list-item">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="font-weight:600;font-size:14px">${u.name||'-'}</span>
+          <span style="color:var(--txt2);font-size:13px">(${u.nickname})</span>
+          <span class="badge ${u.role==='admin'?'bb':'by'}">${u.role==='admin'?'관리자':'멤버'}</span>
+          ${sBadge} ${planBadge}
+        </div>
+        <div style="font-size:12px;color:var(--txt2)">한도: ${u.accountLimit||3}개
+          ${u.expiresAt ? (() => { const exp=new Date(u.expiresAt); const diff=Math.ceil((exp-new Date())/(1000*60*60*24)); return diff<0?` · <span style="color:var(--red)">⚠️ 만료</span>`:`· ${diff}일 남음`; })() : ''}
+          ${u.extendRequest ? ' · <span style="color:var(--yellow)">📩 연장신청</span>' : ''}
+        </div>
+      </div>
+      ${u.role !== 'admin' ? `
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        <div style="display:flex;gap:4px">
+          ${u.status==='approved'?`<button class="btn btn-sm btn-r" onclick="setStatus('${u.id}','suspended')">정지</button>`:`<button class="btn btn-sm btn-g" onclick="setStatus('${u.id}','approved',${u.accountLimit||3})">활성화</button>`}
+        </div>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm" onclick="extendUserDays('${u.id}',10)">+10일</button>
+          <button class="btn btn-sm btn-g" onclick="extendUserDays('${u.id}',30)">+30일</button>
+        </div>
+        <button class="btn btn-sm btn-r" onclick="delUser('${u.id}')">삭제</button>
+      </div>` : ''}
+    </div>`;
+  };
+
+  // 공동대표 목록
+  const pEl = document.getElementById('partnerUserList');
+  const partnerCount = document.getElementById('partnerUserCount');
+  if (partnerCount) partnerCount.textContent = `(${partnerUsers.length}명)`;
+  if (pEl) pEl.innerHTML = partnerUsers.length ? partnerUsers.map(renderUserItem).join('') : '<div style="color:var(--txt2);font-size:14px">엑시온 코드로 가입한 유저 없음</div>';
+
   const uEl = document.getElementById('userList');
   const userCount = document.getElementById('userCount');
-  userCount.textContent = `(${activeUsers.length}명)`;
+  userCount.textContent = `(${normalUsers.length}명)`;
   uEl.innerHTML = activeUsers.map(u => {
     const sBadge = u.status === 'approved' ? '<span class="badge bg">사용중</span>' : '<span class="badge br">정지</span>';
     return `<div class="list-item">
@@ -1037,7 +1147,10 @@ async function loadAdmin() {
         <div style="display:flex;gap:4px">
           ${u.status==='approved'?`<button class="btn btn-sm btn-r" onclick="setStatus('${u.id}','suspended')">정지</button>`:`<button class="btn btn-sm btn-g" onclick="setStatus('${u.id}','approved',${u.accountLimit||3})">활성화</button>`}
         </div>
-        <button class="btn btn-sm btn-g" onclick="extendUser('${u.id}')">+30일 연장</button>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-sm" onclick="extendUserDays('${u.id}',10)">+10일</button>
+          <button class="btn btn-sm btn-g" onclick="extendUserDays('${u.id}',30)">+30일</button>
+        </div>
         <button class="btn btn-sm btn-r" onclick="delUser('${u.id}')">삭제</button>
       </div>` : ''}
     </div>`;
@@ -1057,11 +1170,39 @@ async function denyLimitReq(id) {
 }
 
 async function extendUser(id) {
-  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', extendDays: 30 } });
-  if (d.error) return toast(d.error, 'err');
-  toast('30일 연장됐어!'); loadAdmin();
+  await extendUserDays(id, 30);
 }
 
+async function extendUserDays(id, days) {
+  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', extendDays: days } });
+  if (d.error) return toast(d.error, 'err');
+  toast(`${days}일 연장됐어!`); loadAdmin();
+}
+
+async function savePartnerCode() {
+  const code = document.getElementById('partnerCodeInput').value.trim().toUpperCase();
+  if (!code) return toast('코드를 입력해줘', 'err');
+  const d = await api('/api/settings', { method: 'PUT', body: { partnerCode: code } });
+  if (d.error) return toast(d.error, 'err');
+  toast('엑시온 코드 저장됐어!');
+  document.getElementById('partnerCodeStatus').textContent = '현재 코드: ' + code;
+}
+
+async function approveUpgrade(id) {
+  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', plan: 'paid', accountLimit: 3, approveUpgrade: true } });
+  if (d.error) return toast(d.error, 'err');
+  toast('유료 전환 승인됐어! (3개)'); loadAdmin();
+}
+async function approveUpgrade6(id) {
+  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', plan: 'paid', accountLimit: 6, approveUpgrade: true } });
+  if (d.error) return toast(d.error, 'err');
+  toast('유료 전환 승인됐어! (6개)'); loadAdmin();
+}
+async function denyUpgrade(id) {
+  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', denyUpgrade: true } });
+  if (d.error) return toast(d.error, 'err');
+  toast('거절됐어!'); loadAdmin();
+}
 async function denyExtend(id) {
   const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', denyExtend: true } });
   if (d.error) return toast(d.error, 'err');
@@ -1120,12 +1261,52 @@ function applyCoupangComment() {
   toast('댓글란에 적용됐어!');
 }
 
+async function approveFree(id) {
+  const d = await api(`/api/users/${id}/status`, { method: 'PUT', body: { status: 'approved', plan: 'free', planDays: 7, accountLimit: 1 } });
+  if (d.error) return toast(d.error, 'err');
+  toast('무료 7일 승인됐어!'); loadAdmin();
+}
+
+async function saveKakaoLink() {
+  const link = document.getElementById('kakaoLinkInput').value.trim();
+  const d = await api('/api/settings', { method: 'PUT', body: { kakaoLink: link } });
+  if (d.error) return toast(d.error, 'err');
+  toast('링크 저장됐어!');
+  document.getElementById('kakaoLinkStatus').textContent = '✅ 저장됨: ' + link;
+}
+
+async function openKakaoLink() {
+  const d = await api('/api/settings');
+  if (d.kakaoLink) window.open(d.kakaoLink, '_blank');
+  else toast('관리자 링크가 설정되지 않았어', 'err');
+}
+
+async function requestUpgrade() {
+  const d = await api('/api/users/upgrade-request', { method: 'POST' });
+  if (d.error) return toast(d.error, 'err');
+  toast('유료 전환 신청했어! 관리자 승인 대기중');
+  document.getElementById('upgradeStatus').textContent = '✅ 신청 완료 — 관리자 승인 대기중';
+  document.getElementById('upgradeStatus').style.color = 'var(--green)';
+  document.getElementById('upgradeBtn').disabled = true;
+}
+
 async function checkExpiry() {
   try {
     const me = await api('/api/auth/me');
     const allUsers = await api('/api/users');
     if (!Array.isArray(allUsers)) return;
     const myInfo = allUsers.find(u => u.nickname === me.nickname);
+
+    // 무료플랜 카드
+    const freePlanCard = document.getElementById('freePlanCard');
+    if (freePlanCard && myInfo?.plan === 'free') {
+      freePlanCard.style.display = 'block';
+      if (myInfo.upgradeRequest) {
+        document.getElementById('upgradeStatus').textContent = '✅ 신청 완료 — 관리자 승인 대기중';
+        document.getElementById('upgradeStatus').style.color = 'var(--green)';
+        document.getElementById('upgradeBtn').disabled = true;
+      }
+    }
 
     // 남은 일수 표시
     const daysEl = document.getElementById('expireDaysLeft');
@@ -1146,19 +1327,23 @@ async function checkExpiry() {
       if (daysEl) daysEl.textContent = '사용기간 정보 없음';
     }
 
-    if (!myInfo || !myInfo.expiresAt) return;
+    if (!myInfo?.expiresAt) return;
     const exp = new Date(myInfo.expiresAt);
     const diff = Math.ceil((exp - new Date()) / (1000*60*60*24));
     const card = document.getElementById('expireNoticeCard');
     const text = document.getElementById('expireNoticeText');
+    const contactBtn = document.getElementById('contactBtn');
     if (!card || !text) return;
     if (diff < 0) {
       card.style.display = 'block';
-      text.innerHTML = `사용 기간이 <b>${exp.toLocaleDateString('ko-KR')}</b>에 만료됐어요.<br>계속 사용하려면 아래에서 <b>30일 연장 신청</b>을 해줘요.`;
+      card.style.borderColor = 'var(--red)';
+      const planMsg = myInfo.plan === 'free' ? '무료 체험이 종료됐어요.<br>유료로 전환하거나 관리자에게 문의해줘요.' : '계속 사용하려면 연장 신청 또는 관리자에게 문의해줘요.';
+      text.innerHTML = `사용 기간이 <b>${exp.toLocaleDateString('ko-KR')}</b>에 만료됐어요.<br>${planMsg}`;
+      if (contactBtn) contactBtn.style.display = 'inline-flex';
     } else if (diff <= 7) {
       card.style.display = 'block';
       card.style.borderColor = 'var(--yellow)';
-      text.innerHTML = `사용 기간이 <b>${diff}일 후 (${exp.toLocaleDateString('ko-KR')})</b>에 만료돼요.<br>미리 <b>30일 연장 신청</b>을 해두는 걸 추천해요.`;
+      text.innerHTML = `사용 기간이 <b>${diff}일 후</b>에 만료돼요. 미리 연장 신청을 해두는 걸 추천해요.`;
     }
   } catch(e) {}
 }
