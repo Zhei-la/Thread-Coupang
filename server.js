@@ -210,7 +210,8 @@ app.post('/api/generate', auth, async (req, res) => {
     : `스레드(Threads SNS)에 올릴 게시글을 작성해줘.\n주제: ${topic}\n조건:\n- 반드시 반말로\n- ${toneDesc}\n- 이모지 절대 사용 금지\n- "첫째", "둘째", "결론적으로" 같은 형식적 표현 금지\n- ~합니다, ~해요 같은 존댓말 절대 금지\n- SNS 특유의 자연스러운 구어체\n- 500자 이내\n- 다른 설명 없이 게시글 텍스트만 출력`;
 
   try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.9, maxOutputTokens: 500 } })
     });
