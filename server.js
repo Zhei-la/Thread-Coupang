@@ -42,11 +42,62 @@ function saveScheduled(userId, data) { saveJSON(`${userDir(userId)}/scheduled.js
 // ── 비밀번호 해시 ──
 function hashPw(pw) { return crypto.createHash('sha256').update(pw + 'threads_salt_2025').digest('hex'); }
 
+// ── 세션 저장소 (만료시간 포함) ──
+// sessions: { token: { userId, expiresAt } }
+const SESSION_TTL = 3 * 24 * 60 * 60 * 1000; // 3일
+
+function createSession(userId) {
+  const token = crypto.randomUUID();
+  sessions[token] = { userId, expiresAt: Date.now() + SESSION_TTL };
+  return token;
+}
+
+function getSession(token) {
+  const s = sessions[token];
+  if (!s) return null;
+  if (Date.now() > s.expiresAt) { delete sessions[token]; return null; }
+  return s;
+}
+
+// 만료 세션 정리 (1시간마다)
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, s] of Object.entries(sessions)) {
+    if (now > s.expiresAt) delete sessions[token];
+  }
+}, 60 * 60 * 1000);
+
+// ── Rate Limiting ──
+const rateLimitMap = {};
+function rateLimit(maxReq = 60, windowMs = 60000) {
+  return (req, res, next) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    if (!rateLimitMap[ip]) rateLimitMap[ip] = [];
+    rateLimitMap[ip] = rateLimitMap[ip].filter(t => now - t < windowMs);
+    if (rateLimitMap[ip].length >= maxReq) {
+      return res.status(429).json({ error: '요청이 너무 많아. 잠시 후 다시 시도해줘.' });
+    }
+    rateLimitMap[ip].push(now);
+    next();
+  };
+}
+
+// Rate limit 맵 정리 (10분마다)
+setInterval(() => {
+  const now = Date.now();
+  for (const ip of Object.keys(rateLimitMap)) {
+    rateLimitMap[ip] = (rateLimitMap[ip] || []).filter(t => now - t < 60000);
+    if (!rateLimitMap[ip].length) delete rateLimitMap[ip];
+  }
+}, 10 * 60 * 1000);
+
 // ── 세션 미들웨어 ──
 function auth(req, res, next) {
   const token = req.headers['x-session'] || req.query.session;
-  if (!token || !sessions[token]) return res.status(401).json({ error: '로그인 필요' });
-  req.userId = sessions[token];
+  const s = getSession(token);
+  if (!token || !s) return res.status(401).json({ error: '로그인 필요' });
+  req.userId = s.userId;
   req.user = users.find(u => u.id === req.userId);
   next();
 }
@@ -81,7 +132,7 @@ app.post('/api/auth/setup', (req, res) => {
 });
 
 // 가입 (유저 0명이면 초대코드 없이 관리자, 이후엔 초대코드 필수)
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', rateLimit(5, 60000), (req, res) => {
   const { nickname, password, inviteCode } = req.body;
   if (!nickname || !password) return res.status(400).json({ error: '닉네임과 비밀번호 필요' });
   if (users.find(u => u.nickname === nickname)) return res.status(400).json({ error: '이미 사용중인 닉네임' });
@@ -107,20 +158,18 @@ app.post('/api/auth/register', (req, res) => {
     res.json({ pending: true, nickname: user.nickname });
     return;
   }
-  const token = crypto.randomUUID();
-  sessions[token] = user.id;
+  const token = createSession(user.id);
   res.json({ token, nickname: user.nickname, role: user.role });
 });
 
 // 로그인
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', rateLimit(10, 60000), (req, res) => {
   const { nickname, password } = req.body;
   const user = users.find(u => u.nickname === nickname && u.passwordHash === hashPw(password));
   if (!user) return res.status(401).json({ error: '닉네임 또는 비밀번호 오류' });
   if (user.status === 'pending') return res.status(403).json({ error: 'pending' });
   if (user.status === 'suspended') return res.status(403).json({ error: 'suspended' });
-  const token = crypto.randomUUID();
-  sessions[token] = user.id;
+  const token = createSession(user.id);
   res.json({ token, nickname: user.nickname, role: user.role });
 });
 
@@ -204,7 +253,7 @@ app.put('/api/accounts/:id/topics', auth, (req, res) => {
 //  AI 글 생성
 // ══════════════════════════════════
 
-app.post('/api/generate', auth, async (req, res) => {
+app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
   const { topic, tone, type, imageDesc } = req.body;
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'GROQ_API_KEY 없음' });
@@ -270,18 +319,39 @@ app.post('/api/generate', auth, async (req, res) => {
 생각보다 너무 괜찮았음
 이래서 사람들이 찾는 건가 싶더라`,
 
-    '쿠팡': `너는 쿠팡 구매 유도형 콘텐츠 작성자다.
-핵심 목표: 클릭 유도 + 구매 욕구 자극, 짧고 강하게.
-규칙:
-1. 첫 문장은 반드시 강한 어그로 (호기심/짜증/놀람/중독 느낌)
-2. 특정 현실적인 상황을 만들어서 시작
-3. 감정 표현 포함 (짜증, 놀람, 만족 등)
-4. 제품 장점은 자연스럽게 녹일 것 (설명처럼 쓰지 말 것)
-5. 글 길이: 최소 1줄, 최대 5줄 (짧으면 1~2줄로 끝낼 것)
-6. 마지막 줄에 행동 유도 문장
-7. 절대 같은 패턴 반복 금지
-8. "가성비 좋다", "추천합니다" 같은 뻔한 표현 금지
-출력 구조: 어그로 문장 → 상황+감정 → 자연스럽게 장점 → 행동 유도`
+    '쿠팡': `너는 쿠팡 구매 유도형 SNS 콘텐츠 작성자다.
+
+[핵심 목표]
+짧고 강하게. 읽는 순간 사고 싶게 만들어야 한다.
+
+[절대 규칙]
+- 글은 최대 3~5줄. 짧으면 1~2줄도 OK
+- 첫 문장에서 바로 어그로 (설명 금지)
+- 실제 경험처럼 써야 함 (광고 느낌 절대 금지)
+- "가성비", "추천", "좋은 제품" 같은 뻔한 말 금지
+- 이모지 금지
+- 반말
+- 줄바꿈 활용해서 가독성 좋게
+
+[상황별 예시 — 이 느낌으로 작성]
+음식/야식: 남편이 야식 만들어 달래서 만들어줬더니 맨날 이것만 찾는다 골치아프네
+디저트: 지인이 먹고있는거 뺏어 먹었다가 두박스나 시킴 진짜 개맛있다
+강아지 용품: 우리 강아지 산책시킬때 이거 안하면 산책 안나감
+강아지 간식: 사료에 이거 하나 넣으면 완뚝임
+아기 음식/용품: 우리 딸래미 밥먹을때 이거 없으면 절대 밥 안먹음
+아기 용품: 이거 하나면 애기 보는거 개쉬움
+생활용품: 이거 사고 나서 삶의 질이 달라졌네
+기타: 주제에 맞는 현실적인 상황을 직접 만들어서 작성
+
+[출력 구조]
+1줄: 어그로 / 공감 유발 상황
+1~2줄: 자연스럽게 장점 노출 (설명 말고 경험으로)
+1줄: 행동 유도 (자연스럽게)
+
+[주의]
+- 예시 문장 그대로 복붙 금지
+- 매번 다른 패턴으로 작성
+- 주제에 맞는 상황을 스스로 창작할 것`
   };
 
   const toneInstruction = tonePrompts[tone] || tonePrompts['일상'];
@@ -418,7 +488,7 @@ async function replyToThread(accessToken, postId, commentText) {
   return pubData.id;
 }
 
-app.post('/api/publish', auth, async (req, res) => {
+app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
   const { accountId, text, imageUrls, videoUrl, commentText } = req.body;
   const accs = getAccounts(req.userId);
   const account = accs.find(a => a.id === accountId);
