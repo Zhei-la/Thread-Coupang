@@ -624,7 +624,10 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
   const { accountId, text, imageUrls, videoUrl, commentText } = req.body;
   const accs = getAccounts(req.userId);
   const account = accs.find(a => a.id === accountId);
-  if (!account) return res.status(404).json({ error: '계정 없음' });
+  if (!account) {
+    console.error('[PUBLISH] 계정 없음 - accountId:', accountId, '등록계정:', accs.map(a=>a.id));
+    return res.status(404).json({ error: '계정 없음' });
+  }
 
   // 일별 발행 횟수 체크
   const user = users.find(u => u.id === req.userId);
@@ -636,21 +639,25 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
     return res.status(429).json({ error: `오늘 발행 한도(${dailyLimit}개)를 초과했어. 내일 다시 시도해줘.` });
   }
 
+  console.log('[PUBLISH] 시작 - accountId:', accountId, 'text길이:', text?.length, 'imageUrls:', imageUrls?.length || 0);
   try {
     const postId = await publishToThreads(account.accessToken, text, imageUrls || [], videoUrl || '');
+    console.log('[PUBLISH] 글 발행 성공 - postId:', postId);
     let commentId = null;
     if (commentText && commentText.trim()) {
-      await new Promise(r => setTimeout(r, 3000)); // 글 발행 후 3초 대기
+      await new Promise(r => setTimeout(r, 3000));
       commentId = await replyToThread(account.accessToken, postId, commentText.trim());
+      console.log('[PUBLISH] 댓글 발행 성공 - commentId:', commentId);
     }
-    // 발행 횟수 기록
     const countData = getPublishCount(req.userId);
     const todayKey = getTodayKey();
     countData[todayKey] = (countData[todayKey] || 0) + 1;
     savePublishCount(req.userId, countData);
-
     res.json({ ok: true, postId, commentId });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch(e) {
+    console.error('[PUBLISH] 에러:', e.message, e.stack);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ══════════════════════════════════
