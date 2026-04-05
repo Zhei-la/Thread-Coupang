@@ -211,7 +211,7 @@ app.post('/api/generate', auth, async (req, res) => {
 
   try {
     const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`, {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.9, maxOutputTokens: 500 } })
     });
