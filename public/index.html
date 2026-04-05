@@ -313,6 +313,26 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
   </div>
 </div>
 
+<!-- 예약 수정 모달 -->
+<div class="modal-bg" id="editSchedModal">
+  <div class="modal">
+    <h3>✏️ 예약 수정</h3>
+    <input type="hidden" id="editSchedId" />
+    <div style="margin-bottom:12px">
+      <label class="label">글 내용</label>
+      <textarea id="editSchedText" style="min-height:100px"></textarea>
+    </div>
+    <div style="margin-bottom:16px">
+      <label class="label">발행 시간</label>
+      <input type="datetime-local" id="editSchedTime" />
+    </div>
+    <div class="row">
+      <button class="btn" onclick="closeModal('editSchedModal')" style="flex:1">취소</button>
+      <button class="btn btn-p" onclick="saveEditSched()" style="flex:1">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 태그 편집 모달 -->
 <div class="modal-bg" id="tagModal">
   <div class="modal">
@@ -372,7 +392,7 @@ function closeSidebar() {
 }
 
 // ── 페이지 이동 ──
-function go(name, el) {
+function go(name, el, pushState=true) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
@@ -381,11 +401,18 @@ function go(name, el) {
     if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + name + "'")) n.classList.add('active');
   });
   localStorage.setItem('page', name);
+  if (pushState) history.pushState({ page: name }, '', '#' + name);
   if (name === 'schedule') loadSched();
   if (name === 'accounts') loadAccs();
   if (name === 'admin') loadAdmin();
   closeSidebar();
 }
+
+// 뒤로가기/앞으로가기 처리
+window.addEventListener('popstate', (e) => {
+  const page = e.state?.page || 'write';
+  go(page, null, false);
+});
 
 // ── 인증 탭 ──
 function switchTab(tab, el) {
@@ -430,7 +457,11 @@ function enterApp(user) {
   }
   loadAccs();
   const saved = localStorage.getItem('page') || 'write';
-  go(saved);
+  // URL 해시에서 페이지 복원
+  const hash = location.hash.replace('#', '');
+  const startPage = hash || saved;
+  history.replaceState({ page: startPage }, '', '#' + startPage);
+  go(startPage, null, false);
 }
 
 async function doLogin() {
@@ -634,8 +665,9 @@ async function doSched() {
 async function loadSched() {
   const posts = await api('/api/schedule');
   const el = document.getElementById('schedList');
-  if (!Array.isArray(posts) || !posts.length) { el.innerHTML = '<div style="color:var(--txt2);font-size:14px">예약된 글 없음</div>'; return; }
-  el.innerHTML = [...posts].reverse().map(p => `
+  const activePosts = Array.isArray(posts) ? posts.filter(p => p.status !== 'done') : [];
+  if (!activePosts.length) { el.innerHTML = '<div style="color:var(--txt2);font-size:14px">예약된 글 없음</div>'; return; }
+  el.innerHTML = [...activePosts].reverse().map(p => `
     <div class="list-item">
       <div style="flex:1">
         <div style="font-size:13px;color:var(--txt2);margin-bottom:4px">
@@ -665,12 +697,25 @@ async function pubNowSched(id) {
 async function editSched(id) {
   const posts = await api('/api/schedule');
   const p = posts.find(x => x.id === id); if (!p) return;
-  const newText = prompt('글 내용 수정:', p.text); if (newText === null) return;
-  const newTime = prompt('발행 시간 (YYYY-MM-DDTHH:MM):', p.scheduledAt.slice(0, 16)); if (newTime === null) return;
-  if (new Date(newTime) <= new Date()) return toast('지나간 시간은 안 돼', 'err');
-  const d = await api(`/api/schedule/${id}`, { method: 'PUT', body: { text: newText, scheduledAt: new Date(newTime).toISOString() } });
+  document.getElementById('editSchedId').value = id;
+  document.getElementById('editSchedText').value = p.text;
+  const min = new Date().toISOString().slice(0,16);
+  const timeEl = document.getElementById('editSchedTime');
+  timeEl.min = min;
+  timeEl.value = p.scheduledAt.slice(0,16);
+  document.getElementById('editSchedModal').classList.add('open');
+}
+
+async function saveEditSched() {
+  const id = document.getElementById('editSchedId').value;
+  const text = document.getElementById('editSchedText').value.trim();
+  const scheduledAt = document.getElementById('editSchedTime').value;
+  if (!text) return toast('글 내용을 입력해줘', 'err');
+  if (!scheduledAt) return toast('시간을 선택해줘', 'err');
+  if (new Date(scheduledAt) <= new Date()) return toast('지나간 시간은 안 돼', 'err');
+  const d = await api(`/api/schedule/${id}`, { method: 'PUT', body: { text, scheduledAt: new Date(scheduledAt).toISOString() } });
   if (d.error) return toast(d.error, 'err');
-  toast('수정됐어!'); loadSched();
+  closeModal('editSchedModal'); toast('수정됐어!'); loadSched();
 }
 
 // ── 계정 관리 ──
