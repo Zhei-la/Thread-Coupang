@@ -898,6 +898,21 @@ async function delUser(id) {
 
 function copy(id) { navigator.clipboard.writeText(document.getElementById(id).value).then(() => toast('복사됨!')); }
 
+function applyCoupangComment() {
+  const link = document.getElementById('coupangLinks').value.trim();
+  const commentText = document.getElementById('commentText').value.trim();
+  if (!link) return toast('링크를 먼저 입력해줘', 'err');
+
+  let result = '[쿠팡 파트너스 활동으로 수수료를 제공받을 수 있습니다]';
+  if (commentText) result += '\n\n' + commentText;
+  result += '\n\n' + link + '\n' + link + '\n' + link;
+
+  // 댓글란에 바로 적용 + 스크롤해서 보이게
+  document.getElementById('commentText').value = result;
+  document.getElementById('commentText').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  toast('댓글란에 적용됐어!');
+}
+
 init();
 </script>
 </body>
