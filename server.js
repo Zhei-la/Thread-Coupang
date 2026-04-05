@@ -206,25 +206,32 @@ app.put('/api/accounts/:id/topics', auth, (req, res) => {
 
 app.post('/api/generate', auth, async (req, res) => {
   const { topic, tone, type } = req.body;
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY 없음' });
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'GROQ_API_KEY 없음' });
 
   const toneMap = { '일상': '친구한테 말하듯 편하고 자연스럽게', '정보': '유용한 정보를 쉽게 설명하듯', '유머': '재치있고 웃긴 느낌으로', '감성': '감성적이고 공감되는 느낌으로', '도발': '자극적이고 관심끄는 느낌으로' };
   const toneDesc = toneMap[tone] || '자연스럽게';
 
   const prompt = type === 'comment'
-    ? `스레드(Threads SNS)에 달 댓글을 1개만 작성해줘.\n주제: ${topic}\n조건:\n- 반드시 반말로\n- ${toneDesc}\n- 이모지 절대 사용 금지\n- "첫째", "둘째", "결론적으로" 같은 형식적 표현 금지\n- ~합니다, ~해요 같은 존댓말 절대 금지\n- 짧고 자연스럽게 (1~2문장)\n- 다른 설명 없이 댓글 텍스트만 출력`
-    : `스레드(Threads SNS)에 올릴 게시글을 작성해줘.\n주제: ${topic}\n조건:\n- 반드시 반말로\n- ${toneDesc}\n- 이모지 절대 사용 금지\n- "첫째", "둘째", "결론적으로" 같은 형식적 표현 금지\n- ~합니다, ~해요 같은 존댓말 절대 금지\n- SNS 특유의 자연스러운 구어체\n- 500자 이내\n- 다른 설명 없이 게시글 텍스트만 출력`;
+    ? `스레드(Threads SNS)에 달 댓글을 1개만 작성해줘.\n주제: ${topic}\n조건:\n- 반드시 반말로\n- ${toneDesc}\n- 이모지 절대 사용 금지\n- 형식적 표현 금지\n- 존댓말 절대 금지\n- 짧고 자연스럽게 (1~2문장)\n- 댓글 텍스트만 출력`
+    : `스레드(Threads SNS)에 올릴 게시글을 작성해줘.\n주제: ${topic}\n조건:\n- 반드시 반말로\n- ${toneDesc}\n- 이모지 절대 사용 금지\n- 형식적 표현 금지\n- 존댓말 절대 금지\n- SNS 자연스러운 구어체\n- 500자 이내\n- 게시글 텍스트만 출력`;
 
   try {
-    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.9, maxOutputTokens: 500 } })
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.9,
+        max_tokens: 500
+      })
     });
     const data = await r.json();
-    console.log("Gemini 응답:", JSON.stringify(data));
-    res.json({ text: (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim() });
+    console.log('Groq 응답 상태:', r.status);
+    if (data.error) throw new Error(data.error.message);
+    const text = data.choices?.[0]?.message?.content || '';
+    res.json({ text: text.trim() });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
