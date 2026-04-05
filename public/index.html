@@ -757,19 +757,35 @@ function switchMedia(tab) {
 }
 
 async function handleImg(input) {
-  for (const f of Array.from(input.files)) {
+  const files = Array.from(input.files);
+  // 미리보기 먼저 표시
+  for (const f of files) {
     imgFiles.push(f);
     const item = document.createElement('div');
     item.className = 'preview-item'; item.dataset.idx = imgFiles.length - 1;
-    item.innerHTML = `<img src="${URL.createObjectURL(f)}"><button class="remove-img" onclick="removeImg(${imgFiles.length-1})">✕</button>`;
+    item.innerHTML = `<img src="${URL.createObjectURL(f)}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--bdr);opacity:0.5"><button class="remove-img" onclick="removeImg(${imgFiles.length-1})">✕</button><div style="font-size:10px;color:var(--txt2);text-align:center">업로드중...</div>`;
     document.getElementById('previewList').appendChild(item);
   }
+  toast('📷 사진 업로드 중...');
   const fd = new FormData();
-  Array.from(input.files).forEach(f => fd.append('images', f));
+  files.forEach(f => fd.append('images', f));
   try {
-    const d = await fetch('/api/upload', { method: 'POST', headers: { 'x-session': session }, body: fd }).then(r => r.json());
-    if (d.urls) imgUrls.push(...d.urls);
-  } catch(e) {}
+    const r = await fetch('/api/upload', { method: 'POST', headers: { 'x-session': session }, body: fd });
+    const d = await r.json();
+    if (d.error) { toast('사진 업로드 실패: ' + d.error, 'err'); return; }
+    if (d.urls && d.urls.length) {
+      imgUrls.push(...d.urls);
+      // 미리보기 업데이트 (업로드 완료)
+      const items = document.querySelectorAll('#previewList .preview-item');
+      items.forEach(item => {
+        const img = item.querySelector('img');
+        if (img) img.style.opacity = '1';
+        const txt = item.querySelector('div');
+        if (txt) txt.remove();
+      });
+      toast('✅ 사진 업로드 완료!');
+    }
+  } catch(e) { toast('사진 업로드 실패: ' + e.message, 'err'); }
 }
 
 function removeImg(idx) {
@@ -793,6 +809,12 @@ async function pubNow() {
   if (!accId) return toast('계정을 선택해줘', 'err');
   const text = document.getElementById('postText').value.trim();
   if (!text) return toast('글을 작성해줘', 'err');
+
+  // 중복 발행 방지 - 버튼 비활성화
+  const pubBtn = document.querySelector('button[onclick="pubNow()"]');
+  const schedBtn = document.querySelector('button[onclick="openSched('post')"]');
+  if (pubBtn) { pubBtn.disabled = true; pubBtn.innerHTML = '<span class="spin"></span> 발행 중...'; }
+  if (schedBtn) schedBtn.disabled = true;
   const commentText = document.getElementById('commentText').value.trim();
   const commentReserveTime = document.getElementById('commentReserveTime')?.value;
 
@@ -812,12 +834,13 @@ async function pubNow() {
     const d = await api('/api/publish', { method: 'POST', body });
     if (d.error) throw new Error(d.error);
 
-    // 댓글 예약 따로 등록
+    // 댓글 예약 따로 등록 (글 postId를 replyToId로 전달)
     if (useCommentReserve) {
       const dc = await api('/api/schedule', { method: 'POST', body: {
         accountId: accId,
         text: commentText,
         type: 'comment',
+        replyToId: d.postId || null,
         scheduledAt: new Date(commentReserveTime).toISOString()
       }});
       if (dc.error) toast('글은 발행됐는데 댓글 예약 실패: ' + dc.error, 'err');
@@ -833,7 +856,12 @@ async function pubNow() {
     document.getElementById('vidPreview').innerHTML = '';
     document.getElementById('commentReserveTime').value = '';
     document.getElementById('commentReserveWrap').style.display = 'none';
-  } catch(e) { toast(e.message, 'err'); }
+  } catch(e) {
+    toast(e.message, 'err');
+  } finally {
+    if (pubBtn) { pubBtn.disabled = false; pubBtn.innerHTML = '⚡ 즉시 발행'; }
+    if (schedBtn) schedBtn.disabled = false;
+  }
 }
 
 function openSched(type) {
@@ -868,6 +896,8 @@ async function doSched() {
   const type = document.getElementById('schedType').value;
   const scheduledAt = document.getElementById('schedTime').value;
   if (!scheduledAt) return toast('시간을 선택해줘', 'err');
+  const schedSubmitBtn = document.querySelector('#schedModal .btn-g');
+  if (schedSubmitBtn) { schedSubmitBtn.disabled = true; schedSubmitBtn.innerHTML = '<span class="spin"></span> 등록 중...'; }
 
   if (type === 'comment') {
     // 댓글만 단독 예약
@@ -908,6 +938,7 @@ async function doSched() {
     }
   }
 
+  if (schedSubmitBtn) { schedSubmitBtn.disabled = false; schedSubmitBtn.innerHTML = '예약 등록'; }
   closeModal('schedModal');
 }
 
