@@ -576,8 +576,7 @@ async function loadSchedule() {
         <div style="font-size:14px;line-height:1.5;margin-bottom:8px">${p.text.slice(0,100)}${p.text.length>100?'...':''}</div>
         ${p.status==='pending'?`
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-sm" onclick="editSchedule('${p.id}','${p.text.replace(/'/g,"\'").replace(/
-/g,' ')}','${p.scheduledAt}')">✏️ 수정</button>
+          <button class="btn btn-sm" onclick="editSchedule('${p.id}')">✏️ 수정</button>
           <button class="btn btn-sm btn-green" onclick="publishNowScheduled('${p.id}')">⚡ 즉시발행</button>
           <button class="btn btn-sm btn-red" onclick="cancelSchedule('${p.id}')">취소</button>
         </div>`:''}
@@ -595,18 +594,19 @@ async function publishNowScheduled(id){
   toast('✅ 즉시 발행 완료!'); loadSchedule();
 }
 
-function editSchedule(id, text, scheduledAt){
-  const newText = prompt('글 내용 수정:', text);
+async function editSchedule(id){
+  const posts = await api('/api/schedule');
+  const p = posts.find(x=>x.id===id);
+  if(!p) return;
+  const newText = prompt('글 내용 수정:', p.text);
   if(newText===null) return;
   const now = new Date();
-  const minStr = now.toISOString().slice(0,16);
-  const newTime = prompt('발행 시간 수정 (형식: YYYY-MM-DDTHH:MM)\n현재: '+scheduledAt.slice(0,16)+'\n(현재 이후 시간 입력)', scheduledAt.slice(0,16));
+  const newTime = prompt('발행 시간 수정 (형식: YYYY-MM-DDTHH:MM)\n(현재 이후 시간 입력)', p.scheduledAt.slice(0,16));
   if(newTime===null) return;
   if(new Date(newTime) <= now) return toast('지나간 시간은 설정 불가','error');
-  api(`/api/schedule/${id}`,{method:'PUT',body:{text:newText,scheduledAt:new Date(newTime).toISOString()}}).then(d=>{
-    if(d.error) return toast(d.error,'error');
-    toast('수정됐어!'); loadSchedule();
-  });
+  const d = await api(`/api/schedule/${id}`,{method:'PUT',body:{text:newText,scheduledAt:new Date(newTime).toISOString()}});
+  if(d.error) return toast(d.error,'error');
+  toast('수정됐어!'); loadSchedule();
 }
 
 // ── 인사이트 ──
