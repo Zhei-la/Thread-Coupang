@@ -398,15 +398,12 @@ app.get('/api/insights/:accountId', auth, async (req, res) => {
   const account = accs.find(a => a.id === req.params.accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
   try {
-    const r = await fetch(`https://graph.threads.net/v1.0/me?fields=id,username,followers_count,threads_biography&access_token=${account.accessToken}`);
+    const r = await fetch(`https://graph.threads.net/v1.0/me?fields=id,username&access_token=${account.accessToken}`);
     const data = await r.json();
-    console.log('인사이트 응답:', JSON.stringify(data));
     if (data.error) return res.status(400).json({ error: data.error.message || JSON.stringify(data.error) });
     res.json({
       id: data.id || '-',
-      username: data.username || '-',
-      followers_count: data.followers_count || 0,
-      threads_biography: data.threads_biography || ''
+      username: data.username || '-'
     });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
