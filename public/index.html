@@ -694,23 +694,27 @@ async function loadInsights() {
     return;
   }
   const today = new Date().toLocaleDateString('ko-KR');
+  const followers = typeof d.followers_count === 'number' ? d.followers_count.toLocaleString() : (d.followers_count || 0);
+  const username = typeof d.username === 'string' ? d.username : JSON.stringify(d.username || '-');
+  const userId = typeof d.id === 'string' || typeof d.id === 'number' ? d.id : '-';
+  const bio = typeof d.threads_biography === 'string' ? d.threads_biography : '없음';
   el.innerHTML=`
     <div style="font-size:13px;color:var(--text2);margin-bottom:16px">📅 ${today} 기준</div>
     <div class="insight-stat-grid">
       <div class="insight-stat">
-        <div class="insight-stat-num">${(d.followers_count||0).toLocaleString()}</div>
+        <div class="insight-stat-num">${followers}</div>
         <div class="insight-stat-label">👥 팔로워</div>
       </div>
       <div class="insight-stat">
-        <div class="insight-stat-num">@${d.username||'-'}</div>
+        <div class="insight-stat-num">@${username}</div>
         <div class="insight-stat-label">🧵 계정명</div>
       </div>
       <div class="insight-stat">
-        <div class="insight-stat-num">${d.id||'-'}</div>
+        <div class="insight-stat-num" style="font-size:18px">${userId}</div>
         <div class="insight-stat-label">🆔 사용자 ID</div>
       </div>
       <div class="insight-stat">
-        <div class="insight-stat-num" style="font-size:16px">${d.threads_biography||'없음'}</div>
+        <div class="insight-stat-num" style="font-size:14px">${bio}</div>
         <div class="insight-stat-label">📝 바이오</div>
       </div>
     </div>`;
