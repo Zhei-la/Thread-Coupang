@@ -266,7 +266,7 @@ app.delete('/api/invites/:code', adminAuth, (req, res) => {
 
 // 유저 목록 (관리자)
 app.get('/api/users', adminAuth, (req, res) => {
-  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', plan: u.plan||'paid', accountLimit: u.accountLimit||3, dailyPublishLimit: u.dailyPublishLimit||null, limitRequest: u.limitRequest||null, extendRequest: u.extendRequest||null, upgradeRequest: u.upgradeRequest||null, joinedVia: u.joinedVia||'normal', approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt })));
+  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', plan: u.plan||'free', accountLimit: u.accountLimit||2, dailyPublishLimit: u.dailyPublishLimit||null, limitRequest: u.limitRequest||null, extendRequest: u.extendRequest||null, upgradeRequest: u.upgradeRequest||null, joinedVia: u.joinedVia||'normal', approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt })));
 });
 
 app.delete('/api/users/:id', adminAuth, (req, res) => {
@@ -316,11 +316,29 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
     user.approvedAt = new Date().toISOString();
     const days = req.body.planDays || 30;
     user.expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-    user.plan = req.body.plan || 'paid'; // 'free' or 'paid'
-    if (req.body.plan === 'free') {
+    user.plan = req.body.plan || 'basic';
+    if (req.body.plan === 'basic') {
+      user.accountLimit = 0; // 계정 불필요
+      user.dailyPublishLimit = 0; // 발행 불가
+    } else if (req.body.plan === 'pro') {
+      user.accountLimit = 2;
+      user.dailyPublishLimit = 3;
+    } else if (req.body.plan === 'premium') {
+      user.accountLimit = 6;
+      user.dailyPublishLimit = 5;
+    } else if (req.body.plan === 'free') {
       user.accountLimit = 1;
       user.dailyPublishLimit = 2;
     }
+  }
+  // 재승인 시 플랜 변경
+  if (req.body.changePlan) {
+    user.plan = req.body.plan;
+    if (req.body.plan === 'basic') { user.accountLimit = 0; user.dailyPublishLimit = 0; }
+    else if (req.body.plan === 'pro') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
+    else if (req.body.plan === 'premium') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
+    const base = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
+    user.expiresAt = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
   }
   if (req.body.accountLimit) {
     user.accountLimit = req.body.accountLimit;
@@ -391,6 +409,17 @@ app.put('/api/accounts/:id/topics', auth, (req, res) => {
 // ══════════════════════════════════
 
 app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
+  // 베이직 플랜 하루 200번 제한
+  const genUser = users.find(u => u.id === req.userId);
+  if (genUser && genUser.plan === 'basic') {
+    const genCount = getPublishCount(req.userId);
+    const genKey = 'gen_' + getTodayKey();
+    if ((genCount[genKey] || 0) >= 200) {
+      return res.status(429).json({ error: '오늘 글 생성 한도(200번)를 초과했어. 내일 다시 시도해줘.' });
+    }
+    genCount[genKey] = (genCount[genKey] || 0) + 1;
+    savePublishCount(req.userId, genCount);
+  }
   const { topic, tone, type, imageDesc } = req.body;
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'GROQ_API_KEY 없음' });
@@ -645,7 +674,7 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
   else if (user?.dailyPublishLimit) dailyLimit = user.dailyPublishLimit;
   else if ((user?.accountLimit || 3) >= 6) dailyLimit = 5;
   else if (user?.plan === 'free') dailyLimit = 2;
-  else dailyLimit = 3;
+  else dailyLimit = 3; // 베이직(2계정)
   const today = getTodayKey();
   const counts = getPublishCount(req.userId);
   const todayCount = counts[today] || 0;
