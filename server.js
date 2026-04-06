@@ -227,7 +227,23 @@ app.post('/api/auth/logout', auth, (req, res) => {
 
 // 내 정보
 app.get('/api/auth/me', auth, (req, res) => {
-  res.json({ nickname: req.user.nickname, role: req.user.role });
+  const u = req.user;
+  const today = getTodayKey();
+  const counts = getPublishCount(u.id);
+  const genUsed = counts['gen_' + today] || 0;
+  const genLimit = u.plan === 'basic' ? 200 : u.plan === 'free' ? 100 : null;
+  res.json({
+    id: u.id,
+    nickname: u.nickname,
+    name: u.name || '',
+    role: u.role,
+    plan: u.plan || 'free',
+    accountLimit: u.accountLimit || 1,
+    expiresAt: u.expiresAt || null,
+    genUsed: genUsed,
+    genLimit: genLimit,
+    status: u.status || 'approved'
+  });
 });
 
 // ══════════════════════════════════
