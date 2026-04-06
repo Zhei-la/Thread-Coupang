@@ -1284,13 +1284,37 @@ async function loadAdmin() {
   ugCount.textContent = upgradeReqs.length ? upgradeReqs.length + '건' : '';
   ugCount.style.display = upgradeReqs.length ? '' : 'none';
   ugEl.innerHTML = upgradeReqs.length ? upgradeReqs.map(function(u) {
-    return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px">' + (u.name || '-') + ' (' + u.nickname + ')</div>' +
-      '<div style="font-size:12px;color:var(--txt2)">무료 7일 - 유료 전환 신청</div></div>' +
-      '<div style="display:flex;gap:4px">' +
-      '<button class="btn btn-sm btn-g" onclick="approveUpgrade(\'' + u.id + '\')">승인 3개</button>' +
-      '<button class="btn btn-sm btn-g" onclick="approveUpgrade6(\'' + u.id + '\')">승인 6개</button>' +
+    return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px">' + (u.name || '-') + ' <span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span></div>' +
+      '<div style="font-size:12px;color:var(--txt2)">유료 전환 신청</div></div>' +
+      '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
+      '<button class="btn btn-sm" style="border-color:#666;color:#aaa" onclick="approvePlan(\'' + u.id + '\',\'basic\')">베이직 30일</button>' +
+      '<button class="btn btn-sm btn-g" onclick="approvePlan(\'' + u.id + '\',\'pro\')">프로 30일</button>' +
+      '<button class="btn btn-sm" style="border-color:var(--yellow);color:var(--yellow)" onclick="approvePlan(\'' + u.id + '\',\'premium\')">프리미엄 60일</button>' +
       '<button class="btn btn-sm btn-r" onclick="denyUpgrade(\'' + u.id + '\')">거절</button></div></div>';
   }).join('') : '<div style="color:var(--txt2);font-size:14px">신청 없음</div>';
+
+  // 요금제 변경 요청
+  var planChangeReqs = users.filter(function(u) { return u.planChangeRequest; });
+  var pcEl = document.getElementById('planChangeList');
+  var pcCount = document.getElementById('planChangeCount');
+  var planNames2 = { basic: '베이직', pro: '프로', premium: '프리미엄', free: '무료체험' };
+  if (pcCount) { pcCount.textContent = planChangeReqs.length ? planChangeReqs.length + '건' : ''; pcCount.style.display = planChangeReqs.length ? '' : 'none'; }
+  if (pcEl) {
+    pcEl.innerHTML = planChangeReqs.length ? planChangeReqs.map(function(u) {
+      var reqPlan = u.planChangeRequest ? u.planChangeRequest.plan : '-';
+      var curPlan = planNames2[u.plan] || u.plan || '-';
+      var reqPlanName = planNames2[reqPlan] || reqPlan;
+      var reqDate = u.planChangeRequest ? new Date(u.planChangeRequest.requestedAt).toLocaleDateString('ko-KR') : '';
+      return '<div class="list-item"><div style="flex:1">' +
+        '<div style="font-weight:600;font-size:14px;margin-bottom:4px">' + (u.name || '-') + ' <span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span></div>' +
+        '<div style="font-size:13px;margin-bottom:2px">현재: <b style="color:var(--txt)">' + curPlan + '</b> → 변경 요청: <b style="color:var(--yellow)">' + reqPlanName + '</b></div>' +
+        '<div style="font-size:11px;color:var(--txt2)">신청일: ' + reqDate + '</div></div>' +
+        '<div style="display:flex;gap:4px">' +
+        '<button class="btn btn-sm btn-g" onclick="approvePlanChange(\'' + u.id + '\',\'' + reqPlan + '\')">✅ 승인</button>' +
+        '<button class="btn btn-sm btn-r" onclick="denyPlanChange(\'' + u.id + '\')">거절</button>' +
+        '</div></div>';
+    }).join('') : '<div style="color:var(--txt2);font-size:14px">신청 없음</div>';
+  }
 
   try {
     var settings = await api('/api/settings');
@@ -1311,28 +1335,38 @@ async function loadAdmin() {
   var normalUsers = allActive.filter(function(u) { return u.joinedVia !== 'partner'; });
 
   function renderUser(u) {
-    var sb = u.status === 'approved' ? '<span class="badge bg">사용중</span>' : '<span class="badge br">정지</span>';
-    var planLabel = u.plan === 'basic' ? '베이직' : u.plan === 'pro' ? '프로' : u.plan === 'premium' ? '프리미엄' : u.plan === 'free' ? '무료' : '-';
-    var planColor = u.plan === 'premium' ? 'by' : u.plan === 'pro' ? 'bg' : u.plan === 'basic' ? 'br' : 'bb';
+    var isExpired = u.expiresAt && new Date(u.expiresAt) < new Date();
+    var sb = isExpired ? '<span class="badge br">기간만료</span>' : (u.status === 'approved' ? '<span class="badge bg">사용중</span>' : '<span class="badge br">정지</span>');
+    var planLabel = u.plan === 'basic' ? '베이직' : u.plan === 'pro' ? '프로' : u.plan === 'premium' ? '프리미엄' : '무료체험';
+    var planColor = u.plan === 'premium' ? 'by' : u.plan === 'pro' ? 'bg' : u.plan === 'basic' ? 'bb' : 'br';
     var pb = '<span class="badge ' + planColor + '">' + planLabel + '</span>';
     var expInfo = '';
     if (u.expiresAt) {
       var diff = Math.ceil((new Date(u.expiresAt) - new Date()) / 86400000);
-      expInfo = diff < 0 ? ' · <span style="color:var(--red)">만료</span>' : ' · ' + diff + '일 남음';
+      expInfo = diff < 0 ? '<span style="color:var(--red);font-weight:700">만료됨</span>' : '<b>' + diff + '일 남음</b>';
     }
+    var statusBtn = u.status === 'approved' && !isExpired
+      ? '<button class="btn btn-sm btn-r" onclick="setStatus(\'' + u.id + '\',\'suspended\')">정지</button>'
+      : '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\')">활성화</button>';
     var btns = u.role !== 'admin' ? (
-      '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">' +
-      '<div style="display:flex;gap:4px">' + (u.status === 'approved' ? '<button class="btn btn-sm btn-r" onclick="setStatus(\'' + u.id + '\',\'suspended\')">정지</button>' : '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\',' + (u.accountLimit || 3) + ')">활성화</button>') + '</div>' +
-      '<div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="extendUserDays(\'' + u.id + '\',10)">+10일</button><button class="btn btn-sm btn-g" onclick="extendUserDays(\'' + u.id + '\',30)">+30일</button></div>' +
-      '<div style="display:flex;gap:4px"><button class="btn btn-sm ' + ((u.accountLimit || 3) === 3 ? 'btn-p' : '') + '" onclick="setLimit(\'' + u.id + '\',3)">3개</button><button class="btn btn-sm ' + ((u.accountLimit || 3) === 6 ? 'btn-p' : '') + '" onclick="setLimit(\'' + u.id + '\',6)">6개</button></div>' +
-      '<button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">삭제</button></div>'
+      '<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">' +
+      '<div style="display:flex;gap:4px">' + statusBtn + '<button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">삭제</button></div>' +
+      '<div style="display:flex;gap:4px"><button class="btn btn-sm" style="color:var(--red);border-color:var(--red)" onclick="extendUserDays(\'' + u.id + '\',-10)">-10일</button><button class="btn btn-sm" onclick="extendUserDays(\'' + u.id + '\',10)">+10일</button></div>' +
+      '<div style="display:flex;gap:4px">' +
+        '<button class="btn btn-sm" style="font-size:11px;border-color:#666;color:#aaa" onclick="setPlanAndExtend(\'' + u.id + '\',\'basic\')">베이직<br>30일</button>' +
+        '<button class="btn btn-sm btn-g" style="font-size:11px" onclick="setPlanAndExtend(\'' + u.id + '\',\'pro\')">프로<br>30일</button>' +
+        '<button class="btn btn-sm" style="font-size:11px;border-color:var(--yellow);color:var(--yellow)" onclick="setPlanAndExtend(\'' + u.id + '\',\'premium\')">프리미엄<br>60일</button>' +
+      '</div>' +
+      '</div>'
     ) : '';
-    return '<div class="list-item"><div style="flex:1"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">' +
-      '<span style="font-weight:600;font-size:14px">' + (u.name || '-') + '</span>' +
-      '<span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span>' +
+    return '<div class="list-item" style="align-items:flex-start"><div style="flex:1;min-width:0">' +
+      '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap">' +
+      '<span style="font-weight:700;font-size:14px">' + (u.name || '-') + '</span>' +
+      '<span style="color:var(--txt2);font-size:12px">(' + u.nickname + ')</span>' +
       '<span class="badge ' + (u.role === 'admin' ? 'bb' : 'by') + '">' + (u.role === 'admin' ? '관리자' : '멤버') + '</span>' +
       sb + pb + '</div>' +
-      '<div style="font-size:12px;color:var(--txt2)">한도: ' + (u.accountLimit || 3) + '개' + expInfo + '</div></div>' + btns + '</div>';
+      '<div style="font-size:12px;color:var(--txt2)">' + expInfo + '</div>' +
+      '</div>' + btns + '</div>';
   }
 
   _cachedPartnerUsers = partnerUsers;
