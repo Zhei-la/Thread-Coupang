@@ -931,6 +931,21 @@ async function pubNow() {
   if (!accId) return toast('계정을 선택해줘', 'err');
   var text = document.getElementById('postText').value.trim();
   if (!text) return toast('글을 작성해줘', 'err');
+
+  // 발행 버튼 비활성화 + 로딩 표시
+  var pubBtn = document.querySelector('button[onclick="pubNow()"]');
+  var hasMedia = (mediaMode === 'photo' && imgUrls.length) || (mediaMode === 'video' && vidUrl);
+  if (pubBtn) {
+    pubBtn.disabled = true;
+    pubBtn.innerHTML = '<span class="spin"></span> ' + (hasMedia ? '미디어 처리 중... (30초 소요)' : '발행 중...');
+  }
+  // 발행 중 토스트
+  var loadingToast = document.createElement('div');
+  loadingToast.className = 'toast';
+  loadingToast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:14px 20px;font-size:14px;z-index:999;display:flex;align-items:center;gap:10px';
+  loadingToast.innerHTML = '<span class="spin" style="width:16px;height:16px;border-width:2px"></span>' + (hasMedia ? '사진/영상 업로드 및 처리 중이에요...' : '게시글 발행 중이에요...');
+  document.body.appendChild(loadingToast);
+
   var commentText = document.getElementById('commentText').value.trim();
   var commentReserveTime = document.getElementById('commentReserveTime').value;
   var body = { accountId: accId, text: text };
@@ -940,12 +955,13 @@ async function pubNow() {
   if (!useReserve && commentText) body.commentText = commentText;
   try {
     var d = await api('/api/publish', { method: 'POST', body: body });
+    loadingToast.remove();
     if (d.error) throw new Error(d.error);
     if (useReserve) {
       var dc = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: commentText, type: 'comment', scheduledAt: new Date(commentReserveTime).toISOString() } });
-      toast(dc.error ? '글 발행됐지만 댓글 예약 실패' : '글 발행 완료! 댓글은 예약됐어');
+      toast(dc.error ? '글 발행됐지만 댓글 예약 실패' : '✅ 글 발행 완료! 댓글은 예약됐어');
     } else {
-      toast(d.commentId ? '글 + 댓글 발행 완료!' : '발행 완료!');
+      toast(d.commentId ? '✅ 글 + 댓글 발행 완료!' : '✅ 발행 완료!');
     }
     document.getElementById('postText').value = '';
     document.getElementById('commentText').value = '';
@@ -953,7 +969,12 @@ async function pubNow() {
     document.getElementById('previewList').innerHTML = '';
     document.getElementById('vidPreview').innerHTML = '';
     document.getElementById('commentReserveWrap').style.display = 'none';
-  } catch(e) { toast(e.message, 'err'); }
+  } catch(e) {
+    loadingToast.remove();
+    toast(e.message, 'err');
+  } finally {
+    if (pubBtn) { pubBtn.disabled = false; pubBtn.innerHTML = '⚡ 즉시 발행'; }
+  }
 }
 
 function openSched(type) {
