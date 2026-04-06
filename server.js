@@ -1237,6 +1237,7 @@ cron.schedule('* * * * *', async () => {
   const settings = getSettings();
   const now = new Date();
   const currentTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  console.log(`[AUTO-CRON] 체크 시작 - 현재시간: ${currentTime}, 자동스케줄러활성: ${settings.autoSchedulerEnabled}`);
   const dataDir = `${DATA_ROOT}/users`;
   if (!fs.existsSync(dataDir)) return;
   const userDirs = fs.readdirSync(dataDir);
@@ -1245,13 +1246,15 @@ cron.schedule('* * * * *', async () => {
     if (!user) continue;
     // 관리자이거나 전체 활성화 + 프리미엄(6개) 유저만
     if (user.role !== 'admin') {
-      if (!settings.autoSchedulerEnabled) continue;
-      if ((user.accountLimit || 3) < 6) continue; // 6개 플랜만 허용
+      if (!settings.autoSchedulerEnabled) { continue; }
+      if ((user.accountLimit || 3) < 6) { continue; }
     }
     const autoSchedules = getAutoSchedules(userId);
-    // 관리자 무제한, 프리미엄 최대 3개
-    const maxAuto = user.role === 'admin' ? 999 : 3;
+    console.log(`[AUTO-CRON] 유저 ${user.nickname}(${user.role}) - 스케줄 ${autoSchedules.length}개`);
+    // 관리자 무제한, 프리미엄 최대 5개
+    const maxAuto = user.role === 'admin' ? 999 : 5;
     const toRun = autoSchedules.filter(s => s.enabled && s.publishTime === currentTime).slice(0, maxAuto);
+    console.log(`[AUTO-CRON] 현재시간(${currentTime}) 매칭 스케줄: ${toRun.length}개`);
     if (!toRun.length) continue;
     console.log(`[AUTO] 유저 ${userId} - ${toRun.length}개 자동 발행`);
     for (const sched of toRun) {
