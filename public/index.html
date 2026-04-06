@@ -139,6 +139,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     <nav>
       <div class="nav-item active" onclick="go('write',this)">✏️ 글 작성</div>
       <div class="nav-item" onclick="go('schedule',this)">📅 예약 목록</div>
+      <div class="nav-item" onclick="go('autoSchedule',this)" id="autoSchedNav">🤖 자동 스케줄러 <span style="font-size:10px;color:var(--yellow);margin-left:4px">테스트중</span></div>
       <div class="nav-item" onclick="go('accounts',this)">👤 계정 관리</div>
       <div class="nav-sep" id="adminSep" style="display:none"></div>
       <div class="nav-item" id="adminNav" style="display:none" onclick="go('admin',this)">⚙️ 관리자</div>
@@ -240,6 +241,63 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       </div>
     </div>
 
+    <!-- 자동 스케줄러 -->
+    <div class="page" id="page-autoSchedule">
+      <h1>🤖 자동 스케줄러 <span class="badge by" style="font-size:12px;vertical-align:middle">테스트중</span></h1>
+      <div id="autoSchedLocked" style="display:none">
+        <div class="card" style="border-color:var(--yellow)">
+          <h2 style="color:var(--yellow)">테스트 중인 기능이에요</h2>
+          <div style="font-size:13px;color:var(--txt2)">관리자 테스트 완료 후 활성화될 예정이에요.</div>
+        </div>
+      </div>
+      <div id="autoSchedContent">
+        <div class="card">
+          <h2>새 자동 스케줄 등록</h2>
+          <div style="margin-bottom:12px">
+            <label class="label">계정 선택</label>
+            <select id="autoAccId"></select>
+          </div>
+          <div style="margin-bottom:12px">
+            <label class="label">주제</label>
+            <input id="autoTopic" placeholder="예: 쿠팡 할인 상품, AI 뉴스" />
+          </div>
+          <div style="margin-bottom:12px">
+            <label class="label">말투</label>
+            <select id="autoTone">
+              <option>리스트형</option>
+              <option>정보성</option>
+              <option>리뷰형</option>
+              <option>일상</option>
+              <option>공감형</option>
+              <option>스토리형</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:12px">
+            <label class="label">매일 발행 시간</label>
+            <input type="time" id="autoTime" value="09:00" />
+          </div>
+          <div style="margin-bottom:12px;padding:12px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr)">
+            <label class="label">댓글 자동 생성 (선택)</label>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <input type="checkbox" id="autoCommentEnabled" style="width:auto" onchange="document.getElementById('autoCommentWrap').style.display=this.checked?'block':'none'" />
+              <label style="font-size:13px;color:var(--txt2)">댓글도 자동으로 달기</label>
+            </div>
+            <div id="autoCommentWrap" style="display:none">
+              <label class="label">댓글 발행 딜레이 (분)</label>
+              <input type="number" id="autoDelay" value="10" min="5" max="60" style="margin-bottom:8px" />
+              <div style="font-size:11px;color:var(--blue);margin-bottom:8px">글 발행 후 N분 뒤에 댓글 자동 달림</div>
+            </div>
+          </div>
+          <button class="btn btn-p" onclick="addAutoSched()">+ 등록</button>
+        </div>
+        <div class="card">
+          <h2>등록된 자동 스케줄</h2>
+          <div id="autoSchedList"><span class="spin"></span></div>
+        </div>
+      </div>
+    </div>
+
     <!-- 예약 목록 -->
     <div class="page" id="page-schedule">
       <h1>📅 예약 목록</h1>
@@ -324,6 +382,19 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <h2>유료 전환 신청 <span id="upgradeCount" class="badge bb"></span></h2>
         <div id="upgradeList"><div style="color:var(--txt2);font-size:14px">신청 없음</div></div>
       </div>
+      <div class="card">
+        <h2>🤖 자동 스케줄러 설정</h2>
+        <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">현재 관리자만 테스트 가능. 활성화하면 모든 유저가 사용 가능.</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <span style="font-size:14px">상태:</span>
+          <span id="autoSchedStatusBadge" class="badge by">테스트중</span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm btn-g" onclick="setAutoScheduler(true)">전체 활성화</button>
+          <button class="btn btn-sm btn-r" onclick="setAutoScheduler(false)">테스트 전용으로</button>
+        </div>
+      </div>
+
       <div class="card">
         <h2>관리자 문의 링크 설정</h2>
         <div style="font-size:13px;color:var(--txt2);margin-bottom:10px">유저 문의하기 클릭 시 연결 링크 (카카오 오픈채팅 등)</div>
@@ -477,6 +548,7 @@ function go(name, el) {
   localStorage.setItem('page', name);
   history.pushState({ page: name }, '', '#' + name);
   if (name === 'schedule') loadSched();
+  if (name === 'autoSchedule') loadAutoSched();
   if (name === 'accounts') loadAccs();
   if (name === 'admin') loadAdmin();
   closeSidebar();
@@ -1264,6 +1336,74 @@ async function checkExpiry() {
 }
 
 function copy(id) { navigator.clipboard.writeText(document.getElementById(id).value).then(function() { toast('복사됐어!'); }); }
+
+async function loadAutoSched() {
+  var d = await api('/api/auto-schedule');
+  var el = document.getElementById('autoSchedList');
+  if (d.error === 'test') {
+    document.getElementById('autoSchedLocked').style.display = 'block';
+    document.getElementById('autoSchedContent').style.display = 'none';
+    return;
+  }
+  // 계정 select 채우기
+  var accs = await api('/api/accounts');
+  var sel = document.getElementById('autoAccId');
+  sel.innerHTML = (Array.isArray(accs) ? accs : []).map(function(a) {
+    return '<option value="' + a.id + '">' + a.name + '</option>';
+  }).join('');
+  if (!Array.isArray(d) || !d.length) {
+    el.innerHTML = '<div style="color:var(--txt2);font-size:14px">등록된 자동 스케줄 없음</div>';
+    return;
+  }
+  el.innerHTML = d.map(function(s) {
+    return '<div class="list-item"><div style="flex:1">' +
+      '<div style="font-weight:600;font-size:14px;margin-bottom:4px">' + s.accountName + ' · ' + s.publishTime + ' 매일</div>' +
+      '<div style="font-size:13px;margin-bottom:4px">' + s.topic + ' / ' + s.tone + (s.coupangKeyword ? ' / 쿠팡키워드: ' + s.coupangKeyword : '') + '</div>' +
+      (s.commentTone ? '<div style="font-size:12px;color:var(--blue)">' + s.commentDelay + '분 후 댓글 자동</div>' : '') +
+      '</div><div style="display:flex;gap:6px;align-items:center">' +
+      '<span class="badge ' + (s.enabled ? 'bg' : 'br') + '">' + (s.enabled ? '활성' : '비활성') + '</span>' +
+      '<button class="btn btn-sm btn-r" onclick="delAutoSched('' + s.id + '')">삭제</button>' +
+      '</div></div>';
+  }).join('');
+}
+
+async function addAutoSched() {
+  var accId = document.getElementById('autoAccId').value;
+  var topic = document.getElementById('autoTopic').value.trim();
+  var tone = document.getElementById('autoTone').value;
+  var time = document.getElementById('autoTime').value;
+  if (!topic) return toast('주제를 입력해줘', 'err');
+  if (!time) return toast('발행 시간을 선택해줘', 'err');
+  var commentEnabled = document.getElementById('autoCommentEnabled').checked;
+  var delay = parseInt(document.getElementById('autoDelay').value) || 10;
+  var d = await api('/api/auto-schedule', { method: 'POST', body: {
+    accountId: accId, topic: topic, tone: tone, publishTime: time,
+    commentTone: commentEnabled ? tone : '', commentDelay: delay, enabled: true
+  }});
+  if (d.error) {
+    if (d.error === 'test') return toast('관리자만 사용 가능한 테스트 기능이야', 'err');
+    return toast(d.error, 'err');
+  }
+  toast('자동 스케줄 등록됐어!');
+  document.getElementById('autoTopic').value = '';
+  loadAutoSched();
+}
+
+async function delAutoSched(id) {
+  await api('/api/auto-schedule/' + id, { method: 'DELETE' });
+  toast('삭제됐어!'); loadAutoSched();
+}
+
+async function setAutoScheduler(enabled) {
+  var d = await api('/api/settings/auto-scheduler', { method: 'PUT', body: { enabled: enabled }});
+  if (d.error) return toast(d.error, 'err');
+  var badge = document.getElementById('autoSchedStatusBadge');
+  if (badge) {
+    badge.textContent = enabled ? '전체 활성화' : '테스트중';
+    badge.className = 'badge ' + (enabled ? 'bg' : 'by');
+  }
+  toast(enabled ? '전체 유저 활성화됐어!' : '관리자 테스트 전용으로 변경됐어!');
+}
 
 init();
 </script>
