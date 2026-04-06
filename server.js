@@ -1290,7 +1290,7 @@ cron.schedule('* * * * *', async () => {
 
         const toneExample = sched.toneExample ? '\n\n말투 예시:\n' + sched.toneExample : '';
         const tonePromptExtra = sched.tonePrompt ? '\n\n추가 스타일 지침:\n' + sched.tonePrompt : '';
-        const systemMsg = '반드시 한국어로만. 이모지 금지. 존댓말 금지. 게시글 텍스트만 출력.' + (sched.toneExample ? ' 아래 말투 예시를 참고해서 비슷한 스타일로 작성해.' : '');
+        const systemMsg = '절대 규칙: 영어, 일본어, 중국어 등 한국어 이외의 언어 사용 금지. 오직 한국어로만 작성. 이모지 사용 금지. 존댓말 금지. 반말로만 작성. 게시글 텍스트만 출력하고 다른 말 절대 하지 마.' + (sched.toneExample ? ' 아래 말투 예시를 참고해서 비슷한 스타일로 작성해.' : '');
         const prompt = (tonePrompts[sched.tone] || tonePrompts['일상']) + toneExample + tonePromptExtra + '\n\n주제: ' + selectedTopic + '\n\n위 형식에 맞게 Threads 게시글을 작성해줘. 반드시 한국어로만, 이모지 없이, 게시글 텍스트만 출력해.';
         const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
