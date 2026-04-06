@@ -1069,9 +1069,7 @@ cron.schedule('* * * * *', async () => {
           '쿠팡': '쿠팡 구매 유도. 1~3줄, 어그로, 경험담처럼. 제품명 금지.'
         };
         const systemMsg = '반드시 한국어로만. 반말. 이모지 금지. 존댓말 금지. 게시글 텍스트만 출력.';
-        const prompt = (tonePrompts[sched.tone] || '자연스럽게') + '
-주제: ' + sched.topic + '
-위 형식으로 Threads 게시글 작성. 한국어만, 반말로, 이모지 없이.';
+        const prompt = (tonePrompts[sched.tone] || tonePrompts['일상']) + '\n\n주제: ' + sched.topic + '\n\n위 형식에 맞게 Threads 게시글을 작성해줘. 반드시 한국어로만, 반말로, 이모지 없이, 게시글 텍스트만 출력해.';
         const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -1102,13 +1100,7 @@ cron.schedule('* * * * *', async () => {
               try {
                 const coupangUrl = await getCoupangLink(sched.coupangKeyword);
                 if (coupangUrl) {
-                  commentText = '[쿠팡 파트너스 활동으로 수수료를 제공받을 수 있습니다]
-
-' + commentText + '
-
-' + coupangUrl + '
-' + coupangUrl + '
-' + coupangUrl;
+                  commentText = '[쿠팡 파트너스 활동으로 수수료를 제공받을 수 있습니다]\n\n' + commentText + '\n\n' + coupangUrl + '\n' + coupangUrl + '\n' + coupangUrl;
                   console.log('[AUTO] 쿠팡 링크 자동 생성 성공');
                 }
               } catch(e) {
