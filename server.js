@@ -243,14 +243,29 @@ app.post('/api/auth/register', rateLimit(5, 60000), (req, res) => {
 
 // 로그인
 app.post('/api/auth/login', rateLimit(10, 60000), (req, res) => {
-  const { nickname, password } = req.body;
-  const user = users.find(u => u.nickname === nickname && u.passwordHash === hashPw(password));
+  const nickname = sanitize(req.body.nickname || '');
+  const password = req.body.password || '';
+  if (!nickname || !password) return res.status(400).json({ error: '닉네임과 비밀번호 필요' });
+  if (nickname.length > 30 || password.length > 100) return res.status(400).json({ error: '입력값 오류' });
+  // passwordHash 또는 password 필드 모두 지원 (마이그레이션 호환)
+  const user = users.find(u => {
+    if (u.nickname !== nickname) return false;
+    const stored = u.passwordHash || u.password || '';
+    return verifyPw(password, stored);
+  });
   if (!user) return res.status(401).json({ error: '닉네임 또는 비밀번호 오류' });
   if (user.status === 'pending') return res.status(403).json({ error: 'pending' });
   if (user.status === 'suspended') return res.status(403).json({ error: 'suspended' });
   // 사용기간 만료 체크
   if (user.expiresAt && new Date() > new Date(user.expiresAt) && user.role !== 'admin') {
     return res.status(403).json({ error: 'expired' });
+  }
+  // 구버전 해시면 새 해시로 마이그레이션
+  const stored = user.passwordHash || user.password || '';
+  if (stored !== hashPw(password)) {
+    user.passwordHash = hashPw(password);
+    delete user.password;
+    saveJSON(`${DATA_ROOT}/users.json`, users);
   }
   const token = createSession(user.id);
   res.json({ token, nickname: user.nickname, role: user.role });
