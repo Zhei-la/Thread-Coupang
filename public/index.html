@@ -122,6 +122,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     <div class="sidebar-foot">
       <div style="font-weight:600;font-size:14px;margin-bottom:2px" id="sideNick"></div>
       <div style="font-size:11px;color:var(--txt2);margin-bottom:10px" id="sideRole"></div>
+      <a href="https://open.kakao.com/o/sdwT0Zoi" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:#FEE500;color:#000;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:10px">💬 관리자 문의하기</a>
       <label class="label">계정 선택</label>
       <select id="globalAcc" onchange="onAccChange()" style="margin-bottom:10px"></select>
       <button class="btn btn-r btn-sm" style="width:100%" onclick="doLogout()">로그아웃</button>
@@ -212,9 +213,20 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     <div class="page" id="page-autoSchedule">
       <h1>🤖 자동 스케줄러 <span class="badge by" style="font-size:12px;vertical-align:middle">테스트중</span></h1>
       <div id="autoSchedLocked" style="display:none">
-        <div class="card" style="border-color:var(--yellow)">
-          <h2 style="color:var(--yellow)">테스트 중인 기능이에요</h2>
-          <div style="font-size:13px;color:var(--txt2)">관리자 테스트 완료 후 활성화될 예정이에요.</div>
+        <div class="card" style="border-color:var(--yellow);text-align:center;padding:40px 20px">
+          <div style="font-size:48px;margin-bottom:16px">🚧</div>
+          <h2 style="color:var(--yellow);font-size:18px;margin-bottom:12px">준비 중입니다</h2>
+          <div style="font-size:14px;color:var(--txt2);line-height:1.7;margin-bottom:20px">자동 스케줄러 기능을 열심히 준비하고 있어요.<br>곧 만나볼 수 있어요!</div>
+          <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:16px;text-align:left">
+            <div style="font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:10px">💎 프리미엄 업그레이드 시 사용 가능해요</div>
+            <div style="font-size:13px;color:var(--txt2);line-height:1.8">
+              <div>✓ 프로 플랜 (6계정) 전용 기능</div>
+              <div>✓ 매일 지정 시간에 글 자동 생성 + 발행</div>
+              <div>✓ 최대 3개 스케줄 동시 운영</div>
+              <div>✓ 자동 댓글 예약 기능 포함</div>
+            </div>
+            <button class="btn btn-sm" style="margin-top:12px;border-color:var(--yellow);color:var(--yellow);width:100%;justify-content:center" onclick="openPlanModal()">💎 프리미엄 업그레이드 문의하기</button>
+          </div>
         </div>
       </div>
       <div id="autoSchedContent">
@@ -244,6 +256,10 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <button class="btn btn-p" onclick="addAutoSched()">+ 등록</button>
         </div>
         <div class="card"><h2>등록된 자동 스케줄</h2><div id="autoSchedList"><span class="spin"></span></div></div>
+        <div class="card">
+          <h2>최근 발행 로그 (최근 5개)</h2>
+          <div id="autoLogList"><span class="spin"></span></div>
+        </div>
       </div>
     </div>
 
@@ -259,6 +275,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
             https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=앱시크릿&access_token=단기토큰
           </div>
           <div style="color:var(--green);margin-top:6px">응답에서 access_token 값 복사 → 아래 토큰란에 붙여넣기</div>
+          <a href="MANUAL_URL_HERE" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:var(--blue);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none">📖 자세한 토큰 발급 방법 보러가기 →</a>
         </div>
       </div>
       <div class="card">
@@ -287,6 +304,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <button class="btn btn-sm btn-p" onclick="requestUpgrade()" id="upgradeBtn">💎 유료 전환 신청하기</button>
         <div id="upgradeStatus" style="margin-top:8px;font-size:13px;color:var(--txt2)"></div>
       </div>
+      <div class="card" style="border-color:rgba(245,158,11,.3);background:linear-gradient(135deg,rgba(245,158,11,.05) 0%,var(--sur) 60%)">
+        <h2 style="color:var(--yellow)">💎 요금제 변경</h2>
+        <div style="font-size:13px;color:var(--txt2);margin-bottom:14px">현재 등급을 확인하고 업그레이드 문의를 할 수 있어요.</div>
+        <button class="btn btn-sm" style="border-color:var(--yellow);color:var(--yellow)" onclick="openPlanModal()">요금제 변경 문의하기</button>
+      </div>
+
       <div class="card" id="limitRequestCard">
         <h2>계정 한도 / 연장 요청</h2>
         <div style="font-size:13px;color:var(--txt2);margin-bottom:12px" id="expireDaysLeft"></div>
@@ -374,6 +397,39 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       <button class="btn" onclick="closeModal('schedModal')" style="flex:1">취소</button>
       <button class="btn btn-g" onclick="doSched()" style="flex:1">예약 등록</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="planModal">
+  <div class="modal" style="width:520px;max-width:95vw;max-height:90vh;overflow-y:auto">
+    <h3>💎 요금제 안내</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px">
+      <div style="padding:14px;background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;text-align:center">
+        <div style="font-size:11px;color:var(--txt2);margin-bottom:6px">무료 체험</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px">7일</div>
+        <div style="font-size:11px;color:var(--txt2);line-height:1.8">계정 1개<br>하루 2회 발행<br>글 생성 무제한</div>
+      </div>
+      <div style="padding:14px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:10px;text-align:center">
+        <div style="font-size:11px;color:var(--blue);margin-bottom:6px">베이직</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:4px">9,900원</div>
+        <div style="font-size:10px;color:var(--txt2);margin-bottom:8px">/월</div>
+        <div style="font-size:11px;color:var(--txt2);line-height:1.8">계정 3개<br>하루 3회 발행<br>예약 발행</div>
+      </div>
+      <div style="padding:14px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:10px;text-align:center;position:relative">
+        <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--yellow);color:#000;font-size:10px;font-weight:700;padding:2px 10px;border-radius:100px">추천</div>
+        <div style="font-size:11px;color:var(--yellow);margin-bottom:6px">프로</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:4px">19,900원</div>
+        <div style="font-size:10px;color:var(--txt2);margin-bottom:8px">/월</div>
+        <div style="font-size:11px;color:var(--txt2);line-height:1.8">계정 6개<br>하루 5회 발행<br>예약 발행<br>자동 스케줄러</div>
+      </div>
+    </div>
+    <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px">📋 업그레이드 문의 (아래 내용 복사 후 카카오로 전송)</div>
+      <div id="planInquiryText" style="font-size:13px;color:var(--txt2);line-height:2;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:12px;font-family:monospace">로딩 중...</div>
+      <button class="btn btn-sm btn-p" style="margin-top:10px;width:100%;justify-content:center" onclick="copyPlanInquiry()">📋 문의 내용 복사하기</button>
+    </div>
+    <a href="https://open.kakao.com/o/sdwT0Zoi" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:#FEE500;color:#000;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;margin-bottom:12px">💬 카카오로 문의하기 (클릭하면 연결)</a>
+    <button class="btn" style="width:100%;justify-content:center" onclick="closeModal('planModal')">닫기</button>
   </div>
 </div>
 
@@ -1153,6 +1209,25 @@ async function loadAutoSched() {
     document.getElementById('autoSchedContent').style.display = 'none';
     return;
   }
+  // 발행 로그
+  var logs = await api('/api/auto-logs');
+  var logEl = document.getElementById('autoLogList');
+  if (logEl) {
+    if (!Array.isArray(logs) || !logs.length) {
+      logEl.innerHTML = '<div style="color:var(--txt2);font-size:14px">발행 기록 없음</div>';
+    } else {
+      logEl.innerHTML = logs.map(function(l) {
+        var isOk = l.status === 'success';
+        var timeStr = new Date(l.publishedAt).toLocaleString('ko-KR');
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdr)">' +
+          '<span class="badge ' + (isOk ? 'bg' : 'br') + '">' + (isOk ? '발행완료' : '실패') + '</span>' +
+          '<div style="flex:1">' +
+          '<div style="font-size:13px;font-weight:600">' + l.accountName + ' · ' + l.topic + ' / ' + l.tone + '</div>' +
+          '<div style="font-size:11px;color:var(--txt2)">' + timeStr + (l.error ? ' · ' + l.error : '') + '</div>' +
+          '</div></div>';
+      }).join('');
+    }
+  }
   var accs = await api('/api/accounts');
   var sel = document.getElementById('autoAccId');
   sel.innerHTML = (Array.isArray(accs) ? accs : []).map(function(a) {
@@ -1190,6 +1265,29 @@ async function addAutoSched() {
 async function delAutoSched(id) {
   await api('/api/auto-schedule/' + id, { method: 'DELETE' });
   toast('삭제됐어!'); loadAutoSched();
+}
+
+async function openPlanModal() {
+  var me = await api('/api/auth/me');
+  var allUsers = await api('/api/users');
+  var myInfo = Array.isArray(allUsers) ? allUsers.find(function(u) { return u.nickname === me.nickname; }) : null;
+  var planName = '무료 체험';
+  if (myInfo) {
+    if (myInfo.plan === 'paid' && (myInfo.accountLimit || 3) >= 6) planName = '프로 (6계정)';
+    else if (myInfo.plan === 'paid') planName = '베이직 (3계정)';
+    else planName = '무료 체험';
+  }
+  var namePart = myInfo ? (myInfo.name || '-') : '-';
+  var nickPart = myInfo ? myInfo.nickname : '-';
+  var inquiryText = '이름: ' + namePart + '\n닉네임: ' + nickPart + '\n현재 등급: ' + planName + '\n변경할 등급: ';
+  document.getElementById('planInquiryText').style.whiteSpace = 'pre';
+  document.getElementById('planInquiryText').textContent = inquiryText;
+  document.getElementById('planModal').classList.add('open');
+}
+
+function copyPlanInquiry() {
+  var text = document.getElementById('planInquiryText').textContent;
+  navigator.clipboard.writeText(text).then(function() { toast('문의 내용 복사됐어! 카카오로 전송해줘'); });
 }
 
 init();
