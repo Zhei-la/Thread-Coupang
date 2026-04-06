@@ -43,6 +43,8 @@ function saveSettings(data) { saveJSON(`${DATA_ROOT}/settings.json`, data); }
 function getTodayKey() { return new Date().toISOString().slice(0, 10); }
 function getPublishCount(userId) { return loadJSON(`${userDir(userId)}/publish_count.json`, {}); }
 function savePublishCount(userId, data) { saveJSON(`${userDir(userId)}/publish_count.json`, data); }
+// 계정별 발행 횟수 (accountId_날짜 키)
+function getAccPublishKey(accountId) { return accountId + '_' + getTodayKey(); }
 function saveAccounts(userId, data) { saveJSON(`${userDir(userId)}/accounts.json`, data); }
 function getScheduled(userId) { return loadJSON(`${userDir(userId)}/scheduled.json`, []); }
 function saveScheduled(userId, data) { saveJSON(`${userDir(userId)}/scheduled.json`, data); }
@@ -637,11 +639,17 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
 
   // 일별 발행 횟수 체크
   const user = users.find(u => u.id === req.userId);
-  const dailyLimit = user?.dailyPublishLimit || 5; // 기본 5개, 무료는 2개
+  // 관리자 무제한, 무료=2개, 베이직(3계정)=3개, 프로(6계정)=5개
+  let dailyLimit = 5;
+  if (user?.role === 'admin') dailyLimit = 9999;
+  else if (user?.dailyPublishLimit) dailyLimit = user.dailyPublishLimit;
+  else if ((user?.accountLimit || 3) >= 6) dailyLimit = 5;
+  else if (user?.plan === 'free') dailyLimit = 2;
+  else dailyLimit = 3;
   const today = getTodayKey();
   const counts = getPublishCount(req.userId);
   const todayCount = counts[today] || 0;
-  if (user?.role !== 'admin' && todayCount >= dailyLimit) {
+  if (dailyLimit < 9999 && todayCount >= dailyLimit) {
     return res.status(429).json({ error: `오늘 발행 한도(${dailyLimit}개)를 초과했어. 내일 다시 시도해줘.` });
   }
 
@@ -997,8 +1005,8 @@ app.get('/api/auto-schedule', auth, (req, res) => {
 app.post('/api/auto-schedule', auth, (req, res) => {
   const user = users.find(u => u.id === req.userId);
   const settings = getSettings();
-  // 관리자이거나 autoSchedulerEnabled 일때만
-  if (user?.role !== 'admin' && !settings.autoSchedulerEnabled) {
+  // 관리자만 사용 가능 (테스트 중)
+  if (user?.role !== 'admin') {
     return res.status(403).json({ error: 'test' });
   }
   const { accountId, topic, tone, publishTime, commentTone, commentDelay, enabled, coupangKeyword } = req.body;
@@ -1034,6 +1042,20 @@ app.put('/api/settings/auto-scheduler', adminAuth, (req, res) => {
   res.json({ ok: true, enabled: settings.autoSchedulerEnabled });
 });
 
+// 자동 스케줄러 발행 로그
+function getAutoLogs(userId) { return loadJSON(`${userDir(userId)}/auto_logs.json`, []); }
+function saveAutoLog(userId, log) {
+  const logs = getAutoLogs(userId);
+  logs.unshift(log); // 최신 맨 앞
+  if (logs.length > 20) logs.splice(20); // 최대 20개 보관
+  saveJSON(`${userDir(userId)}/auto_logs.json`, logs);
+}
+
+app.get('/api/auto-logs', auth, (req, res) => {
+  const logs = getAutoLogs(req.userId);
+  res.json(logs.slice(0, 5)); // 최근 5개만
+});
+
 // 자동 스케줄러 cron (매 분마다 체크)
 cron.schedule('* * * * *', async () => {
   const settings = getSettings();
@@ -1045,10 +1067,15 @@ cron.schedule('* * * * *', async () => {
   for (const userId of userDirs) {
     const user = users.find(u => u.id === userId);
     if (!user) continue;
-    // 관리자이거나 전체 활성화된 경우만
-    if (user.role !== 'admin' && !settings.autoSchedulerEnabled) continue;
+    // 관리자이거나 전체 활성화 + 프리미엄(6개) 유저만
+    if (user.role !== 'admin') {
+      if (!settings.autoSchedulerEnabled) continue;
+      if ((user.accountLimit || 3) < 6) continue; // 6개 플랜만 허용
+    }
     const autoSchedules = getAutoSchedules(userId);
-    const toRun = autoSchedules.filter(s => s.enabled && s.publishTime === currentTime);
+    // 관리자 무제한, 프리미엄 최대 3개
+    const maxAuto = user.role === 'admin' ? 999 : 3;
+    const toRun = autoSchedules.filter(s => s.enabled && s.publishTime === currentTime).slice(0, maxAuto);
     if (!toRun.length) continue;
     console.log(`[AUTO] 유저 ${userId} - ${toRun.length}개 자동 발행`);
     for (const sched of toRun) {
@@ -1082,6 +1109,14 @@ cron.schedule('* * * * *', async () => {
         // 즉시 발행
         const postId = await publishToThreads(account.accessToken, text, [], '');
         console.log(`[AUTO] 발행 성공: ${sched.topic} / ${sched.tone}`);
+        saveAutoLog(userId, {
+          id: postId,
+          accountName: account.name,
+          topic: sched.topic,
+          tone: sched.tone,
+          status: 'success',
+          publishedAt: new Date().toISOString()
+        });
         // 댓글도 있으면 delay 후 예약
         if (sched.commentTone) {
           const delay = sched.commentDelay || 10;
@@ -1113,7 +1148,18 @@ cron.schedule('* * * * *', async () => {
             console.log(`[AUTO] 댓글 예약됨: ${delay}분 후`);
           }
         }
-      } catch(e) { console.log(`[AUTO] 실패:`, e.message); }
+      } catch(e) {
+        console.log(`[AUTO] 실패:`, e.message);
+        saveAutoLog(userId, {
+          id: Date.now().toString(),
+          accountName: account.name,
+          topic: sched.topic,
+          tone: sched.tone,
+          status: 'failed',
+          error: e.message,
+          publishedAt: new Date().toISOString()
+        });
+      }
     }
   }
 });
