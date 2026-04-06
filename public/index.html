@@ -319,10 +319,13 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           </div>
           <button class="btn btn-p" onclick="addAutoSched()">+ 등록</button>
         </div>
-        <div class="card"><h2>등록된 자동 스케줄</h2><div id="autoSchedList"><span class="spin"></span></div></div>
+        <div class="card">
+          <h2>등록된 자동 스케줄 <span style="font-size:11px;color:var(--txt2);font-weight:400">계정당 하루 5개 발행</span></h2>
+          <div id="autoSchedList"><span class="spin"></span></div>
+        </div>
         <div class="card">
           <h2>최근 발행 로그 (최근 5개)</h2>
-          <div id="autoLogList"><span class="spin"></span></div>
+          <div id="autoLogList"><div style="color:var(--txt2);font-size:14px">로딩중...</div></div>
         </div>
       </div>
     </div>
@@ -1601,16 +1604,18 @@ async function loadAutoSched() {
   var logEl = document.getElementById('autoLogList');
   if (logEl) {
     if (!Array.isArray(logs) || !logs.length) {
-      logEl.innerHTML = '<div style="color:var(--txt2);font-size:14px">발행 기록 없음</div>';
+      logEl.innerHTML = '<div style="color:var(--txt2);font-size:14px;padding:10px 0">오늘 발행 기록 없음</div>';
     } else {
       logEl.innerHTML = logs.map(function(l) {
         var isOk = l.status === 'success';
-        var timeStr = new Date(l.publishedAt).toLocaleString('ko-KR');
-        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdr)">' +
-          '<span class="badge ' + (isOk ? 'bg' : 'br') + '">' + (isOk ? '발행완료' : '실패') + '</span>' +
-          '<div style="flex:1">' +
-          '<div style="font-size:13px;font-weight:600">' + l.accountName + ' · ' + l.topic + ' / ' + l.tone + '</div>' +
-          '<div style="font-size:11px;color:var(--txt2)">' + timeStr + (l.error ? ' · ' + l.error : '') + '</div>' +
+        var timeStr = new Date(l.publishedAt).toLocaleString('ko-KR', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--bdr)">' +
+          '<span class="badge ' + (isOk ? 'bg' : 'br') + '" style="flex-shrink:0;margin-top:2px">' + (isOk ? '완료' : '실패') + '</span>' +
+          '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13px;font-weight:600;margin-bottom:2px">' + l.accountName + '</div>' +
+          '<div style="font-size:12px;color:var(--txt2);margin-bottom:2px">주제: ' + (l.topic || '-') + ' · ' + (l.tone || '-') + '</div>' +
+          (l.postText ? '<div style="font-size:11px;color:var(--txt2);padding:4px 8px;background:var(--bg);border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + l.postText.slice(0,50) + '...</div>' : '') +
+          '<div style="font-size:11px;color:var(--txt2)">' + timeStr + (l.error ? ' · <span style="color:var(--red)">' + l.error + '</span>' : '') + '</div>' +
           '</div></div>';
       }).join('');
     }
@@ -1756,7 +1761,22 @@ async function addTopicToSched(schedId) {
   var res = await api('/api/auto-schedule/' + schedId + '/topics', { method: 'PUT', body: { topics: topics } });
   if (res.error) return toast(res.error, 'err');
   if (input) input.value = '';
-  toast('주제 추가됐어!'); loadAutoSched();
+  toast('주제 추가됐어!');
+  // 수정창 닫지 않고 주제 태그만 업데이트
+  updateSchedTopicTags(schedId, topics);
+}
+
+function updateSchedTopicTags(schedId, topics) {
+  // 주제 태그 영역만 업데이트 (수정창 유지)
+  var schedEl = document.querySelector('[data-sched-id="' + schedId + '"]');
+  if (!schedEl) { loadAutoSched(); return; }
+  var tagArea = schedEl.querySelector('.topic-tags');
+  if (!tagArea) { loadAutoSched(); return; }
+  tagArea.innerHTML = topics.map(function(t, i) {
+    var active = t.active !== false;
+    return '<span onclick="toggleSchedTopic(\'' + schedId + '\',' + i + ')" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:100px;font-size:12px;border:1px solid ' + (active ? 'var(--green)' : 'var(--bdr)') + ';background:' + (active ? 'rgba(34,197,94,.15)' : 'var(--sur2)') + ';color:' + (active ? 'var(--green)' : 'var(--txt2)') + '">' +
+      (active ? '✅ ' : '') + t.text + '</span>';
+  }).join('');
 }
 
 async function saveSchedEdit(schedId) {
@@ -1767,7 +1787,8 @@ async function saveSchedEdit(schedId) {
   if (tone) body.tone = tone.value;
   var res = await api('/api/auto-schedule/' + schedId, { method: 'PUT', body: body });
   if (res.error) return toast(res.error, 'err');
-  toast('수정됐어!'); loadAutoSched();
+  toast('✅ 저장됐어!');
+  loadAutoSched(); // 전체 새로고침 (수정창 닫힘)
 }
 
 async function openPlanModal() {
