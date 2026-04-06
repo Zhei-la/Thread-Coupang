@@ -179,9 +179,9 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <div class="preview-list" id="previewList"></div>
         </div>
         <div id="mediaVideo" style="display:none">
-          <div class="upload-area" onclick="document.getElementById('vidInput').click()">🎬 클릭해서 영상 추가</div>
+          <div id="vidUploadArea" class="upload-area" onclick="document.getElementById('vidInput').click()">🎬 클릭해서 영상 추가 (MP4, 최대 1개)</div>
           <input type="file" id="vidInput" accept="video/mp4" style="display:none" onchange="handleVid(this)">
-          <div id="vidPreview"></div>
+          <div id="vidPreview" style="position:relative;margin-top:8px"></div>
         </div>
         <div id="imgAnalysisResult" style="display:none;margin-top:10px;padding:10px;background:var(--sur2);border-radius:8px;font-size:13px;color:var(--txt2)"></div>
       </div>
@@ -231,10 +231,11 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       </div>
       <div class="card">
         <h2>발행</h2>
-        <div id="commentReserveWrap" style="display:none;margin-bottom:12px;padding:10px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr)">
-          <div style="font-size:13px;font-weight:600;margin-bottom:6px">💬 댓글 예약 시간</div>
-          <div style="font-size:11px;color:var(--txt2);margin-bottom:6px">글은 바로 올라가고 댓글은 이 시간에 달려요</div>
-          <input type="datetime-local" id="commentReserveTime" />
+        <div id="commentReserveWrap" style="display:none;margin-bottom:12px;padding:12px;background:var(--sur2);border-radius:8px;border:1px solid var(--blue)">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--blue)">💬 댓글 예약 시간</div>
+          <div style="font-size:11px;color:var(--txt2);margin-bottom:8px">글은 바로 올라가고 댓글은 이 시간에 달려요</div>
+          <input type="datetime-local" id="commentReserveTime" style="width:100%;font-size:16px;padding:10px 14px;background:var(--sur);border:1px solid var(--bdr);color:var(--txt);border-radius:8px;-webkit-appearance:none;appearance:none" />
+          <button class="btn btn-r btn-sm" style="margin-top:8px;width:100%;justify-content:center" onclick="cancelCommentReserve()">✕ 댓글 예약 취소</button>
         </div>
         <div style="display:flex;gap:12px;justify-content:center;">
           <button class="btn btn-g" onclick="pubNow()" style="flex:1;max-width:240px">⚡ 즉시 발행</button>
@@ -855,6 +856,11 @@ function trackGenCount() {
   }
 }
 
+function cancelCommentReserve() {
+  document.getElementById('commentReserveWrap').style.display = 'none';
+  document.getElementById('commentReserveTime').value = '';
+}
+
 function showCommentReserve() {
   var txt = document.getElementById('commentText').value.trim();
   var wrap = document.getElementById('commentReserveWrap');
@@ -917,13 +923,34 @@ function removeImg(idx) {
 async function handleVid(input) {
   var f = input.files[0];
   if (!f) return;
-  document.getElementById('vidPreview').innerHTML = '<video src="' + URL.createObjectURL(f) + '" controls style="max-width:100%;border-radius:8px;margin-top:8px"></video>';
+  var preview = document.getElementById('vidPreview');
+  preview.innerHTML = '<div style="position:relative;display:inline-block;width:100%">' +
+    '<video src="' + URL.createObjectURL(f) + '" controls style="max-width:100%;border-radius:8px;display:block"></video>' +
+    '<button onclick="removeVid()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1">✕</button>' +
+    '<div id="vidUploadStatus" style="font-size:12px;color:var(--txt2);margin-top:6px">업로드 중...</div>' +
+    '</div>';
+  document.getElementById('vidUploadArea').style.display = 'none';
   var fd = new FormData();
   fd.append('video', f);
   try {
     var d = await fetch('/api/upload-video', { method: 'POST', headers: { 'x-session': session }, body: fd }).then(function(r) { return r.json(); });
-    if (d.url) { vidUrl = d.url; toast('영상 업로드 완료!'); }
-  } catch(e) { toast('영상 업로드 실패', 'err'); }
+    if (d.url) {
+      vidUrl = d.url;
+      var st = document.getElementById('vidUploadStatus');
+      if (st) st.textContent = '✅ 업로드 완료!';
+      toast('영상 업로드 완료!');
+    } else {
+      toast(d.error || '업로드 실패', 'err');
+      removeVid();
+    }
+  } catch(e) { toast('영상 업로드 실패', 'err'); removeVid(); }
+}
+
+function removeVid() {
+  vidUrl = '';
+  document.getElementById('vidPreview').innerHTML = '';
+  document.getElementById('vidUploadArea').style.display = '';
+  document.getElementById('vidInput').value = '';
 }
 
 async function pubNow() {
@@ -1378,10 +1405,11 @@ async function loadAdmin() {
         '<button class="btn btn-sm" style="padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',1)">+1일</button>' +
         '<button class="btn btn-sm" style="padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',10)">+10일</button>' +
       '</div>' +
-      '<div style="display:flex;gap:4px">' +
-        '<button class="btn btn-sm" style="font-size:11px;border-color:#666;color:#aaa" onclick="setPlanAndExtend(\'' + u.id + '\',\'basic\')">베이직<br>30일</button>' +
-        '<button class="btn btn-sm btn-g" style="font-size:11px" onclick="setPlanAndExtend(\'' + u.id + '\',\'pro\')">프로<br>30일</button>' +
-        '<button class="btn btn-sm" style="font-size:11px;border-color:var(--yellow);color:var(--yellow)" onclick="setPlanAndExtend(\'' + u.id + '\',\'premium\')">프리미엄<br>60일</button>' +
+      '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
+        '<button class="btn btn-sm" style="font-size:11px;border-color:var(--blue);color:var(--blue);padding:4px 7px" onclick="extendUserDays(\'' + u.id + '\',1)">무료<br>+1일</button>' +
+        '<button class="btn btn-sm" style="font-size:11px;border-color:#666;color:#aaa;padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'basic\')">베이직<br>30일</button>' +
+        '<button class="btn btn-sm btn-g" style="font-size:11px;padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'pro\')">프로<br>30일</button>' +
+        '<button class="btn btn-sm" style="font-size:11px;border-color:var(--yellow);color:var(--yellow);padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'premium\')">프리미엄<br>60일</button>' +
       '</div>' +
       '</div>'
     ) : '';
