@@ -1642,12 +1642,16 @@ async function loadAutoSched() {
     }
     var exampleHtml = s.toneExample ? '<div style="font-size:11px;color:var(--txt2);margin-top:4px;padding:5px 8px;background:var(--bg);border-radius:6px;border-left:2px solid var(--green)">말투예시: ' + s.toneExample.slice(0,40) + (s.toneExample.length>40?'...':'') + '</div>' : '';
     // 수정 폼 (숨김)
-    var editHtml = '<div id="editSched_' + s.id + '" style="display:none;margin-top:10px;padding:10px;background:var(--bg);border-radius:8px;border:1px solid var(--bdr)">' +
-      '<div style="margin-bottom:8px"><label style="font-size:12px;color:var(--txt2)">발행 시간</label><input type="time" id="editTime_' + s.id + '" value="' + s.publishTime + '" style="width:100%;margin-top:4px" /></div>' +
-      '<div style="margin-bottom:8px"><label style="font-size:12px;color:var(--txt2)">말투</label>' +
-      '<select id="editTone_' + s.id + '" style="width:100%;margin-top:4px"><option ' + (s.tone==='리스트형'?'selected':'') + '>리스트형</option><option ' + (s.tone==='정보성'?'selected':'') + '>정보성</option><option ' + (s.tone==='리뷰형'?'selected':'') + '>리뷰형</option><option ' + (s.tone==='일상'?'selected':'') + '>일상</option><option ' + (s.tone==='공감형'?'selected':'') + '>공감형</option><option ' + (s.tone==='스토리형'?'selected':'') + '>스토리형</option></select></div>' +
-      '<div style="margin-bottom:8px"><label style="font-size:12px;color:var(--txt2)">주제 추가</label><div style="display:flex;gap:6px;margin-top:4px"><input id="addTopic_' + s.id + '" placeholder="새 주제 입력" style="flex:1" onkeydown="if(event.key===\'Enter\'){addTopicToSched(\'' + s.id + '\');event.preventDefault()}" /><button class=\"btn btn-sm btn-p\" onclick=\"addTopicToSched(\'' + s.id + '\')\">+추가</button></div></div>' +
-      '<button class="btn btn-sm btn-g" style="width:100%;justify-content:center" onclick="saveSchedEdit(\'' + s.id + '\')">저장</button>' +
+    var toneOpts = ['리스트형','정보성','리뷰형','일상','공감형','스토리형'].map(function(t) {
+      return '<option ' + (s.tone===t?'selected':'') + '>' + t + '</option>';
+    }).join('');
+    var editHtml = '<div id="editSched_' + s.id + '" style="display:none;margin-top:10px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--bdr)">' +
+      '<div style="margin-bottom:10px"><label style="font-size:12px;color:var(--txt2)">발행 시간</label><input type="time" id="editTime_' + s.id + '" value="' + s.publishTime + '" style="width:100%;margin-top:4px" /></div>' +
+      '<div style="margin-bottom:10px"><label style="font-size:12px;color:var(--txt2)">말투</label><select id="editTone_' + s.id + '" style="width:100%;margin-top:4px">' + toneOpts + '</select></div>' +
+      '<div style="margin-bottom:10px"><label style="font-size:12px;color:var(--txt2)">말투 예시 <span style=\"color:var(--txt2);font-size:10px\">(AI가 참고해서 비슷하게 써요)</span></label><textarea id="editToneExample_' + s.id + '" placeholder="예) 오늘 진짜 대박 제품 발견했어\n이거 써보니까 완전 신세계더라" style="width:100%;margin-top:4px;min-height:70px;font-size:12px">' + (s.toneExample || '') + '</textarea></div>' +
+      '<div style="margin-bottom:10px"><label style="font-size:12px;color:var(--txt2)">스타일 프롬프트 <span style=\"color:var(--blue);font-size:10px\">(작성하면 더 정확해요)</span></label><textarea id="editTonePrompt_' + s.id + '" placeholder="예) 짧고 임팩트 있게, 2~3문장, 경험담처럼" style="width:100%;margin-top:4px;min-height:50px;font-size:12px">' + (s.tonePrompt || '') + '</textarea></div>' +
+      '<div style="margin-bottom:10px"><label style="font-size:12px;color:var(--txt2)">주제 추가</label><div style="display:flex;gap:6px;margin-top:4px"><input id="addTopic_' + s.id + '" placeholder="새 주제 입력" style="flex:1" onkeydown="if(event.key===\'Enter\'){addTopicToSched(\'' + s.id + '\');event.preventDefault()}" /><button class=\"btn btn-sm btn-p\" onclick=\"addTopicToSched(\'' + s.id + '\')\">+추가</button></div></div>' +
+      '<button class="btn btn-sm btn-g" style="width:100%;justify-content:center" onclick="saveSchedEdit(\'' + s.id + '\')">✅ 저장</button>' +
       '</div>';
     return '<div class="list-item" style="align-items:flex-start;flex-direction:column"><div style="display:flex;width:100%;align-items:flex-start">' +
       '<div style="flex:1">' +
@@ -1782,13 +1786,17 @@ function updateSchedTopicTags(schedId, topics) {
 async function saveSchedEdit(schedId) {
   var time = document.getElementById('editTime_' + schedId);
   var tone = document.getElementById('editTone_' + schedId);
+  var toneExample = document.getElementById('editToneExample_' + schedId);
+  var tonePrompt = document.getElementById('editTonePrompt_' + schedId);
   var body = {};
   if (time) body.publishTime = time.value;
   if (tone) body.tone = tone.value;
+  if (toneExample) body.toneExample = toneExample.value.trim();
+  if (tonePrompt) body.tonePrompt = tonePrompt.value.trim();
   var res = await api('/api/auto-schedule/' + schedId, { method: 'PUT', body: body });
   if (res.error) return toast(res.error, 'err');
   toast('✅ 저장됐어!');
-  loadAutoSched(); // 전체 새로고침 (수정창 닫힘)
+  loadAutoSched();
 }
 
 async function openPlanModal() {
