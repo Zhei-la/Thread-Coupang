@@ -1236,8 +1236,11 @@ app.get('/api/auto-logs', auth, (req, res) => {
 cron.schedule('* * * * *', async () => {
   const settings = getSettings();
   const now = new Date();
-  const currentTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-  console.log(`[AUTO-CRON] 체크 시작 - 현재시간: ${currentTime}, 자동스케줄러활성: ${settings.autoSchedulerEnabled}`);
+  // Railway는 UTC 기준 - 한국시간(KST = UTC+9)으로 변환
+  const kstOffset = 9 * 60 * 60 * 1000;
+  const kstNow = new Date(now.getTime() + kstOffset);
+  const currentTime = kstNow.getUTCHours().toString().padStart(2,'0') + ':' + kstNow.getUTCMinutes().toString().padStart(2,'0');
+  console.log(`[AUTO-CRON] KST시간: ${currentTime}, 자동스케줄러활성: ${settings.autoSchedulerEnabled}`);
   const dataDir = `${DATA_ROOT}/users`;
   if (!fs.existsSync(dataDir)) return;
   const userDirs = fs.readdirSync(dataDir);
