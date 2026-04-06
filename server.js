@@ -409,13 +409,14 @@ app.put('/api/accounts/:id/topics', auth, (req, res) => {
 // ══════════════════════════════════
 
 app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
-  // 베이직 플랜 하루 200번 제한
+  // 플랜별 하루 생성 제한
   const genUser = users.find(u => u.id === req.userId);
-  if (genUser && genUser.plan === 'basic') {
+  if (genUser && genUser.role !== 'admin') {
     const genCount = getPublishCount(req.userId);
     const genKey = 'gen_' + getTodayKey();
-    if ((genCount[genKey] || 0) >= 200) {
-      return res.status(429).json({ error: '오늘 글 생성 한도(200번)를 초과했어. 내일 다시 시도해줘.' });
+    const genLimit = genUser.plan === 'basic' ? 200 : 100; // 베이직 200, 나머지 100
+    if ((genCount[genKey] || 0) >= genLimit) {
+      return res.status(429).json({ error: '오늘 글 생성 한도(' + genLimit + '번)를 초과했어. 내일 다시 시도해줘.' });
     }
     genCount[genKey] = (genCount[genKey] || 0) + 1;
     savePublishCount(req.userId, genCount);
