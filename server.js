@@ -7,8 +7,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+app.use(cors(corsOptions));
 
 // ── 데이터 루트 경로 (Railway Volume 마운트) ──
 const DATA_ROOT = process.env.DATA_PATH || '/app/data';
@@ -50,7 +49,20 @@ function getScheduled(userId) { return loadJSON(`${userDir(userId)}/scheduled.js
 function saveScheduled(userId, data) { saveJSON(`${userDir(userId)}/scheduled.json`, data); }
 
 // ── 비밀번호 해시 ──
-function hashPw(pw) { return crypto.createHash('sha256').update(pw + 'threads_salt_2025').digest('hex'); }
+function hashPw(pw) {
+  // PBKDF2 - SHA-256보다 강력한 해시
+  return crypto.pbkdf2Sync(pw, 'threads_secure_salt_2025_!@#', 100000, 64, 'sha512').toString('hex');
+}
+function hashPwLegacy(pw) {
+  // 기존 해시 (하위 호환용)
+  return crypto.createHash('sha256').update(pw + 'threads_salt_2025').digest('hex');
+}
+function verifyPw(pw, storedHash) {
+  // 새 해시 먼저 확인, 실패하면 기존 해시 확인
+  if (hashPw(pw) === storedHash) return true;
+  if (hashPwLegacy(pw) === storedHash) return true;
+  return false;
+}
 
 // ── 세션 저장소 (파일 영속 + 만료시간) ──
 const SESSION_TTL = 3 * 24 * 60 * 60 * 1000; // 3일
@@ -126,7 +138,7 @@ setInterval(() => {
 
 // ── 세션 미들웨어 ──
 function auth(req, res, next) {
-  const token = req.headers['x-session'] || req.query.session;
+  const token = req.headers['x-session']; // URL query 세션 제거 (보안)
   const s = getSession(token);
   if (!token || !s) return res.status(401).json({ error: '로그인 필요' });
   req.userId = s.userId;
@@ -139,6 +151,20 @@ function adminAuth(req, res, next) {
     next();
   });
 }
+
+// ── 보안 HTTP 헤더 ──
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.removeHeader('X-Powered-By');
+  next();
+});
+
+// ── 요청 크기 제한 ──
+app.use(express.json({ limit: '10mb' }));
 
 // ── 정적 파일 (로그인 전에도 접근 가능) ──
 app.use(express.static('public'));
@@ -415,7 +441,11 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
 //  Threads 계정 관리 (유저별)
 // ══════════════════════════════════
 
-app.get('/api/accounts', auth, (req, res) => res.json(getAccounts(req.userId)));
+app.get('/api/accounts', auth, (req, res) => {
+  const accs = getAccounts(req.userId);
+  // 토큰은 앞 6자리만 노출
+  res.json(accs.map(a => ({ ...a, accessToken: (a.accessToken || '').slice(0, 6) + '...' + (a.accessToken || '').slice(-4) })));
+});
 
 app.post('/api/accounts', auth, (req, res) => {
   const { name, accessToken, topics } = req.body;
@@ -659,7 +689,7 @@ async function publishToThreads(accessToken, text, imageUrls = [], videoUrl = ''
     if (d.error) throw new Error(d.error.message);
     containerId = d.id;
   } else if (imageUrls.length === 1) {
-    console.log('[PUBLISH] 이미지 URL:', imageUrls[0]);
+    console.log('[PUBLISH] 이미지 발행 시작');
     const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'IMAGE', image_url: imageUrls[0], text, access_token: accessToken }) });
     const d = await r.json();
     console.log('[PUBLISH] Threads API 응답:', JSON.stringify(d));
@@ -729,7 +759,7 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
     return res.status(429).json({ error: `오늘 발행 한도(${dailyLimit}개)를 초과했어. 내일 다시 시도해줘.` });
   }
 
-  console.log('[PUBLISH] 시작 - accountId:', accountId, 'text길이:', text?.length, 'imageUrls:', imageUrls?.length || 0);
+  console.log('[PUBLISH] 발행 시작');
   try {
     const postId = await publishToThreads(account.accessToken, text, imageUrls || [], videoUrl || '');
     console.log('[PUBLISH] 글 발행 성공 - postId:', postId);
@@ -755,12 +785,12 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
 // ══════════════════════════════════
 
 app.post('/api/schedule', auth, (req, res) => {
-  const { accountId, text, imageUrls, scheduledAt, commentText } = req.body;
+  const { accountId, text, imageUrls, videoUrl, scheduledAt, commentText } = req.body;
   const accs = getAccounts(req.userId);
   const account = accs.find(a => a.id === accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
   const posts = getScheduled(req.userId);
-  const post = { id: Date.now().toString(), accountId, accountName: account.name, text, type: req.body.type || 'post', imageUrls: imageUrls || [], commentText: commentText || '', replyToId: req.body.replyToId || null, scheduledAt, status: 'pending', createdAt: new Date().toISOString() };
+  const post = { id: Date.now().toString(), accountId, accountName: account.name, text, type: req.body.type || 'post', imageUrls: imageUrls || [], videoUrl: videoUrl || '', commentText: commentText || '', replyToId: req.body.replyToId || null, scheduledAt, status: 'pending', createdAt: new Date().toISOString() };
   posts.push(post);
   saveScheduled(req.userId, posts);
   res.json(post);
@@ -787,6 +817,7 @@ app.put('/api/schedule/:id', auth, (req, res) => {
   if (req.body.text) post.text = req.body.text;
   if (req.body.scheduledAt) post.scheduledAt = req.body.scheduledAt;
   if (req.body.imageUrls !== undefined) post.imageUrls = req.body.imageUrls;
+  if (req.body.videoUrl !== undefined) post.videoUrl = req.body.videoUrl;
   if (req.body.commentText !== undefined) post.commentText = req.body.commentText;
   saveScheduled(req.userId, posts);
   res.json(post);
@@ -954,7 +985,12 @@ app.get('/api/keywords', auth, async (req, res) => {
 // ══════════════════════════════════
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
-const videoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
+// 영상은 디스크에 임시 저장 (메모리 절약)
+const videoStorage = multer.diskStorage({
+  destination: function(req, file, cb) { cb(null, '/tmp'); },
+  filename: function(req, file, cb) { cb(null, 'vid_' + Date.now() + '.mp4'); }
+});
+const videoUpload = multer({ storage: videoStorage, limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB 제한
 
 async function uploadToCloudinary(buffer, filename, resourceType = 'image') {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
@@ -1004,7 +1040,7 @@ async function uploadToCloudinary(buffer, filename, resourceType = 'image') {
   });
   const d = await r.json();
   if (d.error) throw new Error(d.error.message);
-  console.log('[CLOUDINARY] 업로드 성공:', d.secure_url);
+  console.log('[CLOUDINARY] 업로드 성공');
   return d.secure_url;
 }
 
@@ -1025,10 +1061,15 @@ app.post('/api/upload', auth, upload.array('images', 10), async (req, res) => {
 app.post('/api/upload-video', auth, videoUpload.single('video'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: '영상 없음' });
-    const url = await uploadToCloudinary(req.file.buffer, req.file.originalname, 'video');
+    // 디스크에서 읽어서 Cloudinary 업로드
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const url = await uploadToCloudinary(fileBuffer, req.file.originalname || 'video.mp4', 'video');
+    // 임시 파일 삭제
+    try { fs.unlinkSync(req.file.path); } catch(e2) {}
     res.json({ url });
   } catch(e) {
     console.error('[UPLOAD-VIDEO] 에러:', e.message);
+    if (req.file?.path) { try { fs.unlinkSync(req.file.path); } catch(e2) {} }
     res.status(500).json({ error: e.message });
   }
 });
@@ -1083,25 +1124,69 @@ app.get('/api/auto-schedule', auth, (req, res) => {
 app.post('/api/auto-schedule', auth, (req, res) => {
   const user = users.find(u => u.id === req.userId);
   const settings = getSettings();
-  // 관리자만 사용 가능 (테스트 중)
   if (user?.role !== 'admin') {
     return res.status(403).json({ error: 'test' });
   }
-  const { accountId, topic, tone, publishTime, commentTone, commentDelay, enabled, coupangKeyword } = req.body;
+  const { accountId, topics, tone, publishTime, commentTone, commentDelay, enabled, toneExample, tonePrompt } = req.body;
   const accs = getAccounts(req.userId);
+  // 계정 토큰이 실제 토큰 (앞자리 숨겨진 경우 원본 찾기)
   const account = accs.find(a => a.id === accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
   const schedules = getAutoSchedules(req.userId);
-  const existing = schedules.find(s => s.id === req.body.id);
-  if (existing) {
-    Object.assign(existing, { accountId, accountName: account.name, topic, tone, publishTime, commentTone, commentDelay, coupangKeyword: coupangKeyword || '', enabled });
-    saveAutoSchedules(req.userId, schedules);
-    return res.json(existing);
+  // 기존 수정
+  if (req.body.id) {
+    const existing = schedules.find(s => s.id === req.body.id);
+    if (existing) {
+      Object.assign(existing, { accountId, accountName: account.name, topics: topics || [], tone, publishTime, commentTone: commentTone || '', commentDelay: commentDelay || 10, toneExample: toneExample || '', tonePrompt: tonePrompt || '', enabled: enabled !== false });
+      saveAutoSchedules(req.userId, schedules);
+      return res.json(existing);
+    }
   }
-  const item = { id: Date.now().toString(), accountId, accountName: account.name, topic, tone, publishTime, commentTone: commentTone || '', commentDelay: commentDelay || 10, coupangKeyword: coupangKeyword || '', enabled: enabled !== false, createdAt: new Date().toISOString() };
+  // 신규 등록 - 계정당 하루 5개 제한 체크
+  const today = getTodayKey();
+  const todayCount = schedules.filter(s => s.accountId === accountId && s.createdDate === today).length;
+  if (user.role !== 'admin' && todayCount >= 5) {
+    return res.status(429).json({ error: '계정당 하루 최대 5개까지 등록 가능해' });
+  }
+  const item = {
+    id: Date.now().toString(),
+    accountId, accountName: account.name,
+    topics: Array.isArray(topics) ? topics : [],  // [{text, active}]
+    tone, publishTime,
+    commentTone: commentTone || '', commentDelay: commentDelay || 10,
+    toneExample: toneExample || '', tonePrompt: tonePrompt || '',
+    enabled: enabled !== false,
+    createdDate: today,
+    createdAt: new Date().toISOString()
+  };
   schedules.push(item);
   saveAutoSchedules(req.userId, schedules);
   res.json(item);
+});
+
+// 자동 스케줄 주제 활성화 토글
+app.put('/api/auto-schedule/:id/topics', auth, (req, res) => {
+  const schedules = getAutoSchedules(req.userId);
+  const sched = schedules.find(s => s.id === req.params.id);
+  if (!sched) return res.status(404).json({ error: '없음' });
+  sched.topics = req.body.topics;
+  saveAutoSchedules(req.userId, schedules);
+  res.json(sched);
+});
+
+// 자동 스케줄 시간/말투 수정
+app.put('/api/auto-schedule/:id', auth, (req, res) => {
+  const schedules = getAutoSchedules(req.userId);
+  const sched = schedules.find(s => s.id === req.params.id);
+  if (!sched) return res.status(404).json({ error: '없음' });
+  if (req.body.publishTime) sched.publishTime = req.body.publishTime;
+  if (req.body.tone) sched.tone = req.body.tone;
+  if (req.body.topics) sched.topics = req.body.topics;
+  if (req.body.toneExample !== undefined) sched.toneExample = req.body.toneExample;
+  if (req.body.tonePrompt !== undefined) sched.tonePrompt = req.body.tonePrompt;
+  if (req.body.enabled !== undefined) sched.enabled = req.body.enabled;
+  saveAutoSchedules(req.userId, schedules);
+  res.json(sched);
 });
 
 // 자동 스케줄 삭제
@@ -1173,8 +1258,10 @@ cron.schedule('* * * * *', async () => {
           '스토리형': '스토리형 SNS 콘텐츠. 상황->전개->결론 구조.',
           '쿠팡': '쿠팡 구매 유도. 1~3줄, 어그로, 경험담처럼. 제품명 금지.'
         };
-        const systemMsg = '반드시 한국어로만. 반말. 이모지 금지. 존댓말 금지. 게시글 텍스트만 출력.';
-        const prompt = (tonePrompts[sched.tone] || tonePrompts['일상']) + '\n\n주제: ' + sched.topic + '\n\n위 형식에 맞게 Threads 게시글을 작성해줘. 반드시 한국어로만, 반말로, 이모지 없이, 게시글 텍스트만 출력해.';
+        const toneExample = sched.toneExample ? '\n\n말투 예시:\n' + sched.toneExample : '';
+        const tonePromptExtra = sched.tonePrompt ? '\n\n추가 스타일 지침:\n' + sched.tonePrompt : '';
+        const systemMsg = '반드시 한국어로만. 이모지 금지. 존댓말 금지. 게시글 텍스트만 출력.' + (sched.toneExample ? ' 아래 말투 예시를 참고해서 비슷한 스타일로 작성해.' : '');
+        const prompt = (tonePrompts[sched.tone] || tonePrompts['일상']) + toneExample + tonePromptExtra + '\n\n주제: ' + sched.topic + '\n\n위 형식에 맞게 Threads 게시글을 작성해줘. 반드시 한국어로만, 이모지 없이, 게시글 텍스트만 출력해.';
         const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -1186,11 +1273,11 @@ cron.schedule('* * * * *', async () => {
         if (!text) continue;
         // 즉시 발행
         const postId = await publishToThreads(account.accessToken, text, [], '');
-        console.log(`[AUTO] 발행 성공: ${sched.topic} / ${sched.tone}`);
+        console.log(`[AUTO] 발행 성공: ${selectedTopic} / ${sched.tone}`);
         saveAutoLog(userId, {
           id: postId,
           accountName: account.name,
-          topic: sched.topic,
+          topic: selectedTopic,
           tone: sched.tone,
           status: 'success',
           publishedAt: new Date().toISOString()
@@ -1245,6 +1332,17 @@ cron.schedule('* * * * *', async () => {
 // 서버 시작 시 세션 파일 로드
 sessions = loadSessions();
 console.log(`세션 복원: ${Object.keys(sessions).length}개`);
+
+// ── 전역 에러 핸들러 (스택 트레이스 숨김) ──
+app.use((err, req, res, next) => {
+  console.error('[ERROR]', err.message);
+  res.status(500).json({ error: '서버 오류가 발생했어. 잠시 후 다시 시도해줘.' });
+});
+
+// ── 없는 라우트 404 ──
+app.use((req, res) => {
+  res.status(404).json({ error: '없는 경로야' });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`서버 실행중: ${PORT}`));
