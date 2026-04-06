@@ -179,7 +179,10 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <div class="preview-list" id="previewList"></div>
         </div>
         <div id="mediaVideo" style="display:none">
-          <div id="vidUploadArea" class="upload-area" onclick="document.getElementById('vidInput').click()">🎬 클릭해서 영상 추가 (MP4, 최대 1개)</div>
+          <div id="vidUploadArea" class="upload-area" onclick="document.getElementById('vidInput').click()">
+            🎬 클릭해서 영상 추가<br>
+            <span style="font-size:11px;color:var(--txt2)">MP4 · 최대 1분 · 1GB 이하</span>
+          </div>
           <input type="file" id="vidInput" accept="video/mp4" style="display:none" onchange="handleVid(this)">
           <div id="vidPreview" style="position:relative;margin-top:8px"></div>
         </div>
@@ -272,13 +275,35 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div class="card">
           <h2>새 자동 스케줄 등록</h2>
           <div style="margin-bottom:12px"><label class="label">계정</label><select id="autoAccId"></select></div>
-          <div style="margin-bottom:12px"><label class="label">주제</label><input id="autoTopic" placeholder="예: 쿠팡 할인, AI 뉴스" /></div>
+
+          <div style="margin-bottom:12px">
+            <label class="label">주제 목록 (여러 개 추가 가능)</label>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <input id="autoTopicInput" placeholder="예: 쿠팡 할인, AI 뉴스, 건강 정보" style="flex:1" onkeydown="if(event.key==='Enter'){addAutoTopic();event.preventDefault()}" />
+              <button class="btn btn-sm btn-p" onclick="addAutoTopic()">+ 추가</button>
+            </div>
+            <div id="autoTopicList" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px"></div>
+            <div style="font-size:11px;color:var(--txt2);margin-top:6px">추가된 주제 중 원하는 것만 클릭해서 오늘 발행할 주제를 선택하세요</div>
+          </div>
+
           <div style="margin-bottom:12px"><label class="label">말투</label>
             <select id="autoTone">
               <option>리스트형</option><option>정보성</option><option>리뷰형</option>
               <option>일상</option><option>공감형</option><option>스토리형</option>
             </select>
           </div>
+
+          <div style="margin-bottom:12px;padding:12px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr)">
+            <label class="label" style="color:var(--green)">✍️ 나만의 말투 설정 (선택)</label>
+            <div style="font-size:11px;color:var(--blue);margin-bottom:8px">말투 예시를 입력하면 AI가 비슷한 스타일로 글을 써요. 프롬프트를 작성하시면 더 정확해요!</div>
+            <label class="label">말투 예시</label>
+            <textarea id="autoToneExample" placeholder="예시) 오늘 진짜 대박 제품 발견했어
+이거 써보니까 완전 신세계더라
+솔직히 이 가격에 이 퀄리티는 말이 안 됨" style="min-height:80px;margin-bottom:10px;font-size:13px"></textarea>
+            <label class="label">추가 스타일 프롬프트 <span style="color:var(--txt2);font-size:11px">(선택, 더 정확한 스타일 지정)</span></label>
+            <textarea id="autoTonePrompt" placeholder="예시) 짧고 임팩트 있게, 2~3문장으로, 경험담처럼 자연스럽게, 구매 욕구를 자극하는 표현 사용" style="min-height:60px;font-size:13px"></textarea>
+          </div>
+
           <div style="margin-bottom:12px"><label class="label">매일 발행 시간</label><input type="time" id="autoTime" value="09:00" /></div>
           <div style="margin-bottom:16px;padding:12px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr)">
             <label class="label">댓글 자동 생성 (선택)</label>
@@ -923,11 +948,31 @@ function removeImg(idx) {
 async function handleVid(input) {
   var f = input.files[0];
   if (!f) return;
+
+  // 영상 길이 체크 (1분 = 60초)
+  var objUrl = URL.createObjectURL(f);
+  var tempVid = document.createElement('video');
+  tempVid.preload = 'metadata';
+  tempVid.src = objUrl;
+  await new Promise(function(resolve) { tempVid.onloadedmetadata = resolve; setTimeout(resolve, 3000); });
+  if (tempVid.duration > 62) {
+    URL.revokeObjectURL(objUrl);
+    input.value = '';
+    return toast('영상은 최대 1분(60초)까지만 업로드 가능해. 영상 한도를 초과했어!', 'err');
+  }
+
+  // 용량 체크 (1GB)
+  if (f.size > 1024 * 1024 * 1024) {
+    URL.revokeObjectURL(objUrl);
+    input.value = '';
+    return toast('영상 용량이 너무 커. 1GB 이하로 올려줘!', 'err');
+  }
+
   var preview = document.getElementById('vidPreview');
   preview.innerHTML = '<div style="position:relative;display:inline-block;width:100%">' +
-    '<video src="' + URL.createObjectURL(f) + '" controls style="max-width:100%;border-radius:8px;display:block"></video>' +
+    '<video src="' + objUrl + '" controls style="max-width:100%;border-radius:8px;display:block"></video>' +
     '<button onclick="removeVid()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1">✕</button>' +
-    '<div id="vidUploadStatus" style="font-size:12px;color:var(--txt2);margin-top:6px">업로드 중...</div>' +
+    '<div id="vidUploadStatus" style="font-size:12px;color:var(--txt2);margin-top:6px"><span class="spin" style="width:12px;height:12px;border-width:2px;vertical-align:middle"></span> 업로드 중...</div>' +
     '</div>';
   document.getElementById('vidUploadArea').style.display = 'none';
   var fd = new FormData();
@@ -937,13 +982,13 @@ async function handleVid(input) {
     if (d.url) {
       vidUrl = d.url;
       var st = document.getElementById('vidUploadStatus');
-      if (st) st.textContent = '✅ 업로드 완료!';
+      if (st) st.textContent = '✅ 업로드 완료! 발행 버튼을 눌러줘.';
       toast('영상 업로드 완료!');
     } else {
       toast(d.error || '업로드 실패', 'err');
       removeVid();
     }
-  } catch(e) { toast('영상 업로드 실패', 'err'); removeVid(); }
+  } catch(e) { toast('영상 업로드 실패. 다시 시도해줘.', 'err'); removeVid(); }
 }
 
 function removeVid() {
@@ -992,10 +1037,12 @@ async function pubNow() {
     }
     document.getElementById('postText').value = '';
     document.getElementById('commentText').value = '';
-    imgUrls = []; imgFiles = []; vidUrl = '';
+    // 사진만 초기화, 영상은 유지
+    imgUrls = []; imgFiles = [];
     document.getElementById('previewList').innerHTML = '';
-    document.getElementById('vidPreview').innerHTML = '';
     document.getElementById('commentReserveWrap').style.display = 'none';
+    // 영상 모드가 아닌 경우에만 vidUrl 초기화
+    if (mediaMode !== 'video') { vidUrl = ''; }
   } catch(e) {
     loadingToast.remove();
     toast(e.message, 'err');
@@ -1036,7 +1083,7 @@ async function doSched() {
     toast('댓글 예약 완료!');
   } else {
     var text2 = document.getElementById('postText').value.trim();
-    var d2 = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: text2, type: 'post', imageUrls: imgUrls, videoUrl: vidUrl, scheduledAt: new Date(scheduledAt).toISOString() } });
+    var d2 = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: text2, type: 'post', imageUrls: imgUrls, videoUrl: vidUrl || '', scheduledAt: new Date(scheduledAt).toISOString() } });
     if (d2.error) return toast(d2.error, 'err');
     toast('글 예약 완료!');
     var ct = document.getElementById('commentText').value.trim();
@@ -1576,29 +1623,79 @@ async function loadAutoSched() {
   var el = document.getElementById('autoSchedList');
   if (!Array.isArray(d) || !d.length) { el.innerHTML = '<div style="color:var(--txt2);font-size:14px">등록된 자동 스케줄 없음</div>'; return; }
   el.innerHTML = d.map(function(s) {
-    return '<div class="list-item"><div style="flex:1">' +
-      '<div style="font-weight:600;font-size:14px;margin-bottom:4px">' + s.accountName + ' · 매일 ' + s.publishTime + '</div>' +
-      '<div style="font-size:13px;margin-bottom:4px">' + s.topic + ' / ' + s.tone + '</div>' +
-      (s.commentTone ? '<div style="font-size:12px;color:var(--blue)">' + s.commentDelay + '분 후 댓글 자동</div>' : '') +
-      '</div><div style="display:flex;gap:6px;align-items:center">' +
+    var exampleHtml = s.toneExample ? '<div style="font-size:11px;color:var(--txt2);margin-top:4px;padding:6px 8px;background:var(--bg);border-radius:6px;border-left:2px solid var(--green)">말투예시: ' + s.toneExample.slice(0,50) + (s.toneExample.length>50?'...':'') + '</div>' : '';
+    var promptHtml = s.tonePrompt ? '<div style="font-size:11px;color:var(--blue);margin-top:3px">프롬프트: ' + s.tonePrompt.slice(0,40) + (s.tonePrompt.length>40?'...':'') + '</div>' : '';
+    return '<div class="list-item" style="align-items:flex-start"><div style="flex:1">' +
+      '<div style="font-weight:600;font-size:14px;margin-bottom:3px">' + s.accountName + ' · 매일 ' + s.publishTime + '</div>' +
+      '<div style="font-size:13px;color:var(--txt2);margin-bottom:3px">' + s.topic + ' · ' + s.tone + '</div>' +
+      (s.commentTone ? '<div style="font-size:12px;color:var(--blue);margin-bottom:3px">댓글 ' + s.commentDelay + '분 후 자동</div>' : '') +
+      exampleHtml + promptHtml +
+      '</div><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">' +
       '<span class="badge ' + (s.enabled ? 'bg' : 'br') + '">' + (s.enabled ? '활성' : '비활성') + '</span>' +
       '<button class="btn btn-sm btn-r" onclick="delAutoSched(\'' + s.id + '\')">삭제</button>' +
       '</div></div>';
   }).join('');
 }
 
+// 자동스케줄러 주제 목록
+var autoTopics = [];
+
+function addAutoTopic() {
+  var input = document.getElementById('autoTopicInput');
+  var val = input.value.trim();
+  if (!val) return;
+  if (autoTopics.find(function(t) { return t.text === val; })) { input.value = ''; return; }
+  autoTopics.push({ text: val, active: true });
+  renderAutoTopics();
+  input.value = '';
+}
+
+function renderAutoTopics() {
+  var list = document.getElementById('autoTopicList');
+  if (!list) return;
+  list.innerHTML = autoTopics.map(function(t, i) {
+    var active = t.active;
+    return '<span onclick="toggleAutoTopic(' + i + ')" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;font-size:13px;border:1px solid ' + (active ? 'var(--green)' : 'var(--bdr)') + ';background:' + (active ? 'rgba(34,197,94,.15)' : 'var(--sur2)') + ';color:' + (active ? 'var(--green)' : 'var(--txt2)') + ';transition:all .15s">' +
+      (active ? '✅ ' : '') + t.text +
+      '<button onclick="event.stopPropagation();removeAutoTopic(' + i + ')" style="background:none;border:none;color:inherit;cursor:pointer;font-size:12px;padding:0;margin-left:2px">✕</button>' +
+      '</span>';
+  }).join('');
+}
+
+function toggleAutoTopic(idx) {
+  autoTopics[idx].active = !autoTopics[idx].active;
+  renderAutoTopics();
+}
+
+function removeAutoTopic(idx) {
+  autoTopics.splice(idx, 1);
+  renderAutoTopics();
+}
+
 async function addAutoSched() {
   var accId = document.getElementById('autoAccId').value;
-  var topic = document.getElementById('autoTopic').value.trim();
+  var activeTopics = autoTopics.filter(function(t) { return t.active; }).map(function(t) { return t.text; });
+  if (!activeTopics.length) return toast('주제를 추가하고 선택해줘', 'err');
   var tone2 = document.getElementById('autoTone').value;
   var time = document.getElementById('autoTime').value;
-  if (!topic) return toast('주제를 입력해줘', 'err');
+  var toneExample = document.getElementById('autoToneExample').value.trim();
+  var tonePrompt2 = document.getElementById('autoTonePrompt').value.trim();
   var commentEnabled = document.getElementById('autoCommentEnabled').checked;
   var delay = parseInt(document.getElementById('autoDelay').value) || 10;
-  var d = await api('/api/auto-schedule', { method: 'POST', body: { accountId: accId, topic: topic, tone: tone2, publishTime: time, commentTone: commentEnabled ? tone2 : '', commentDelay: delay, enabled: true } });
-  if (d.error) return toast(d.error === 'test' ? '관리자만 사용 가능한 테스트 기능이야' : d.error, 'err');
-  toast('자동 스케줄 등록됐어!');
-  document.getElementById('autoTopic').value = '';
+  // 선택된 주제 각각 등록
+  for (var i = 0; i < activeTopics.length; i++) {
+    var d = await api('/api/auto-schedule', { method: 'POST', body: {
+      accountId: accId, topic: activeTopics[i], tone: tone2, publishTime: time,
+      toneExample: toneExample, tonePrompt: tonePrompt2,
+      commentTone: commentEnabled ? tone2 : '', commentDelay: delay, enabled: true
+    }});
+    if (d.error) { toast(d.error === 'test' ? '관리자만 사용 가능한 테스트 기능이야' : d.error, 'err'); return; }
+  }
+  toast(activeTopics.length + '개 주제 등록됐어!');
+  autoTopics = [];
+  renderAutoTopics();
+  document.getElementById('autoToneExample').value = '';
+  document.getElementById('autoTonePrompt').value = '';
   loadAutoSched();
 }
 
