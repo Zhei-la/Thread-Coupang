@@ -598,14 +598,21 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
 
   const systemMsg = `당신은 한국 Threads SNS 콘텐츠 전문 작성자입니다.
 [절대 규칙]
-- 반드시 한국어로만 작성 (영어, 한자, 외국어 절대 금지)
+- 반드시 한국어로만 작성. 단, 주제 자체가 영어 단어인 경우(예: AI, SNS, IT 등)는 그대로 써도 됨. 그 외 영어, 한자, 외국어 절대 금지
 - 이모지 절대 사용 금지
 - 반말로만 작성 (존댓말, ~합니다, ~해요, ~입니다 절대 금지)
-- 가독성을 위해 문장 단위로 줄바꿈 (단, 빈 줄은 꼭 필요한 곳에만)
 - 게시글 텍스트만 출력 (설명, 주석, 따옴표 없이)
 - 제품명, 브랜드명을 글에 절대 직접 언급하지 말 것
 - "이거", "이것", "이 녀석", "요거", "이런 거" 등으로 둘러 말할 것
-- 제품명 대신 상황과 경험으로 후킹을 만들 것`;
+- 제품명 대신 상황과 경험으로 후킹을 만들 것
+
+[줄바꿈 규칙 - 매우 중요]
+- 2~3문장마다 줄바꿈(\n) 1번 사용
+- 너무 자주 줄바꾸지 말 것 (한 문장마다 줄바꿈 금지)
+- 문단 전환 시에만 빈 줄(\n\n) 1개 삽입
+- 빈 줄을 2개 이상 연속으로 넣지 말 것
+- 줄바꿈 없이 문장을 너무 길게 이어쓰지도 말 것
+- 자연스럽게 읽히는 호흡으로 작성할 것`;
 
   let prompt = '';
   if (type === 'comment') {
@@ -1260,10 +1267,21 @@ cron.schedule('* * * * *', async () => {
     console.log(`[AUTO-CRON] 현재시간(${currentTime}) 매칭 스케줄: ${toRun.length}개`);
     if (!toRun.length) continue;
     console.log(`[AUTO] 유저 ${userId} - ${toRun.length}개 자동 발행`);
+    // 계정별 오늘 발행 횟수 추적
+    const autoCountToday = {};
     for (const sched of toRun) {
       const accs = getAccounts(userId);
       const account = accs.find(a => a.id === sched.accountId);
       if (!account) continue;
+      // 관리자 무제한, 프리미엄 계정당 5개 제한
+      if (user.role !== 'admin') {
+        const accCount = autoCountToday[sched.accountId] || 0;
+        if (accCount >= 5) {
+          console.log(`[AUTO] 계정 ${account.name} 오늘 5개 한도 초과 - 건너뜀`);
+          continue;
+        }
+        autoCountToday[sched.accountId] = accCount + 1;
+      }
       try {
         const apiKey = process.env.GROQ_API_KEY;
         if (!apiKey) continue;
@@ -1290,8 +1308,9 @@ cron.schedule('* * * * *', async () => {
 
         const toneExample = sched.toneExample ? '\n\n말투 예시:\n' + sched.toneExample : '';
         const tonePromptExtra = sched.tonePrompt ? '\n\n추가 스타일 지침:\n' + sched.tonePrompt : '';
-        const systemMsg = '절대 규칙: 영어, 일본어, 중국어 등 한국어 이외의 언어 사용 금지. 오직 한국어로만 작성. 이모지 사용 금지. 존댓말 금지. 반말로만 작성. 게시글 텍스트만 출력하고 다른 말 절대 하지 마.' + (sched.toneExample ? ' 아래 말투 예시를 참고해서 비슷한 스타일로 작성해.' : '');
-        const prompt = (tonePrompts[sched.tone] || tonePrompts['일상']) + toneExample + tonePromptExtra + '\n\n주제: ' + selectedTopic + '\n\n위 형식에 맞게 Threads 게시글을 작성해줘. 반드시 한국어로만, 이모지 없이, 게시글 텍스트만 출력해.';
+        const systemMsg = `절대 규칙: 주제가 영어 단어인 경우(AI, SNS 등)는 그대로 써도 되지만 그 외 영어, 외국어 절대 금지. 오직 한국어로만 작성. 이모지 사용 금지. 존댓말 금지. 반말로만 작성. 게시글 텍스트만 출력.
+줄바꿈 규칙: 2~3문장마다 줄바꿈 1번. 너무 자주 줄바꾸지 말 것(한 문장마다 줄바꿈 금지). 문단 전환 시에만 빈 줄 1개. 빈 줄 2개 이상 연속 금지. 자연스러운 호흡으로 작성.` + (sched.toneExample ? ' 아래 말투 예시를 참고해서 비슷한 스타일로 작성해.' : '');
+        const prompt = (tonePrompts[sched.tone] || tonePrompts['일상']) + toneExample + tonePromptExtra + '\n\n주제: ' + selectedTopic + '\n\n위 형식에 맞게 Threads 게시글을 작성해줘. 반드시 한국어로만, 이모지 없이, 줄바꿈 포함해서, 게시글 텍스트만 출력해.';
         const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
