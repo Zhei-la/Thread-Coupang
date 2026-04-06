@@ -650,7 +650,7 @@ async function publishToThreads(accessToken, text, imageUrls = [], videoUrl = ''
     const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'VIDEO', video_url: videoUrl, text, access_token: accessToken }) });
     const d = await r.json(); if (d.error) throw new Error(d.error.message);
     containerId = d.id;
-    await new Promise(r => setTimeout(r, 10000));
+    await new Promise(r => setTimeout(r, 30000)); // 영상 처리 대기 30초
   } else if (imageUrls.length === 0) {
     console.log('[PUBLISH] 텍스트 발행 시작');
     const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'TEXT', text, access_token: accessToken }) });
@@ -665,6 +665,7 @@ async function publishToThreads(accessToken, text, imageUrls = [], videoUrl = ''
     console.log('[PUBLISH] Threads API 응답:', JSON.stringify(d));
     if (d.error) throw new Error(d.error.message);
     containerId = d.id;
+    await new Promise(r => setTimeout(r, 30000)); // 이미지 처리 대기 30초
   } else {
     const childIds = [];
     for (const url of imageUrls) {
@@ -672,7 +673,7 @@ async function publishToThreads(accessToken, text, imageUrls = [], videoUrl = ''
       const d = await r.json(); if (d.error) throw new Error(d.error.message);
       childIds.push(d.id);
     }
-    await new Promise(r => setTimeout(r, 3000));
+    await new Promise(r => setTimeout(r, 30000)); // 이미지 처리 대기 30초
     const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'CAROUSEL', children: childIds.join(','), text, access_token: accessToken }) });
     const d = await r.json(); if (d.error) throw new Error(d.error.message);
     containerId = d.id;
@@ -963,7 +964,7 @@ async function uploadToCloudinary(buffer, filename, resourceType = 'image') {
 
   const timestamp = Math.floor(Date.now() / 1000);
   const signature = crypto.createHash('sha256')
-    .update(`timestamp=${timestamp}${apiSecret}`)
+    .update(`access_mode=public&timestamp=${timestamp}&type=upload${apiSecret}`)
     .digest('hex');
 
   // FormData 직접 구성 (multipart)
@@ -990,6 +991,8 @@ async function uploadToCloudinary(buffer, filename, resourceType = 'image') {
   addField('api_key', apiKey);
   addField('timestamp', String(timestamp));
   addField('signature', signature);
+  addField('type', 'upload');
+  addField('access_mode', 'public');
   addFile('file', filename, mimeType, buffer);
   body = Buffer.concat([body, Buffer.from(`--${boundary}--${crlf}`)]);
 
