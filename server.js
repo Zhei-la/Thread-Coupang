@@ -390,6 +390,7 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
     if (!user.approvedAt) user.approvedAt = new Date().toISOString();
   }
   if (req.body.denyUpgrade) user.upgradeRequest = null;
+  if (req.body.denyPlanChange) user.planChangeRequest = null;
   saveJSON(`${DATA_ROOT}/users.json`, users);
   res.json({ ok: true });
 });
