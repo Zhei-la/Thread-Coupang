@@ -1271,10 +1271,21 @@ cron.schedule('* * * * *', async () => {
           '스토리형': '스토리형 SNS 콘텐츠. 상황->전개->결론 구조.',
           '쿠팡': '쿠팡 구매 유도. 1~3줄, 어그로, 경험담처럼. 제품명 금지.'
         };
+        // 주제 선택 - topics 배열에서 active인 것 중 랜덤 1개
+        let selectedTopic = sched.topic || '';
+        if (Array.isArray(sched.topics) && sched.topics.length > 0) {
+          const activeTopics = sched.topics.filter(t => t.active !== false);
+          if (activeTopics.length > 0) {
+            selectedTopic = activeTopics[Math.floor(Math.random() * activeTopics.length)].text;
+          }
+        }
+        if (!selectedTopic) { console.log('[AUTO] 활성 주제 없음 - 건너뜀'); continue; }
+        console.log(`[AUTO] 선택된 주제: ${selectedTopic}`);
+
         const toneExample = sched.toneExample ? '\n\n말투 예시:\n' + sched.toneExample : '';
         const tonePromptExtra = sched.tonePrompt ? '\n\n추가 스타일 지침:\n' + sched.tonePrompt : '';
         const systemMsg = '반드시 한국어로만. 이모지 금지. 존댓말 금지. 게시글 텍스트만 출력.' + (sched.toneExample ? ' 아래 말투 예시를 참고해서 비슷한 스타일로 작성해.' : '');
-        const prompt = (tonePrompts[sched.tone] || tonePrompts['일상']) + toneExample + tonePromptExtra + '\n\n주제: ' + sched.topic + '\n\n위 형식에 맞게 Threads 게시글을 작성해줘. 반드시 한국어로만, 이모지 없이, 게시글 텍스트만 출력해.';
+        const prompt = (tonePrompts[sched.tone] || tonePrompts['일상']) + toneExample + tonePromptExtra + '\n\n주제: ' + selectedTopic + '\n\n위 형식에 맞게 Threads 게시글을 작성해줘. 반드시 한국어로만, 이모지 없이, 게시글 텍스트만 출력해.';
         const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
