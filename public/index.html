@@ -114,7 +114,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     <nav>
       <div class="nav-item active" onclick="go('write',this)">✏️ 글 작성</div>
       <div class="nav-item" onclick="go('schedule',this)">📅 예약 목록</div>
-      <div class="nav-item" onclick="go('autoSchedule',this)" id="autoSchedNav">🤖 자동 스케줄러 <span style="font-size:10px;color:var(--yellow);margin-left:4px">테스트중</span></div>
+      <div class="nav-item" onclick="go('autoSchedule',this)" id="autoSchedNav">🤖 자동 스케줄러 <span id="autoSchedNavBadge" style="font-size:10px;color:var(--yellow);margin-left:4px">테스트중</span></div>
       <div class="nav-item" onclick="go('accounts',this)">👤 계정 관리</div>
       <div class="nav-sep" id="adminSep" style="display:none"></div>
       <div class="nav-item" id="adminNav" style="display:none" onclick="go('admin',this)">⚙️ 관리자</div>
@@ -254,7 +254,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div class="card" style="border-color:var(--yellow);text-align:center;padding:40px 20px">
           <div style="font-size:48px;margin-bottom:16px">🚧</div>
           <h2 style="color:var(--yellow);font-size:18px;margin-bottom:12px">준비 중입니다</h2>
-          <div style="font-size:14px;color:var(--txt2);line-height:1.7;margin-bottom:20px">자동 스케줄러 기능을 열심히 준비하고 있어요.<br>곧 만나볼 수 있어요!</div>
+          <div id="autoSchedLockedMsg" style="font-size:14px;color:var(--txt2);line-height:1.7;margin-bottom:20px">자동 스케줄러 기능을 열심히 준비하고 있어요.<br>곧 만나볼 수 있어요!</div>
           <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:16px;text-align:left">
             <div style="font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:10px">💎 프리미엄 업그레이드 시 사용 가능해요</div>
             <div style="font-size:13px;color:var(--txt2);line-height:1.8">
@@ -414,7 +414,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div id="limitRequestStatus" style="margin-bottom:12px;font-size:13px;color:var(--txt2)"></div>
         <div style="border-top:1px solid var(--bdr);padding-top:14px">
           <h2 style="margin-bottom:10px">사용기간 연장 신청</h2>
-          <button class="btn btn-sm btn-p" onclick="requestExtend()" id="extendReqBtn">30일 연장 신청하기</button>
+          <button class="btn btn-sm btn-p" onclick="requestExtend()" id="extendReqBtn">현재 이용중인 요금제 연장 요청</button>
           <div id="extendRequestStatus" style="margin-top:10px;font-size:13px;color:var(--txt2)"></div>
         </div>
       </div>
@@ -469,10 +469,16 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       </div>
       <div class="card">
         <h2>🟣 엑시온 유저 <span id="partnerUserCount" style="font-size:12px;color:var(--blue);font-weight:400"></span></h2>
+        <div style="margin-bottom:10px">
+          <input id="partnerSearch" placeholder="이름 또는 닉네임 검색..." oninput="filterUsers('partner')" />
+        </div>
         <div id="partnerUserList"><div style="color:var(--txt2);font-size:14px">없음</div></div>
       </div>
       <div class="card">
         <h2>일반 유저 <span id="userCount" style="font-size:12px;color:var(--txt2);font-weight:400"></span></h2>
+        <div style="margin-bottom:10px">
+          <input id="normalSearch" placeholder="이름 또는 닉네임 검색..." oninput="filterUsers('normal')" />
+        </div>
         <div id="userList"></div>
       </div>
     </div>
@@ -1267,9 +1273,13 @@ async function loadAdmin() {
     var settings = await api('/api/settings');
     if (settings.kakaoLink) { document.getElementById('kakaoLinkInput').value = settings.kakaoLink; document.getElementById('kakaoLinkStatus').textContent = '현재: ' + settings.kakaoLink; }
     if (settings.partnerCode) { document.getElementById('partnerCodeInput').value = settings.partnerCode; document.getElementById('partnerCodeStatus').textContent = '현재 코드: ' + settings.partnerCode; }
+    var navBadge2 = document.getElementById('autoSchedNavBadge');
     if (settings.autoSchedulerEnabled) {
       var badge = document.getElementById('autoSchedStatusBadge');
-      if (badge) { badge.textContent = '전체 활성화'; badge.className = 'badge bg'; }
+      if (badge) { badge.textContent = '프리미엄 활성화'; badge.className = 'badge bg'; }
+      if (navBadge2) { navBadge2.textContent = ''; navBadge2.style.display = 'none'; }
+    } else {
+      if (navBadge2) { navBadge2.textContent = '테스트중'; navBadge2.style.display = ''; }
     }
   } catch(e) {}
 
@@ -1302,6 +1312,9 @@ async function loadAdmin() {
       '<div style="font-size:12px;color:var(--txt2)">한도: ' + (u.accountLimit || 3) + '개' + expInfo + '</div></div>' + btns + '</div>';
   }
 
+  _cachedPartnerUsers = partnerUsers;
+  _cachedNormalUsers = normalUsers;
+
   var puEl = document.getElementById('partnerUserList');
   var puCount = document.getElementById('partnerUserCount');
   puCount.textContent = '(' + partnerUsers.length + '명)';
@@ -1333,6 +1346,30 @@ async function setLimit(id, limit) {
 async function delUser(id) {
   if (!confirm('정말 삭제할까?')) return;
   await api('/api/users/' + id, { method: 'DELETE' }); loadAdmin();
+}
+
+async function setPlanAndExtend(id, plan) {
+  var planNames = { basic: '베이직(30일)', pro: '프로(30일)', premium: '프리미엄(60일)' };
+  if (!confirm(planNames[plan] + ' 으로 변경하고 기간 연장할까?')) return;
+  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', setPlan: plan } });
+  if (d.error) return toast(d.error, 'err');
+  toast(planNames[plan] + ' 적용됐어!'); loadAdmin();
+}
+
+// 캐시된 유저 데이터
+var _cachedPartnerUsers = [];
+var _cachedNormalUsers = [];
+
+function filterUsers(type) {
+  var searchEl = document.getElementById(type === 'partner' ? 'partnerSearch' : 'normalSearch');
+  var listEl = document.getElementById(type === 'partner' ? 'partnerUserList' : 'userList');
+  var query = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  var users2 = type === 'partner' ? _cachedPartnerUsers : _cachedNormalUsers;
+  var filtered = query ? users2.filter(function(u) {
+    return (u.name || '').toLowerCase().includes(query) || (u.nickname || '').toLowerCase().includes(query);
+  }) : users2;
+  if (!filtered.length) { listEl.innerHTML = '<div style="color:var(--txt2);font-size:14px">' + (query ? '검색 결과 없음' : '없음') + '</div>'; return; }
+  listEl.innerHTML = filtered.map(renderUser).join('');
 }
 async function denyLimitReq(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', clearLimitRequest: true } }); loadAdmin(); }
 async function extendUserDays(id, days) {
@@ -1374,8 +1411,13 @@ async function setAutoScheduler(enabled) {
   var d = await api('/api/settings/auto-scheduler', { method: 'PUT', body: { enabled: enabled } });
   if (d.error) return toast(d.error, 'err');
   var badge = document.getElementById('autoSchedStatusBadge');
-  if (badge) { badge.textContent = enabled ? '전체 활성화' : '테스트중'; badge.className = 'badge ' + (enabled ? 'bg' : 'by'); }
-  toast(enabled ? '전체 유저 활성화됐어!' : '테스트 전용으로 변경됐어!');
+  if (badge) { badge.textContent = enabled ? '프리미엄 활성화' : '테스트중'; badge.className = 'badge ' + (enabled ? 'bg' : 'by'); }
+  var navBadge = document.getElementById('autoSchedNavBadge');
+  if (navBadge) {
+    if (enabled) { navBadge.textContent = ''; navBadge.style.display = 'none'; }
+    else { navBadge.textContent = '테스트중'; navBadge.style.display = ''; }
+  }
+  toast(enabled ? '프리미엄 유저 활성화됐어!' : '테스트 전용으로 변경됐어!');
 }
 
 async function loadAutoSched() {
@@ -1383,6 +1425,17 @@ async function loadAutoSched() {
   if (d.error === 'test') {
     document.getElementById('autoSchedLocked').style.display = 'block';
     document.getElementById('autoSchedContent').style.display = 'none';
+    // 안내 문구 설정
+    var lockedMsg = document.getElementById('autoSchedLockedMsg');
+    if (lockedMsg) {
+      // 설정 확인
+      var settings2 = await api('/api/settings');
+      if (settings2.autoSchedulerEnabled) {
+        lockedMsg.textContent = '자동 스케줄러는 프리미엄 플랜 전용 기능이에요. 프리미엄으로 업그레이드하면 사용할 수 있어요.';
+      } else {
+        lockedMsg.textContent = '현재 테스트 중인 기능이에요. 프리미엄 이용자도 테스트 준비 중입니다.';
+      }
+    }
     return;
   }
   // 발행 로그
