@@ -1351,7 +1351,12 @@ async function loadAdmin() {
     var btns = u.role !== 'admin' ? (
       '<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">' +
       '<div style="display:flex;gap:4px">' + statusBtn + '<button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">삭제</button></div>' +
-      '<div style="display:flex;gap:4px"><button class="btn btn-sm" style="color:var(--red);border-color:var(--red)" onclick="extendUserDays(\'' + u.id + '\',-10)">-10일</button><button class="btn btn-sm" onclick="extendUserDays(\'' + u.id + '\',10)">+10일</button></div>' +
+      '<div style="display:flex;gap:4px">' +
+        '<button class="btn btn-sm" style="color:var(--red);border-color:var(--red);padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',-10)">-10일</button>' +
+        '<button class="btn btn-sm" style="color:var(--red);border-color:var(--red);padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',-1)">-1일</button>' +
+        '<button class="btn btn-sm" style="padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',1)">+1일</button>' +
+        '<button class="btn btn-sm" style="padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',10)">+10일</button>' +
+      '</div>' +
       '<div style="display:flex;gap:4px">' +
         '<button class="btn btn-sm" style="font-size:11px;border-color:#666;color:#aaa" onclick="setPlanAndExtend(\'' + u.id + '\',\'basic\')">베이직<br>30일</button>' +
         '<button class="btn btn-sm btn-g" style="font-size:11px" onclick="setPlanAndExtend(\'' + u.id + '\',\'pro\')">프로<br>30일</button>' +
