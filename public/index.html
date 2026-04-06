@@ -121,10 +121,31 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     </nav>
     <div class="sidebar-foot">
       <div style="font-weight:600;font-size:14px;margin-bottom:2px" id="sideNick"></div>
-      <div style="font-size:11px;color:var(--txt2);margin-bottom:10px" id="sideRole"></div>
-      <a href="https://open.kakao.com/o/sdwT0Zoi" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:#FEE500;color:#000;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:10px">💬 관리자 문의하기</a>
+      <div style="font-size:11px;color:var(--txt2);margin-bottom:8px" id="sideRole"></div>
+
+      <!-- 서비스 만료일 -->
+      <div id="sideExpireInfo" style="display:none;margin-bottom:8px;padding:8px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr);cursor:pointer" onclick="toggleExpireHelp()">
+        <div style="font-size:11px;color:var(--txt2);margin-bottom:3px">📅 서비스 만료</div>
+        <div id="sideExpireText" style="font-size:12px;font-weight:600"></div>
+        <div id="sideExpireHelp" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)">
+          <div style="font-size:11px;color:var(--txt2);line-height:1.7;margin-bottom:6px">서비스 기간을 연장해야 해요.<br>관리자에게 문의하면 연장 처리해드려요.</div>
+          <a href="https://open.kakao.com/o/sdwT0Zoi" target="_blank" style="display:flex;align-items:center;justify-content:center;padding:6px;background:#FEE500;color:#000;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">💬 문의하러가기</a>
+        </div>
+      </div>
+
+      <!-- 토큰 만료일 (계정 선택 시 표시) -->
+      <div id="sideTokenInfo" style="display:none;margin-bottom:8px;padding:8px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr);cursor:pointer" onclick="toggleTokenHelp()">
+        <div style="font-size:11px;color:var(--txt2);margin-bottom:3px">🔑 토큰 만료</div>
+        <div id="sideTokenText" style="font-size:12px;font-weight:600"></div>
+        <div id="sideTokenHelp" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)">
+          <div style="font-size:11px;color:var(--txt2);line-height:1.7;margin-bottom:6px">장기 토큰을 새로 발급받아야 해요.<br>계정 관리에서 기존 계정 삭제 후 새 토큰으로 다시 추가해줘요.</div>
+          <a href="MANUAL_URL_HERE" target="_blank" style="display:flex;align-items:center;justify-content:center;padding:6px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:6px;color:var(--blue);font-size:11px;font-weight:700;text-decoration:none">📖 매뉴얼 보러가기</a>
+        </div>
+      </div>
+
+      <a href="https://open.kakao.com/o/sdwT0Zoi" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:#FEE500;color:#000;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:8px">💬 문의하기</a>
       <label class="label">계정 선택</label>
-      <select id="globalAcc" onchange="onAccChange()" style="margin-bottom:10px"></select>
+      <select id="globalAcc" onchange="onAccChange();updateTokenInfo()" style="margin-bottom:10px"></select>
       <button class="btn btn-r btn-sm" style="width:100%" onclick="doLogout()">로그아웃</button>
     </div>
   </aside>
@@ -183,6 +204,9 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <button class="btn btn-sm" onclick="genComment()">🪄 댓글 생성</button>
           <button class="btn btn-sm" onclick="copyEl('commentText')">📋 복사</button>
           <button class="btn btn-sm" onclick="openSched('comment')">📅 댓글만 예약</button>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--txt2);padding:8px;background:var(--sur2);border-radius:6px;line-height:1.6">
+          ⚠️ 글/댓글 생성을 너무 빠르게 연속으로 누르면 어뷰징으로 감지되어 일시적으로 제한될 수 있어요.
         </div>
       </div>
       <div class="card" id="coupangLinkCard" style="display:none">
@@ -280,6 +304,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       </div>
       <div class="card">
         <h2>Threads 계정 추가 <span id="accLimitBadge" style="font-size:11px;color:var(--txt2);font-weight:400"></span></h2>
+        <div id="basicPlanNotice" style="display:none;padding:12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;margin-bottom:14px;font-size:13px;color:var(--red);line-height:1.6">
+          베이직 플랜은 계정 등록 없이 글 생성+복사만 가능해요.<br>
+          계정 등록 및 발행 기능은 <b>프로 이상</b>에서 사용할 수 있어요.
+          <button class="btn btn-sm" style="margin-top:8px;border-color:var(--yellow);color:var(--yellow);display:block" onclick="openPlanModal()">💎 업그레이드 문의하기</button>
+        </div>
+        <div id="accAddForm">
         <div style="margin-bottom:12px"><label class="label">계정 이름</label><input id="accName" placeholder="예: 메인 계정" /></div>
         <div style="margin-bottom:12px"><label class="label">장기 액세스 토큰</label><input id="accToken" placeholder="THAAMr..." /></div>
         <div style="margin-bottom:16px">
@@ -291,6 +321,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <div id="tagList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
         </div>
         <button class="btn btn-p" onclick="addAcc()">+ 계정 추가</button>
+        </div>
       </div>
       <div class="card"><h2>등록된 계정</h2><div id="accList"></div></div>
       <div class="card" id="expireNoticeCard" style="display:none;border-color:var(--red)">
@@ -403,24 +434,30 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 <div class="modal-bg" id="planModal">
   <div class="modal" style="width:520px;max-width:95vw;max-height:90vh;overflow-y:auto">
     <h3>💎 요금제 안내</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px">
-      <div style="padding:14px;background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;text-align:center">
-        <div style="font-size:11px;color:var(--txt2);margin-bottom:6px">무료 체험</div>
-        <div style="font-size:18px;font-weight:700;margin-bottom:8px">7일</div>
-        <div style="font-size:11px;color:var(--txt2);line-height:1.8">계정 1개<br>하루 2회 발행<br>글 생성 무제한</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:20px">
+      <div style="padding:12px;background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;text-align:center">
+        <div style="font-size:10px;color:var(--txt2);margin-bottom:4px">무료 체험</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px">7일</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 1개<br>하루 2회 발행<br>글 생성</div>
       </div>
-      <div style="padding:14px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:10px;text-align:center">
-        <div style="font-size:11px;color:var(--blue);margin-bottom:6px">베이직</div>
-        <div style="font-size:18px;font-weight:700;margin-bottom:4px">9,900원</div>
-        <div style="font-size:10px;color:var(--txt2);margin-bottom:8px">/월</div>
-        <div style="font-size:11px;color:var(--txt2);line-height:1.8">계정 3개<br>하루 3회 발행<br>예약 발행</div>
+      <div style="padding:12px;background:rgba(136,136,136,.08);border:1px solid rgba(136,136,136,.3);border-radius:10px;text-align:center">
+        <div style="font-size:10px;color:#aaa;margin-bottom:4px">베이직</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:2px">4,900원</div>
+        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">토큰 불필요<br>글 생성+복사<br>하루 200번<br>30일 사용</div>
       </div>
-      <div style="padding:14px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:10px;text-align:center;position:relative">
-        <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--yellow);color:#000;font-size:10px;font-weight:700;padding:2px 10px;border-radius:100px">추천</div>
-        <div style="font-size:11px;color:var(--yellow);margin-bottom:6px">프로</div>
-        <div style="font-size:18px;font-weight:700;margin-bottom:4px">19,900원</div>
-        <div style="font-size:10px;color:var(--txt2);margin-bottom:8px">/월</div>
-        <div style="font-size:11px;color:var(--txt2);line-height:1.8">계정 6개<br>하루 5회 발행<br>예약 발행<br>자동 스케줄러</div>
+      <div style="padding:12px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:10px;text-align:center">
+        <div style="font-size:10px;color:var(--green);margin-bottom:4px">프로</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:2px">9,900원</div>
+        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 2개<br>하루 3회 발행<br>예약 발행<br>30일 사용</div>
+      </div>
+      <div style="padding:12px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:10px;text-align:center;position:relative">
+        <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--yellow);color:#000;font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px">추천</div>
+        <div style="font-size:10px;color:var(--yellow);margin-bottom:4px">프리미엄</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:2px">19,900원</div>
+        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 6개<br>하루 5회 발행<br>예약+자동발행<br>30일 사용</div>
       </div>
     </div>
     <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;padding:16px;margin-bottom:16px">
@@ -475,6 +512,31 @@ var tone = '리스트형';
 var myRole = '';
 var mediaMode = 'photo';
 var imgUrls = [], imgFiles = [], vidUrl = '', editImgUrls = [], newTags = [], editTags = [];
+
+// 글 생성 어뷰징 방지
+var genClickTimes = [];
+var genCooldownUntil = 0;
+
+function checkGenAbuse() {
+  var now = Date.now();
+  // 쿨다운 중이면 차단
+  if (now < genCooldownUntil) {
+    var remain = Math.ceil((genCooldownUntil - now) / 1000);
+    toast('너무 빠르게 생성을 누르고 있어. ' + remain + '초 후에 다시 시도해줘.', 'err');
+    return false;
+  }
+  // 5초 이내 클릭만 카운트 (5초 넘으면 정상 사용)
+  genClickTimes = genClickTimes.filter(function(t) { return now - t < 60000; });
+  genClickTimes.push(now);
+  // 5초 이내 20번 이상이면 3분 쿨다운
+  if (genClickTimes.length >= 20) {
+    genCooldownUntil = now + 3 * 60 * 1000;
+    genClickTimes = [];
+    toast('연속으로 너무 많이 눌렀어. 3분 후에 다시 사용할 수 있어.', 'err');
+    return false;
+  }
+  return true;
+}
 
 function api(path, opts) {
   opts = opts || {};
@@ -550,6 +612,14 @@ function enterApp(user) {
     checkExpiry();
   }
   loadAccs();
+  updateSideExpire();
+  // 베이직 플랜이면 계정 추가 폼 숨기기
+  if (user.plan === 'basic') {
+    var notice = document.getElementById('basicPlanNotice');
+    var form = document.getElementById('accAddForm');
+    if (notice) notice.style.display = 'block';
+    if (form) form.style.display = 'none';
+  }
   var saved = localStorage.getItem('page') || 'write';
   go(saved, null);
 }
@@ -627,6 +697,7 @@ function pickTone(el) {
 }
 
 async function genPost() {
+  if (!checkGenAbuse()) return;
   var topic = document.getElementById('topic').value.trim();
   if (!topic) return toast('주제를 입력해줘', 'err');
   var btn = document.getElementById('genBtn');
@@ -657,6 +728,7 @@ async function genPost() {
 }
 
 async function genComment() {
+  if (!checkGenAbuse()) return;
   var topic = document.getElementById('topic').value.trim() || '일상';
   try {
     var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, type: 'comment' } });
@@ -1069,7 +1141,7 @@ async function loadAdmin() {
   pEl.innerHTML = pending.length ? pending.map(function(u) {
     return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px">' + (u.name || '-') + ' <span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span></div></div>' +
       '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
-      '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\',3)">승인 3개</button>' +
+      '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\',2)">승인 2개(베이직)</button>' +
       '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\',6)">승인 6개</button>' +
       '<button class="btn btn-sm" style="border-color:var(--blue);color:var(--blue)" onclick="approveFree(\'' + u.id + '\')">무료 7일</button>' +
       '<button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">거절</button></div></div>';
@@ -1120,7 +1192,9 @@ async function loadAdmin() {
 
   function renderUser(u) {
     var sb = u.status === 'approved' ? '<span class="badge bg">사용중</span>' : '<span class="badge br">정지</span>';
-    var pb = u.plan === 'free' ? '<span class="badge bb">무료</span>' : '';
+    var planLabel = u.plan === 'basic' ? '베이직' : u.plan === 'pro' ? '프로' : u.plan === 'premium' ? '프리미엄' : u.plan === 'free' ? '무료' : '-';
+    var planColor = u.plan === 'premium' ? 'by' : u.plan === 'pro' ? 'bg' : u.plan === 'basic' ? 'br' : 'bb';
+    var pb = '<span class="badge ' + planColor + '">' + planLabel + '</span>';
     var expInfo = '';
     if (u.expiresAt) {
       var diff = Math.ceil((new Date(u.expiresAt) - new Date()) / 86400000);
@@ -1179,10 +1253,25 @@ async function extendUserDays(id, days) {
   toast(days + '일 연장됐어!'); loadAdmin();
 }
 async function denyExtend(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyExtend: true } }); loadAdmin(); }
-async function approveUpgrade(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'paid', accountLimit: 3, approveUpgrade: true } }); loadAdmin(); }
+async function approveUpgrade(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'paid', accountLimit: 2, approveUpgrade: true } }); loadAdmin(); }
 async function approveUpgrade6(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'paid', accountLimit: 6, approveUpgrade: true } }); loadAdmin(); }
 async function denyUpgrade(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyUpgrade: true } }); loadAdmin(); }
-async function approveFree(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'free', planDays: 7, accountLimit: 1 } }); loadAdmin(); }
+async function approveFree(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'free', planDays: 7, accountLimit: 1 } }); toast('무료 7일 승인!'); loadAdmin(); }
+
+async function approvePlan(id, plan) {
+  var planNames = { basic: '베이직', pro: '프로', premium: '프리미엄' };
+  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: plan } });
+  if (d.error) return toast(d.error, 'err');
+  toast(planNames[plan] + ' 승인됐어!'); loadAdmin();
+}
+
+async function changePlan(id, plan) {
+  var planNames = { basic: '베이직', pro: '프로', premium: '프리미엄' };
+  if (!confirm(planNames[plan] + '으로 변경할까?')) return;
+  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: plan, changePlan: true } });
+  if (d.error) return toast(d.error, 'err');
+  toast(planNames[plan] + '으로 변경됐어!'); loadAdmin();
+}
 async function saveKakaoLink() {
   var link = document.getElementById('kakaoLinkInput').value.trim();
   await api('/api/settings', { method: 'PUT', body: { kakaoLink: link } });
@@ -1288,6 +1377,55 @@ async function openPlanModal() {
 function copyPlanInquiry() {
   var text = document.getElementById('planInquiryText').textContent;
   navigator.clipboard.writeText(text).then(function() { toast('문의 내용 복사됐어! 카카오로 전송해줘'); });
+}
+
+function toggleTokenHelp() {
+  var el = document.getElementById('sideTokenHelp');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function toggleExpireHelp() {
+  var el = document.getElementById('sideExpireHelp');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function updateSideExpire() {
+  try {
+    var allUsers = await api('/api/users');
+    var me = await api('/api/auth/me');
+    if (!Array.isArray(allUsers)) return;
+    var myInfo = allUsers.find(function(u) { return u.nickname === me.nickname; });
+    if (!myInfo || !myInfo.expiresAt) return;
+    var diff = Math.ceil((new Date(myInfo.expiresAt) - new Date()) / 86400000);
+    var expireEl = document.getElementById('sideExpireInfo');
+    var expireText = document.getElementById('sideExpireText');
+    if (!expireEl || !expireText) return;
+    expireEl.style.display = 'block';
+    var warn = diff <= 10;
+    expireEl.style.borderColor = warn ? 'var(--red)' : 'var(--bdr)';
+    expireText.style.color = warn ? 'var(--red)' : 'var(--green)';
+    expireText.textContent = (warn ? '⚠️ ' : '') + diff + '일 남음' + (diff <= 0 ? ' (만료됨)' : '');
+  } catch(e) {}
+}
+
+async function updateTokenInfo() {
+  var accId = document.getElementById('globalAcc').value;
+  var tokenEl = document.getElementById('sideTokenInfo');
+  var tokenText = document.getElementById('sideTokenText');
+  if (!tokenEl || !tokenText) return;
+  if (!accId) { tokenEl.style.display = 'none'; return; }
+  try {
+    var accs = await api('/api/accounts');
+    var acc = accs.find(function(a) { return a.id === accId; });
+    if (!acc || !acc.tokenRegisteredAt) { tokenEl.style.display = 'none'; return; }
+    var registered = new Date(acc.tokenRegisteredAt);
+    var expireDate = new Date(registered.getTime() + 60 * 86400000);
+    var diff = Math.ceil((expireDate - new Date()) / 86400000);
+    tokenEl.style.display = 'block';
+    var warn = diff <= 10;
+    tokenEl.style.borderColor = warn ? 'var(--yellow)' : 'var(--bdr)';
+    tokenText.style.color = warn ? 'var(--yellow)' : 'var(--txt)';
+    tokenText.textContent = (warn ? '⚠️ ' : '') + Math.max(0, diff) + '일 남음 (~' + expireDate.toLocaleDateString('ko-KR') + ')';
+  } catch(e) {}
 }
 
 init();
