@@ -6,46 +6,35 @@
 <title>ThreadsAuto</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap');
-:root {
-  --bg:#0a0a0a; --sur:#141414; --sur2:#1e1e1e;
-  --bdr:#2a2a2a; --txt:#f0f0f0; --txt2:#888;
-  --green:#22c55e; --red:#ef4444; --blue:#3b82f6; --yellow:#f59e0b;
-}
+:root{--bg:#0a0a0a;--sur:#141414;--sur2:#1e1e1e;--bdr:#2a2a2a;--txt:#f0f0f0;--txt2:#888;--green:#22c55e;--red:#ef4444;--blue:#3b82f6;--yellow:#f59e0b;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
 .auth-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
 .auth-box{background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:36px;width:100%;max-width:380px;}
 .auth-logo{font-size:22px;font-weight:700;margin-bottom:8px;}
-.auth-logo span{color:var(--txt2);font-weight:400;}
 .auth-sub{font-size:13px;color:var(--txt2);margin-bottom:24px;}
 .auth-tabs{display:flex;border:1px solid var(--bdr);border-radius:8px;overflow:hidden;margin-bottom:20px;}
 .auth-tab{flex:1;padding:9px;text-align:center;font-size:13px;cursor:pointer;color:var(--txt2);background:var(--sur2);border:none;font-family:inherit;transition:all .15s;}
 .auth-tab.active{background:var(--sur);color:var(--txt);font-weight:600;}
-.auth-panel{display:none;}
-.auth-panel.active{display:block;}
-.field{margin-bottom:14px;}
-.field label{display:block;font-size:12px;color:var(--txt2);margin-bottom:5px;}
+.auth-panel{display:none;}.auth-panel.active{display:block;}
+.field{margin-bottom:14px;}.field label{display:block;font-size:12px;color:var(--txt2);margin-bottom:5px;}
 .auth-err{font-size:13px;color:var(--red);margin-bottom:10px;min-height:18px;}
 .auth-hint{font-size:13px;color:var(--green);margin-bottom:10px;min-height:18px;}
-.app{display:none;min-height:100vh;}
-.app.on{display:flex;}
+.app{display:none;min-height:100vh;}.app.on{display:flex;}
 .sidebar{width:220px;min-height:100vh;background:var(--sur);border-right:1px solid var(--bdr);display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:50;}
 .logo{padding:0 20px 20px;font-size:18px;font-weight:700;border-bottom:1px solid var(--bdr);margin-bottom:12px;}
-.logo span{color:var(--txt2);font-weight:400;}
 .nav-item{padding:10px 20px;cursor:pointer;font-size:14px;color:var(--txt2);transition:all .15s;display:flex;align-items:center;gap:10px;}
 .nav-item:hover{color:var(--txt);background:var(--sur2);}
 .nav-item.active{color:var(--txt);background:var(--sur2);border-right:2px solid var(--txt);}
 .nav-sep{border-top:1px solid var(--bdr);margin:8px 0;}
 .sidebar-foot{margin-top:auto;padding:16px 20px;border-top:1px solid var(--bdr);}
 .main{margin-left:220px;flex:1;padding:32px;max-width:940px;}
-.page{display:none;}
-.page.active{display:block;}
+.page{display:none;}.page.active{display:block;}
 h1{font-size:22px;font-weight:700;margin-bottom:24px;}
 h2{font-size:11px;font-weight:600;margin-bottom:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:.5px;}
 .card{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:20px;margin-bottom:16px;}
 input,select,textarea{background:var(--sur2);border:1px solid var(--bdr);color:var(--txt);border-radius:8px;padding:10px 14px;font-size:14px;font-family:inherit;outline:none;transition:border .15s;width:100%;}
 input:focus,select:focus,textarea:focus{border-color:#444;}
-select{cursor:pointer;}
 textarea{resize:vertical;min-height:120px;line-height:1.6;}
 .label{font-size:13px;color:var(--txt2);margin-bottom:6px;display:block;}
 .btn{padding:10px 18px;border-radius:8px;border:1px solid var(--bdr);background:var(--sur2);color:var(--txt);font-size:14px;font-family:inherit;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
@@ -61,8 +50,6 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
 .chip{padding:6px 14px;border-radius:100px;border:1px solid var(--bdr);background:var(--sur2);color:var(--txt2);font-size:13px;cursor:pointer;transition:all .15s;}
 .chip:hover,.chip.active{border-color:var(--txt);color:var(--txt);}
-.topic-chip{padding:6px 14px;border-radius:100px;border:1px solid rgba(59,130,246,.3);background:rgba(59,130,246,.08);color:#7cb4ff;font-size:13px;cursor:pointer;transition:all .15s;}
-.topic-chip:hover,.topic-chip.active{border-color:var(--blue);background:rgba(59,130,246,.2);color:#fff;}
 .upload-area{border:1px dashed var(--bdr);border-radius:8px;padding:20px;text-align:center;cursor:pointer;color:var(--txt2);font-size:14px;transition:border .15s;}
 .upload-area:hover{border-color:#555;color:var(--txt);}
 .preview-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
@@ -75,13 +62,10 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 .by{background:rgba(245,158,11,.15);color:var(--yellow);}
 .bb{background:rgba(59,130,246,.15);color:var(--blue);}
 .list-item{display:flex;align-items:flex-start;justify-content:space-between;padding:14px;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;margin-bottom:8px;gap:12px;}
-.tag-wrap{display:flex;gap:8px;margin-bottom:10px;}
-.tag-list{display:flex;flex-wrap:wrap;gap:6px;min-height:28px;}
 .tag-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);border-radius:100px;font-size:12px;color:#7cb4ff;}
 .tag-pill button{background:none;border:none;color:#7cb4ff;cursor:pointer;font-size:12px;padding:0;}
 .toast{position:fixed;bottom:24px;right:24px;background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:14px 20px;font-size:14px;z-index:999;animation:tup .3s ease;max-width:300px;}
-.toast.ok{border-color:var(--green);}
-.toast.err{border-color:var(--red);}
+.toast.ok{border-color:var(--green);}.toast.err{border-color:var(--red);}
 @keyframes tup{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid #333;border-top-color:#888;border-radius:50%;animation:rot .7s linear infinite;vertical-align:middle;}
 @keyframes rot{to{transform:rotate(360deg)}}
@@ -91,21 +75,13 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 .modal h3{font-size:16px;font-weight:600;margin-bottom:16px;}
 .ham{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--sur);border:1px solid var(--bdr);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:18px;}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49;}
-@media(max-width:768px){
-  .ham{display:block;}
-  .sidebar{transform:translateX(-100%);transition:transform .25s;z-index:150;}
-  .sidebar.open{transform:translateX(0);}
-  .overlay.open{display:block;}
-  .main{margin-left:0;padding:16px;padding-top:56px;}
-}
+@media(max-width:768px){.ham{display:block;}.sidebar{transform:translateX(-100%);transition:transform .25s;z-index:150;}.sidebar.open{transform:translateX(0);}.overlay.open{display:block;}.main{margin-left:0;padding:16px;padding-top:56px;}}
 </style>
 </head>
 <body>
-
-<!-- 로그인/가입 -->
 <div class="auth-wrap" id="authWrap">
   <div class="auth-box">
-    <div class="auth-logo">Threads<span>Auto</span></div>
+    <div class="auth-logo">ThreadsAuto</div>
     <div class="auth-sub">로그인하거나 초대코드로 가입해줘</div>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchTab('login',this)">로그인</button>
@@ -129,13 +105,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
   </div>
 </div>
 
-<!-- 앱 -->
 <button class="ham" onclick="toggleSidebar()">☰</button>
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
 <div class="app" id="appWrap">
   <aside class="sidebar" id="sidebar">
-    <div class="logo">Threads<span>Auto</span></div>
+    <div class="logo">ThreadsAuto</div>
     <nav>
       <div class="nav-item active" onclick="go('write',this)">✏️ 글 작성</div>
       <div class="nav-item" onclick="go('schedule',this)">📅 예약 목록</div>
@@ -154,12 +129,10 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
   </aside>
 
   <main class="main">
-    <!-- 글 작성 -->
     <div class="page active" id="page-write">
       <h1>✏️ 글 작성</h1>
-
       <div class="card">
-        <h2>미디어 먼저 올리기 (선택)</h2>
+        <h2>미디어 (선택)</h2>
         <div class="chips" style="margin-bottom:14px">
           <div class="chip active" id="tabPhoto" onclick="switchMedia('photo')">📷 사진</div>
           <div class="chip" id="tabVideo" onclick="switchMedia('video')">🎬 영상</div>
@@ -170,20 +143,17 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <div class="preview-list" id="previewList"></div>
         </div>
         <div id="mediaVideo" style="display:none">
-          <div class="upload-area" onclick="document.getElementById('vidInput').click()">🎬 클릭해서 영상 추가 (mp4)</div>
+          <div class="upload-area" onclick="document.getElementById('vidInput').click()">🎬 클릭해서 영상 추가</div>
           <input type="file" id="vidInput" accept="video/mp4" style="display:none" onchange="handleVid(this)">
           <div id="vidPreview"></div>
         </div>
         <div id="imgAnalysisResult" style="display:none;margin-top:10px;padding:10px;background:var(--sur2);border-radius:8px;font-size:13px;color:var(--txt2)"></div>
       </div>
-
       <div class="card">
         <h2>주제 & 설정</h2>
         <label class="label">주제 태그</label>
-        <div class="chips" id="topicTags" style="margin-bottom:10px">
-          <span style="font-size:13px;color:var(--txt2)">계정을 선택하면 표시돼요</span>
-        </div>
-        <label class="label">제품명 / 주제 입력 <span style="font-size:11px;color:var(--txt2)">제품명을 적으면 제품에 어울리는 글 작성 (글에 제품명 미포함)</span></label>
+        <div class="chips" id="topicTags" style="margin-bottom:10px"><span style="font-size:13px;color:var(--txt2)">계정을 선택하면 표시돼요</span></div>
+        <label class="label">주제 직접 입력</label>
         <div style="margin-bottom:12px"><input id="topic" placeholder="예: 닭강정, 강아지 간식, 공기청정기" /></div>
         <label class="label">말투</label>
         <div class="chips" id="toneChips">
@@ -197,41 +167,34 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         </div>
         <button class="btn btn-p" onclick="genPost()" id="genBtn">🪄 글 생성</button>
       </div>
-
       <div class="card">
         <h2>생성된 글</h2>
         <textarea id="postText" placeholder="글이 여기 생성됩니다..."></textarea>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn btn-sm" onclick="genPost()">🔄 재생성</button>
-          <button class="btn btn-sm" onclick="copy('postText')">📋 복사</button>
+          <button class="btn btn-sm" onclick="copyEl('postText')">📋 복사</button>
         </div>
       </div>
-
       <div class="card">
-        <h2>댓글 자동 생성</h2>
+        <h2>댓글</h2>
         <textarea id="commentText" placeholder="댓글이 여기 생성됩니다..."></textarea>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button class="btn btn-sm" onclick="genComment()">🪄 댓글 생성</button>
-          <button class="btn btn-sm" onclick="genComment()">🔄 재생성</button>
-          <button class="btn btn-sm" onclick="copy('commentText')">📋 복사</button>
-          <button class="btn btn-sm" onclick="openSched('comment')">📅 댓글 예약</button>
+          <button class="btn btn-sm" onclick="copyEl('commentText')">📋 복사</button>
+          <button class="btn btn-sm" onclick="openSched('comment')">📅 댓글만 예약</button>
         </div>
       </div>
-
       <div class="card" id="coupangLinkCard" style="display:none">
         <h2>🛒 쿠팡 링크</h2>
-        <div style="font-size:12px;color:var(--blue);margin-bottom:8px;padding:8px 12px;background:rgba(59,130,246,.08);border-radius:8px;border:1px solid rgba(59,130,246,.2)">
-          순서: 링크 입력 → 댓글 적용 버튼 클릭 → 댓글 생성란 확인 후 발행
-        </div>
+        <div style="font-size:12px;color:var(--blue);margin-bottom:8px;padding:8px 12px;background:rgba(59,130,246,.08);border-radius:8px">순서: 링크 입력 → 댓글 적용 → 발행</div>
         <input id="coupangLinks" placeholder="https://coupang.com/..." style="margin-bottom:10px" />
         <button class="btn btn-p btn-sm" onclick="applyCoupangComment()">✅ 댓글에 적용</button>
       </div>
-
       <div class="card">
         <h2>발행</h2>
         <div id="commentReserveWrap" style="display:none;margin-bottom:12px;padding:10px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr)">
-          <div style="font-size:13px;font-weight:600;margin-bottom:6px">💬 댓글 예약 시간 (즉시발행 시)</div>
-          <div style="font-size:11px;color:var(--txt2);margin-bottom:6px">글은 지금 바로 올리고, 댓글은 이 시간에 예약</div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">💬 댓글 예약 시간</div>
+          <div style="font-size:11px;color:var(--txt2);margin-bottom:6px">글은 바로 올라가고 댓글은 이 시간에 달려요</div>
           <input type="datetime-local" id="commentReserveTime" />
         </div>
         <div class="row">
@@ -241,7 +204,11 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       </div>
     </div>
 
-    <!-- 자동 스케줄러 -->
+    <div class="page" id="page-schedule">
+      <h1>📅 예약 목록</h1>
+      <div id="schedList"><span class="spin"></span></div>
+    </div>
+
     <div class="page" id="page-autoSchedule">
       <h1>🤖 자동 스케줄러 <span class="badge by" style="font-size:12px;vertical-align:middle">테스트중</span></h1>
       <div id="autoSchedLocked" style="display:none">
@@ -253,66 +220,41 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       <div id="autoSchedContent">
         <div class="card">
           <h2>새 자동 스케줄 등록</h2>
-          <div style="margin-bottom:12px">
-            <label class="label">계정 선택</label>
-            <select id="autoAccId"></select>
-          </div>
-          <div style="margin-bottom:12px">
-            <label class="label">주제</label>
-            <input id="autoTopic" placeholder="예: 쿠팡 할인 상품, AI 뉴스" />
-          </div>
-          <div style="margin-bottom:12px">
-            <label class="label">말투</label>
+          <div style="margin-bottom:12px"><label class="label">계정</label><select id="autoAccId"></select></div>
+          <div style="margin-bottom:12px"><label class="label">주제</label><input id="autoTopic" placeholder="예: 쿠팡 할인, AI 뉴스" /></div>
+          <div style="margin-bottom:12px"><label class="label">말투</label>
             <select id="autoTone">
-              <option>리스트형</option>
-              <option>정보성</option>
-              <option>리뷰형</option>
-              <option>일상</option>
-              <option>공감형</option>
-              <option>스토리형</option>
+              <option>리스트형</option><option>정보성</option><option>리뷰형</option>
+              <option>일상</option><option>공감형</option><option>스토리형</option>
             </select>
           </div>
-
-          <div style="margin-bottom:12px">
-            <label class="label">매일 발행 시간</label>
-            <input type="time" id="autoTime" value="09:00" />
-          </div>
-          <div style="margin-bottom:12px;padding:12px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr)">
+          <div style="margin-bottom:12px"><label class="label">매일 발행 시간</label><input type="time" id="autoTime" value="09:00" /></div>
+          <div style="margin-bottom:16px;padding:12px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr)">
             <label class="label">댓글 자동 생성 (선택)</label>
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
               <input type="checkbox" id="autoCommentEnabled" style="width:auto" onchange="document.getElementById('autoCommentWrap').style.display=this.checked?'block':'none'" />
               <label style="font-size:13px;color:var(--txt2)">댓글도 자동으로 달기</label>
             </div>
             <div id="autoCommentWrap" style="display:none">
-              <label class="label">댓글 발행 딜레이 (분)</label>
-              <input type="number" id="autoDelay" value="10" min="5" max="60" style="margin-bottom:8px" />
-              <div style="font-size:11px;color:var(--blue);margin-bottom:8px">글 발행 후 N분 뒤에 댓글 자동 달림</div>
+              <label class="label">딜레이 (분)</label>
+              <input type="number" id="autoDelay" value="10" min="5" max="60" />
+              <div style="font-size:11px;color:var(--blue);margin-top:6px">글 발행 후 N분 뒤 댓글 자동</div>
             </div>
           </div>
           <button class="btn btn-p" onclick="addAutoSched()">+ 등록</button>
         </div>
-        <div class="card">
-          <h2>등록된 자동 스케줄</h2>
-          <div id="autoSchedList"><span class="spin"></span></div>
-        </div>
+        <div class="card"><h2>등록된 자동 스케줄</h2><div id="autoSchedList"><span class="spin"></span></div></div>
       </div>
     </div>
 
-    <!-- 예약 목록 -->
-    <div class="page" id="page-schedule">
-      <h1>📅 예약 목록</h1>
-      <div id="schedList"><span class="spin"></span></div>
-    </div>
-
-    <!-- 계정 관리 -->
     <div class="page" id="page-accounts">
       <h1>👤 계정 관리</h1>
       <div class="card">
-        <h2>🔑 장기 액세스 토큰 발급 방법</h2>
+        <h2>장기 액세스 토큰 발급 방법</h2>
         <div style="font-size:13px;line-height:1.8;color:var(--txt2)">
           <b style="color:var(--txt)">1단계</b> — <a href="https://developers.facebook.com" target="_blank" style="color:var(--blue)">developers.facebook.com</a> 앱 생성 → Threads API → 사용자 토큰 생성기<br>
           <b style="color:var(--txt)">2단계</b> — 액세스 토큰 생성하기 클릭 → 단기 토큰 복사<br>
-          <b style="color:var(--txt)">3단계</b> — 아래 URL 브라우저에 붙여넣기 (앱시크릿, 단기토큰 교체)<br>
+          <b style="color:var(--txt)">3단계</b> — 아래 URL에 앱시크릿, 단기토큰 교체 후 브라우저 주소창에 입력<br>
           <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;word-break:break-all;margin-top:6px">
             https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=앱시크릿&access_token=단기토큰
           </div>
@@ -324,12 +266,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div style="margin-bottom:12px"><label class="label">계정 이름</label><input id="accName" placeholder="예: 메인 계정" /></div>
         <div style="margin-bottom:12px"><label class="label">장기 액세스 토큰</label><input id="accToken" placeholder="THAAMr..." /></div>
         <div style="margin-bottom:16px">
-          <label class="label">주제 태그 <span style="color:var(--txt2);font-size:11px">입력 후 Enter</span></label>
-          <div class="tag-wrap">
+          <label class="label">주제 태그 (입력 후 Enter)</label>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
             <input id="tagInput" placeholder="예: AI, 쿠팡, 여행" style="flex:1" onkeydown="if(event.key==='Enter'){addTag();event.preventDefault()}" />
             <button class="btn btn-sm" onclick="addTag()">+ 추가</button>
           </div>
-          <div class="tag-list" id="tagList"></div>
+          <div id="tagList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
         </div>
         <button class="btn btn-p" onclick="addAcc()">+ 계정 추가</button>
       </div>
@@ -341,38 +283,33 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       </div>
       <div class="card" id="freePlanCard" style="display:none;border-color:var(--blue)">
         <h2 style="color:var(--blue)">무료 체험 중</h2>
-        <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">무료 체험 계정이에요. 유료로 전환하면 더 많은 기능을 쓸 수 있어요.</div>
+        <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">유료로 전환하면 더 많은 기능을 쓸 수 있어요.</div>
         <button class="btn btn-sm btn-p" onclick="requestUpgrade()" id="upgradeBtn">💎 유료 전환 신청하기</button>
         <div id="upgradeStatus" style="margin-top:8px;font-size:13px;color:var(--txt2)"></div>
       </div>
       <div class="card" id="limitRequestCard">
-        <h2>계정 한도 변경 요청</h2>
-        <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">관리자에게 계정 한도 변경을 요청할 수 있어요.</div>
-        <div style="display:flex;gap:8px;margin-bottom:16px">
+        <h2>계정 한도 / 연장 요청</h2>
+        <div style="font-size:13px;color:var(--txt2);margin-bottom:12px" id="expireDaysLeft"></div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
           <button class="btn btn-sm" onclick="requestLimit(3)">3개로 변경 요청</button>
           <button class="btn btn-sm" onclick="requestLimit(6)">6개로 변경 요청</button>
         </div>
-        <div id="limitRequestStatus" style="margin-bottom:16px;font-size:13px;color:var(--txt2)"></div>
-        <div style="border-top:1px solid var(--bdr);padding-top:16px">
-          <h2 style="margin-bottom:8px">사용기간 연장 신청</h2>
-          <div style="font-size:13px;color:var(--txt2);margin-bottom:10px" id="expireDaysLeft"></div>
-          <button class="btn btn-sm btn-p" onclick="requestExtend()" id="extendReqBtn">30일 연장 신청하기</button>
-          <div id="extendRequestStatus" style="margin-top:10px;font-size:13px;color:var(--txt2)"></div>
-        </div>
+        <div id="limitRequestStatus" style="margin-bottom:12px;font-size:13px;color:var(--txt2)"></div>
+        <button class="btn btn-sm btn-p" onclick="requestExtend()" id="extendReqBtn">30일 연장 신청하기</button>
+        <div id="extendRequestStatus" style="margin-top:10px;font-size:13px;color:var(--txt2)"></div>
       </div>
     </div>
 
-    <!-- 관리자 -->
     <div class="page" id="page-admin">
       <h1>⚙️ 관리자</h1>
       <div class="card">
-        <h2>초대코드 관리</h2>
+        <h2>초대코드</h2>
         <button class="btn btn-p" onclick="makeInvite()" style="margin-bottom:16px">🔑 초대코드 생성</button>
         <div id="inviteList"></div>
       </div>
       <div class="card">
         <h2>가입 승인 대기 <span id="pendingCount" class="badge br"></span></h2>
-        <div id="pendingList"><div style="color:var(--txt2);font-size:14px">대기중인 가입 신청 없음</div></div>
+        <div id="pendingList"><div style="color:var(--txt2);font-size:14px">대기중 없음</div></div>
       </div>
       <div class="card">
         <h2>계정 한도 / 연장 요청 <span id="limitReqCount" class="badge by"></span></h2>
@@ -384,20 +321,18 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       </div>
       <div class="card">
         <h2>🤖 자동 스케줄러 설정</h2>
-        <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">현재 관리자만 테스트 가능. 활성화하면 모든 유저가 사용 가능.</div>
+        <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">활성화하면 모든 유저가 사용 가능해요.</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
           <span style="font-size:14px">상태:</span>
           <span id="autoSchedStatusBadge" class="badge by">테스트중</span>
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-sm btn-g" onclick="setAutoScheduler(true)">전체 활성화</button>
-          <button class="btn btn-sm btn-r" onclick="setAutoScheduler(false)">테스트 전용으로</button>
+          <button class="btn btn-sm btn-r" onclick="setAutoScheduler(false)">테스트 전용</button>
         </div>
       </div>
-
       <div class="card">
-        <h2>관리자 문의 링크 설정</h2>
-        <div style="font-size:13px;color:var(--txt2);margin-bottom:10px">유저 문의하기 클릭 시 연결 링크 (카카오 오픈채팅 등)</div>
+        <h2>관리자 문의 링크</h2>
         <div style="display:flex;gap:8px;margin-bottom:16px">
           <input id="kakaoLinkInput" placeholder="https://open.kakao.com/..." style="flex:1" />
           <button class="btn btn-sm btn-p" onclick="saveKakaoLink()">저장</button>
@@ -405,7 +340,6 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div id="kakaoLinkStatus" style="margin-bottom:16px;font-size:12px;color:var(--txt2)"></div>
         <div style="border-top:1px solid var(--bdr);padding-top:16px">
           <h2 style="margin-bottom:8px">엑시온 코드 설정</h2>
-          <div style="font-size:13px;color:var(--txt2);margin-bottom:10px">이 코드로 가입한 유저는 엑시온 유저로 분류</div>
           <div style="display:flex;gap:8px">
             <input id="partnerCodeInput" placeholder="예: AXION01" style="flex:1;text-transform:uppercase" />
             <button class="btn btn-sm btn-p" onclick="savePartnerCode()">저장</button>
@@ -414,31 +348,27 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         </div>
       </div>
       <div class="card">
-        <h2>🟣 엑시온 유저 목록 <span id="partnerUserCount" style="font-size:12px;color:var(--blue);font-weight:400"></span></h2>
-        <div id="partnerUserList"><div style="color:var(--txt2);font-size:14px">엑시온 코드로 가입한 유저 없음</div></div>
+        <h2>🟣 엑시온 유저 <span id="partnerUserCount" style="font-size:12px;color:var(--blue);font-weight:400"></span></h2>
+        <div id="partnerUserList"><div style="color:var(--txt2);font-size:14px">없음</div></div>
       </div>
       <div class="card">
-        <h2>일반 유저 목록 <span id="userCount" style="font-size:12px;color:var(--txt2);font-weight:400"></span></h2>
+        <h2>일반 유저 <span id="userCount" style="font-size:12px;color:var(--txt2);font-weight:400"></span></h2>
         <div id="userList"></div>
       </div>
     </div>
   </main>
 </div>
 
-<!-- 예약 모달 -->
+<!-- 모달들 -->
 <div class="modal-bg" id="schedModal">
   <div class="modal">
     <h3>📅 예약 발행</h3>
     <input type="hidden" id="schedType" value="post" />
-    <div style="margin-bottom:14px">
-      <label class="label">글 발행 시간</label>
-      <input type="datetime-local" id="schedTime" />
-    </div>
+    <div style="margin-bottom:14px"><label class="label">글 발행 시간</label><input type="datetime-local" id="schedTime" /></div>
     <div id="commentSchedWrap" style="display:none;margin-bottom:14px;padding:12px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr)">
       <div style="font-size:13px;font-weight:600;margin-bottom:8px">💬 댓글 발행 시간 (선택)</div>
-      <div style="font-size:12px;color:var(--txt2);margin-bottom:8px">글 올라간 후 댓글 달릴 시간. 비우면 댓글 예약 안됨</div>
       <input type="datetime-local" id="commentSchedTime" />
-      <div style="font-size:11px;color:var(--blue);margin-top:6px">스팸 방지를 위해 글 발행 후 10분 이상 간격 권장</div>
+      <div style="font-size:11px;color:var(--blue);margin-top:6px">글 발행 후 10분 이상 간격 권장</div>
     </div>
     <div class="row">
       <button class="btn" onclick="closeModal('schedModal')" style="flex:1">취소</button>
@@ -447,29 +377,19 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
   </div>
 </div>
 
-<!-- 예약 수정 모달 -->
 <div class="modal-bg" id="editSchedModal">
   <div class="modal" style="width:500px;max-width:95vw">
     <h3>✏️ 예약 수정</h3>
     <input type="hidden" id="editSchedId" />
-    <div style="margin-bottom:12px">
-      <label class="label">글 내용</label>
-      <textarea id="editSchedText" style="min-height:100px"></textarea>
-    </div>
-    <div style="margin-bottom:12px">
-      <label class="label">댓글 내용 (선택)</label>
-      <textarea id="editSchedComment" style="min-height:60px" placeholder="댓글 없으면 비워줘"></textarea>
-    </div>
+    <div style="margin-bottom:12px"><label class="label">글 내용</label><textarea id="editSchedText" style="min-height:100px"></textarea></div>
+    <div style="margin-bottom:12px"><label class="label">댓글 내용 (선택)</label><textarea id="editSchedComment" style="min-height:60px"></textarea></div>
     <div style="margin-bottom:12px">
       <label class="label">사진 변경 (선택)</label>
       <div class="upload-area" onclick="document.getElementById('editImgInput').click()" style="padding:12px">📷 사진 변경하기</div>
       <input type="file" id="editImgInput" multiple accept="image/*" style="display:none" onchange="handleEditImg(this)">
       <div class="preview-list" id="editPreviewList" style="margin-top:8px"></div>
     </div>
-    <div style="margin-bottom:16px">
-      <label class="label">발행 시간</label>
-      <input type="datetime-local" id="editSchedTime" />
-    </div>
+    <div style="margin-bottom:16px"><label class="label">발행 시간</label><input type="datetime-local" id="editSchedTime" /></div>
     <div class="row">
       <button class="btn" onclick="closeModal('editSchedModal')" style="flex:1">취소</button>
       <button class="btn btn-p" onclick="saveEditSched()" style="flex:1">저장</button>
@@ -477,16 +397,15 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
   </div>
 </div>
 
-<!-- 태그 편집 모달 -->
 <div class="modal-bg" id="tagModal">
   <div class="modal">
     <h3>✏️ 주제 태그 편집</h3>
     <input type="hidden" id="editAccId" />
-    <div class="tag-wrap">
+    <div style="display:flex;gap:8px;margin-bottom:8px">
       <input id="editTagInput" placeholder="태그 입력 후 Enter" style="flex:1" onkeydown="if(event.key==='Enter'){addEditTag();event.preventDefault()}" />
       <button class="btn btn-sm" onclick="addEditTag()">+ 추가</button>
     </div>
-    <div class="tag-list" id="editTagList" style="margin-bottom:16px"></div>
+    <div id="editTagList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;min-height:28px"></div>
     <div class="row">
       <button class="btn" onclick="closeModal('tagModal')" style="flex:1">취소</button>
       <button class="btn btn-p" onclick="saveEditTags()" style="flex:1">저장</button>
@@ -496,11 +415,10 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 
 <script>
 var session = localStorage.getItem('sess') || '';
-var tone = 'list';
+var tone = '리스트형';
 var myRole = '';
 var mediaMode = 'photo';
-var imgUrls = [], imgFiles = [], vidUrl = '';
-var newTags = [], editTags = [], editImgUrls = [];
+var imgUrls = [], imgFiles = [], vidUrl = '', editImgUrls = [], newTags = [], editTags = [];
 
 function api(path, opts) {
   opts = opts || {};
@@ -523,41 +441,21 @@ function toast(msg, type) {
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('open');
-}
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('overlay').classList.remove('open');
-}
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
 
 function go(name, el) {
   document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
   document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
   document.getElementById('page-' + name).classList.add('active');
-  if (el) {
-    el.classList.add('active');
-  } else {
-    document.querySelectorAll('.nav-item').forEach(function(n) {
-      var oc = n.getAttribute('onclick') || '';
-      if (oc.indexOf("'" + name + "'") !== -1) n.classList.add('active');
-    });
-  }
+  if (el) el.classList.add('active');
   localStorage.setItem('page', name);
-  history.pushState({ page: name }, '', '#' + name);
   if (name === 'schedule') loadSched();
-  if (name === 'autoSchedule') loadAutoSched();
   if (name === 'accounts') loadAccs();
   if (name === 'admin') loadAdmin();
+  if (name === 'autoSchedule') loadAutoSched();
   closeSidebar();
 }
-
-window.addEventListener('popstate', function(e) {
-  var page = (e.state && e.state.page) || 'write';
-  go(page, null);
-});
 
 function switchTab(tab, el) {
   document.querySelectorAll('.auth-tab').forEach(function(t) { t.classList.remove('active'); });
@@ -575,16 +473,10 @@ async function init() {
       document.getElementById('regHint').textContent = '첫 번째 가입 - 관리자 계정으로 생성돼요';
     }
   } catch(e) {}
-  if (!session) { showAuth(); return; }
-  var r2 = await fetch('/api/auth/me', { headers: { 'x-session': session } });
-  if (r2.status === 401) { session = ''; localStorage.removeItem('sess'); showAuth(); return; }
-  var d2 = await r2.json();
-  enterApp(d2);
-}
-
-function showAuth() {
-  document.getElementById('authWrap').style.display = 'flex';
-  document.getElementById('appWrap').classList.remove('on');
+  if (!session) { return; }
+  var me = await api('/api/auth/me');
+  if (me.error) { session = ''; localStorage.removeItem('sess'); return; }
+  enterApp(me);
 }
 
 function enterApp(user) {
@@ -598,17 +490,11 @@ function enterApp(user) {
     document.getElementById('adminSep').style.display = 'block';
     var lc = document.getElementById('limitRequestCard');
     if (lc) lc.style.display = 'none';
-    var ec = document.getElementById('expireNoticeCard');
-    if (ec) ec.style.display = 'none';
-    var fc = document.getElementById('freePlanCard');
-    if (fc) fc.style.display = 'none';
   } else {
     checkExpiry();
   }
   loadAccs();
-  var hash = location.hash.replace('#', '');
-  var saved = hash || localStorage.getItem('page') || 'write';
-  history.replaceState({ page: saved }, '', '#' + saved);
+  var saved = localStorage.getItem('page') || 'write';
   go(saved, null);
 }
 
@@ -641,10 +527,6 @@ async function doReg() {
   if (d.error) { document.getElementById('regErr').textContent = d.error; return; }
   if (d.pending) {
     document.getElementById('regHint').textContent = '가입 완료! 관리자 승인 후 로그인 가능해.';
-    document.getElementById('regName').value = '';
-    document.getElementById('regNick').value = '';
-    document.getElementById('regPw').value = '';
-    document.getElementById('regCode').value = '';
     return;
   }
   session = d.token;
@@ -657,7 +539,8 @@ async function doLogout() {
   session = '';
   localStorage.removeItem('sess');
   localStorage.removeItem('page');
-  showAuth();
+  document.getElementById('authWrap').style.display = 'flex';
+  document.getElementById('appWrap').classList.remove('on');
 }
 
 async function onAccChange() {
@@ -669,21 +552,15 @@ async function onAccChange() {
   var tags = (acc && acc.topics) ? acc.topics : [];
   if (!tags.length) { group.innerHTML = '<span style="font-size:13px;color:var(--txt2)">주제 태그 없음</span>'; return; }
   group.innerHTML = tags.map(function(t) {
-    return '<div class="topic-chip" onclick="pickTopic(this,\'' + t + '\')">' + t + '</div>';
+    return '<div class="chip" onclick="pickTopic(this,\'' + t + '\')">' + t + '</div>';
   }).join('');
 }
 
 function pickTopic(el, tag) {
-  document.querySelectorAll('#topicTags .topic-chip').forEach(function(c) { c.classList.remove('active'); });
+  document.querySelectorAll('#topicTags .chip').forEach(function(c) { c.classList.remove('active'); });
   el.classList.add('active');
   document.getElementById('topic').value = tag;
 }
-
-var toneMap = {
-  'list': 'list', 'info': 'info', 'review': 'review',
-  'daily': 'daily', 'empathy': 'empathy', 'story': 'story', 'coupang': 'coupang'
-};
-var toneKeys = ['리스트형','정보성','리뷰형','일상','공감형','스토리형','쿠팡'];
 
 function pickTone(el) {
   document.querySelectorAll('#toneChips .chip').forEach(function(c) { c.classList.remove('active'); });
@@ -707,11 +584,11 @@ async function genPost() {
         var ad = await api('/api/analyze-image', { method: 'POST', body: { imageUrl: imgUrls[0] } });
         if (ad.desc) {
           imageDesc = ad.desc;
-          var result = document.getElementById('imgAnalysisResult');
-          result.style.display = 'block';
-          result.textContent = '이미지 분석: ' + imageDesc;
+          var res = document.getElementById('imgAnalysisResult');
+          res.style.display = 'block';
+          res.textContent = '이미지 분석: ' + imageDesc;
         }
-      } catch(e) {}
+      } catch(e2) {}
     }
     btn.innerHTML = '<span class="spin"></span> 글 생성 중...';
     var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, type: 'post', imageDesc: imageDesc } });
@@ -735,17 +612,15 @@ async function genComment() {
 }
 
 function showCommentReserve() {
-  var commentText = document.getElementById('commentText').value.trim();
+  var txt = document.getElementById('commentText').value.trim();
   var wrap = document.getElementById('commentReserveWrap');
   if (!wrap) return;
-  if (commentText) {
+  if (txt) {
     wrap.style.display = 'block';
     var def = new Date(Date.now() + 10 * 60 * 1000);
-    var local = new Date(def.getTime() - def.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    document.getElementById('commentReserveTime').value = local;
+    document.getElementById('commentReserveTime').value = new Date(def.getTime() - def.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   } else {
     wrap.style.display = 'none';
-    document.getElementById('commentReserveTime').value = '';
   }
 }
 
@@ -757,7 +632,6 @@ function applyCoupangComment() {
   if (commentText) result += '\n\n' + commentText;
   result += '\n\n' + link + '\n' + link + '\n' + link;
   document.getElementById('commentText').value = result;
-  document.getElementById('commentText').scrollIntoView({ behavior: 'smooth', block: 'center' });
   showCommentReserve();
   toast('댓글란에 적용됐어!');
 }
@@ -773,33 +647,27 @@ function switchMedia(tab) {
 async function handleImg(input) {
   var files = Array.from(input.files);
   files.forEach(function(f) {
-    imgFiles.push(f);
     var item = document.createElement('div');
     item.className = 'preview-item';
-    item.dataset.idx = imgFiles.length - 1;
-    var url = URL.createObjectURL(f);
-    item.innerHTML = '<img src="' + url + '"><button class="remove-img" onclick="removeImg(' + (imgFiles.length-1) + ')">x</button>';
+    item.innerHTML = '<img src="' + URL.createObjectURL(f) + '"><button class="remove-img" onclick="removeImg(' + imgFiles.length + ')">x</button>';
     document.getElementById('previewList').appendChild(item);
+    imgFiles.push(f);
   });
-  toast('📷 사진 업로드 중...');
+  toast('사진 업로드 중...');
   var fd = new FormData();
   files.forEach(function(f) { fd.append('images', f); });
   try {
     var d = await fetch('/api/upload', { method: 'POST', headers: { 'x-session': session }, body: fd }).then(function(r) { return r.json(); });
-    if (d.urls) {
-      imgUrls = imgUrls.concat(d.urls);
-      toast('사진 업로드 완료!');
-    } else {
-      toast(d.error || '업로드 실패', 'err');
-    }
+    if (d.urls) { imgUrls = imgUrls.concat(d.urls); toast('사진 업로드 완료!'); }
+    else toast(d.error || '업로드 실패', 'err');
   } catch(e) { toast('업로드 실패', 'err'); }
 }
 
 function removeImg(idx) {
   imgFiles.splice(idx, 1);
   imgUrls.splice(idx, 1);
-  var el = document.querySelector('[data-idx="' + idx + '"]');
-  if (el) el.remove();
+  var items = document.querySelectorAll('#previewList .preview-item');
+  if (items[idx]) items[idx].remove();
 }
 
 async function handleVid(input) {
@@ -830,12 +698,8 @@ async function pubNow() {
     var d = await api('/api/publish', { method: 'POST', body: body });
     if (d.error) throw new Error(d.error);
     if (useReserve) {
-      var dc = await api('/api/schedule', { method: 'POST', body: {
-        accountId: accId, text: commentText, type: 'comment',
-        scheduledAt: new Date(commentReserveTime).toISOString()
-      }});
-      if (dc.error) toast('글은 발행됐는데 댓글 예약 실패: ' + dc.error, 'err');
-      else toast('글 발행 완료! 댓글은 예약됐어');
+      var dc = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: commentText, type: 'comment', scheduledAt: new Date(commentReserveTime).toISOString() } });
+      toast(dc.error ? '글 발행됐지만 댓글 예약 실패' : '글 발행 완료! 댓글은 예약됐어');
     } else {
       toast(d.commentId ? '글 + 댓글 발행 완료!' : '발행 완료!');
     }
@@ -844,7 +708,6 @@ async function pubNow() {
     imgUrls = []; imgFiles = []; vidUrl = '';
     document.getElementById('previewList').innerHTML = '';
     document.getElementById('vidPreview').innerHTML = '';
-    document.getElementById('commentReserveTime').value = '';
     document.getElementById('commentReserveWrap').style.display = 'none';
   } catch(e) { toast(e.message, 'err'); }
 }
@@ -853,22 +716,17 @@ function openSched(type) {
   var textId = type === 'comment' ? 'commentText' : 'postText';
   if (!document.getElementById(textId).value.trim()) return toast(type === 'comment' ? '댓글을 먼저 생성해줘' : '글을 먼저 작성해줘', 'err');
   document.getElementById('schedType').value = type;
-  var min = new Date().toISOString().slice(0, 16);
-  var def = new Date(Date.now() + 3600000);
-  var defLocal = new Date(def.getTime() - def.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-  var el = document.getElementById('schedTime');
-  el.min = min; el.value = defLocal;
+  var now = new Date();
+  var def = new Date(now.getTime() + 3600000);
+  document.getElementById('schedTime').value = new Date(def.getTime() - def.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   var commentText = document.getElementById('commentText').value.trim();
-  var commentWrap = document.getElementById('commentSchedWrap');
+  var cw = document.getElementById('commentSchedWrap');
   if (type === 'post' && commentText) {
-    commentWrap.style.display = 'block';
-    var cdef = new Date(Date.now() + 3600000 + 600000);
-    var cdefLocal = new Date(cdef.getTime() - cdef.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    document.getElementById('commentSchedTime').min = min;
-    document.getElementById('commentSchedTime').value = cdefLocal;
+    cw.style.display = 'block';
+    var cdef = new Date(now.getTime() + 3600000 + 600000);
+    document.getElementById('commentSchedTime').value = new Date(cdef.getTime() - cdef.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   } else {
-    commentWrap.style.display = 'none';
-    document.getElementById('commentSchedTime').value = '';
+    cw.style.display = 'none';
   }
   document.getElementById('schedModal').classList.add('open');
 }
@@ -881,25 +739,19 @@ async function doSched() {
   if (!scheduledAt) return toast('시간을 선택해줘', 'err');
   if (type === 'comment') {
     var text = document.getElementById('commentText').value.trim();
-    if (!text) return toast('댓글을 먼저 생성해줘', 'err');
-    var d = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: text, type: 'comment', scheduledAt: new Date(scheduledAt).toISOString() }});
+    var d = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: text, type: 'comment', scheduledAt: new Date(scheduledAt).toISOString() } });
     if (d.error) return toast(d.error, 'err');
     toast('댓글 예약 완료!');
   } else {
     var text2 = document.getElementById('postText').value.trim();
-    if (!text2) return toast('글을 먼저 작성해줘', 'err');
-    var d2 = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: text2, type: 'post', imageUrls: imgUrls, videoUrl: vidUrl, scheduledAt: new Date(scheduledAt).toISOString() }});
+    var d2 = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: text2, type: 'post', imageUrls: imgUrls, videoUrl: vidUrl, scheduledAt: new Date(scheduledAt).toISOString() } });
     if (d2.error) return toast(d2.error, 'err');
     toast('글 예약 완료!');
-    var commentText = document.getElementById('commentText').value.trim();
-    var commentSchedTime = document.getElementById('commentSchedTime').value;
-    if (commentText && commentSchedTime) {
-      if (new Date(commentSchedTime) <= new Date(scheduledAt)) {
-        toast('댓글 시간이 글 시간보다 늦어야 해!', 'err');
-      } else {
-        var dc = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: commentText, type: 'comment', scheduledAt: new Date(commentSchedTime).toISOString() }});
-        if (!dc.error) toast('글 + 댓글 각각 예약 완료!');
-      }
+    var ct = document.getElementById('commentText').value.trim();
+    var cst = document.getElementById('commentSchedTime').value;
+    if (ct && cst && new Date(cst) > new Date(scheduledAt)) {
+      var dc = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: ct, type: 'comment', scheduledAt: new Date(cst).toISOString() } });
+      if (!dc.error) toast('글 + 댓글 각각 예약 완료!');
     }
   }
   closeModal('schedModal');
@@ -911,9 +763,7 @@ async function loadSched() {
   var active = Array.isArray(posts) ? posts.filter(function(p) { return p.status !== 'done'; }) : [];
   if (!active.length) { el.innerHTML = '<div style="color:var(--txt2);font-size:14px">예약된 글 없음</div>'; return; }
   el.innerHTML = active.slice().reverse().map(function(p) {
-    var statusBadge = p.status === 'done' ? '<span class="badge bg">발행됨</span>' :
-                      p.status === 'failed' ? '<span class="badge br">실패</span>' :
-                      '<span class="badge by">대기중</span>';
+    var statusBadge = p.status === 'failed' ? '<span class="badge br">실패</span>' : '<span class="badge by">대기중</span>';
     var btns = '';
     if (p.status === 'pending') {
       btns = '<button class="btn btn-sm" onclick="editSched(\'' + p.id + '\')">수정</button>' +
@@ -926,14 +776,17 @@ async function loadSched() {
     } else {
       btns = '<button class="btn btn-sm btn-r" onclick="cancelSched(\'' + p.id + '\')">삭제</button>';
     }
+    var timeStr = new Date(p.scheduledAt).toLocaleString('ko-KR');
+    var commentBadge = p.type === 'comment' ? ' <span class="badge bb">댓글</span>' : '';
+    var textPreview = p.text.slice(0, 100) + (p.text.length > 100 ? '...' : '');
+    var commentPreview = p.commentText ? '<div style="font-size:12px;color:var(--txt2);background:var(--sur2);border-radius:6px;padding:6px 8px;margin-bottom:8px">댓글: ' + p.commentText.slice(0, 60) + '</div>' : '';
+    var imgInfo = (p.imageUrls && p.imageUrls.length) ? '<div style="font-size:12px;color:var(--blue);margin-bottom:8px">이미지 ' + p.imageUrls.length + '장</div>' : '';
     return '<div class="list-item"><div style="flex:1">' +
-      '<div style="font-size:13px;color:var(--txt2);margin-bottom:4px">' + p.accountName + ' · ' + new Date(p.scheduledAt).toLocaleString('ko-KR') +
-      (p.type === 'comment' ? ' <span class="badge bb">댓글</span>' : '') + '</div>' +
-      '<div style="font-size:14px;line-height:1.5;margin-bottom:4px">' + p.text.slice(0, 100) + (p.text.length > 100 ? '...' : '') + '</div>' +
-      (p.commentText ? '<div style="font-size:12px;color:var(--txt2);background:var(--sur2);border-radius:6px;padding:6px 8px;margin-bottom:8px">댓글: ' + p.commentText.slice(0, 60) + '</div>' : '') +
-      (p.imageUrls && p.imageUrls.length ? '<div style="font-size:12px;color:var(--blue);margin-bottom:8px">이미지 ' + p.imageUrls.length + '장 포함</div>' : '') +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap">' + btns + '</div></div>' +
-      statusBadge + '</div>';
+      '<div style="font-size:13px;color:var(--txt2);margin-bottom:4px">' + p.accountName + ' · ' + timeStr + commentBadge + '</div>' +
+      '<div style="font-size:14px;line-height:1.5;margin-bottom:4px">' + textPreview + '</div>' +
+      commentPreview + imgInfo +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">' + btns + '</div>' +
+      '</div>' + statusBadge + '</div>';
   }).join('');
 }
 
@@ -959,14 +812,10 @@ async function editSched(id) {
   document.getElementById('editSchedText').value = p.text;
   document.getElementById('editSchedComment').value = p.commentText || '';
   editImgUrls = p.imageUrls || [];
-  var prev = document.getElementById('editPreviewList');
-  prev.innerHTML = editImgUrls.map(function(u) {
+  document.getElementById('editPreviewList').innerHTML = editImgUrls.map(function(u) {
     return '<div class="preview-item"><img src="' + u + '" style="width:60px;height:60px;object-fit:cover;border-radius:6px"></div>';
   }).join('');
-  var min = new Date().toISOString().slice(0, 16);
-  var el = document.getElementById('editSchedTime');
-  el.min = min;
-  el.value = p.scheduledAt.slice(0, 16);
+  document.getElementById('editSchedTime').value = p.scheduledAt.slice(0, 16);
   document.getElementById('editSchedModal').classList.add('open');
 }
 
@@ -977,8 +826,7 @@ async function handleEditImg(input) {
     var d = await fetch('/api/upload', { method: 'POST', headers: { 'x-session': session }, body: fd }).then(function(r) { return r.json(); });
     if (d.urls) {
       editImgUrls = d.urls;
-      var prev = document.getElementById('editPreviewList');
-      prev.innerHTML = editImgUrls.map(function(u) {
+      document.getElementById('editPreviewList').innerHTML = editImgUrls.map(function(u) {
         return '<div class="preview-item"><img src="' + u + '" style="width:60px;height:60px;object-fit:cover;border-radius:6px"></div>';
       }).join('');
       toast('사진 업로드됨!');
@@ -992,8 +840,7 @@ async function saveEditSched() {
   var commentText = document.getElementById('editSchedComment').value.trim();
   var scheduledAt = document.getElementById('editSchedTime').value;
   if (!text) return toast('글 내용을 입력해줘', 'err');
-  if (!scheduledAt) return toast('시간을 선택해줘', 'err');
-  var d = await api('/api/schedule/' + id, { method: 'PUT', body: { text: text, scheduledAt: new Date(scheduledAt).toISOString(), imageUrls: editImgUrls, commentText: commentText }});
+  var d = await api('/api/schedule/' + id, { method: 'PUT', body: { text: text, scheduledAt: new Date(scheduledAt).toISOString(), imageUrls: editImgUrls, commentText: commentText } });
   if (d.error) return toast(d.error, 'err');
   closeModal('editSchedModal'); toast('수정됐어!'); loadSched();
 }
@@ -1016,7 +863,7 @@ async function loadAccs() {
     return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px;margin-bottom:4px">' + a.name + '</div>' +
       '<div style="font-size:12px;color:var(--txt2);margin-bottom:8px">' + a.accessToken.slice(0, 24) + '...</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:4px">' + tags + '</div></div>' +
-      '<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">' +
+      '<div style="display:flex;flex-direction:column;gap:6px">' +
       '<button class="btn btn-sm" onclick=\'openTagModal("' + a.id + '",' + JSON.stringify(a.topics || []) + ')\'>태그 편집</button>' +
       '<button class="btn btn-sm btn-r" onclick="delAcc(\'' + a.id + '\')">삭제</button></div></div>';
   }).join('');
@@ -1026,7 +873,7 @@ async function addAcc() {
   var name = document.getElementById('accName').value.trim();
   var accessToken = document.getElementById('accToken').value.trim();
   if (!name || !accessToken) return toast('이름과 토큰 입력해줘', 'err');
-  var d = await api('/api/accounts', { method: 'POST', body: { name: name, accessToken: accessToken, topics: newTags }});
+  var d = await api('/api/accounts', { method: 'POST', body: { name: name, accessToken: accessToken, topics: newTags } });
   if (d.error) return toast(d.error, 'err');
   document.getElementById('accName').value = '';
   document.getElementById('accToken').value = '';
@@ -1069,22 +916,89 @@ function renderEditTags() {
 }
 async function saveEditTags() {
   var id = document.getElementById('editAccId').value;
-  await api('/api/accounts/' + id + '/topics', { method: 'PUT', body: { topics: editTags }});
+  await api('/api/accounts/' + id + '/topics', { method: 'PUT', body: { topics: editTags } });
   closeModal('tagModal'); loadAccs(); onAccChange(); toast('태그 저장됨!');
+}
+
+function copyEl(id) { navigator.clipboard.writeText(document.getElementById(id).value).then(function() { toast('복사됐어!'); }); }
+
+async function checkExpiry() {
+  try {
+    var me = await api('/api/auth/me');
+    var allUsers = await api('/api/users');
+    if (!Array.isArray(allUsers)) return;
+    var myInfo = allUsers.find(function(u) { return u.nickname === me.nickname; });
+    if (!myInfo) return;
+    var fc = document.getElementById('freePlanCard');
+    if (fc && myInfo.plan === 'free') {
+      fc.style.display = 'block';
+      if (myInfo.upgradeRequest) {
+        document.getElementById('upgradeStatus').textContent = '신청 완료 - 관리자 승인 대기중';
+        document.getElementById('upgradeBtn').disabled = true;
+      }
+    }
+    var daysEl = document.getElementById('expireDaysLeft');
+    if (myInfo.expiresAt) {
+      var diff = Math.ceil((new Date(myInfo.expiresAt) - new Date()) / 86400000);
+      if (daysEl) daysEl.innerHTML = diff < 0 ? '<span style="color:var(--red)">사용 기간 만료</span>' : '현재 사용기간: <b>' + diff + '일 남음</b>';
+      if (myInfo.extendRequest) {
+        document.getElementById('extendReqBtn').disabled = true;
+        document.getElementById('extendRequestStatus').textContent = '연장 신청 완료 - 관리자 승인 대기중';
+      }
+      var card = document.getElementById('expireNoticeCard');
+      var text = document.getElementById('expireNoticeText');
+      var btn = document.getElementById('contactBtn');
+      if (card && text) {
+        if (diff < 0) {
+          card.style.display = 'block';
+          text.textContent = '사용 기간이 만료됐어요. 관리자에게 연락해서 연장 문의해줘요.';
+          if (btn) btn.style.display = 'inline-flex';
+        } else if (diff <= 7) {
+          card.style.display = 'block';
+          card.style.borderColor = 'var(--yellow)';
+          text.textContent = diff + '일 후 만료돼요. 미리 연장 신청을 해두는 걸 추천해요.';
+        }
+      }
+    }
+  } catch(e) {}
+}
+
+async function openKakaoLink() {
+  var d = await api('/api/settings');
+  if (d.kakaoLink) window.open(d.kakaoLink, '_blank');
+  else toast('관리자 링크가 설정되지 않았어', 'err');
+}
+async function requestUpgrade() {
+  var d = await api('/api/users/upgrade-request', { method: 'POST' });
+  if (d.error) return toast(d.error, 'err');
+  toast('유료 전환 신청했어!');
+  document.getElementById('upgradeStatus').textContent = '신청 완료 - 관리자 승인 대기중';
+  document.getElementById('upgradeBtn').disabled = true;
+}
+async function requestLimit(limit) {
+  var d = await api('/api/users/limit-request', { method: 'POST', body: { requestLimit: limit } });
+  if (d.error) return toast(d.error, 'err');
+  toast(limit + '개로 변경 요청했어!');
+  document.getElementById('limitRequestStatus').textContent = limit + '개로 변경 요청 완료 - 관리자 승인 대기중';
+}
+async function requestExtend() {
+  var d = await api('/api/users/limit-request', { method: 'POST', body: { requestExtend: true } });
+  if (d.error) return toast(d.error, 'err');
+  toast('연장 신청했어!');
+  document.getElementById('extendReqBtn').disabled = true;
+  document.getElementById('extendRequestStatus').textContent = '연장 신청 완료 - 관리자 승인 대기중';
 }
 
 async function loadAdmin() {
   var invites = await api('/api/invites');
   var iEl = document.getElementById('inviteList');
-  var activeInv = Array.isArray(invites) ? invites.filter(function(c) { return c.status !== 'done'; }) : [];
-  var doneInv = Array.isArray(invites) ? invites.filter(function(c) { return c.status === 'done'; }) : [];
-  var allInv = activeInv.concat(doneInv);
+  var allInv = Array.isArray(invites) ? invites : [];
   iEl.innerHTML = allInv.length ? allInv.map(function(c) {
     return '<div class="list-item"><div style="flex:1">' +
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
-      '<span style="font-family:monospace;font-size:16px;font-weight:700;letter-spacing:2px;color:' + (c.status==='done'?'var(--txt2)':'var(--green)') + '">' + c.code + '</span>' +
-      '<span class="badge ' + (c.status==='done'?'by':'bg') + '">' + (c.status==='done'?'사용완료':'사용중') + '</span></div>' +
-      '<div style="font-size:12px;color:var(--txt2)">사용횟수: ' + (c.useCount||0) + '회 ' + (c.lastUsedBy?'· 마지막: '+c.lastUsedBy:'') + '</div></div>' +
+      '<span style="font-family:monospace;font-size:16px;font-weight:700;color:' + (c.status === 'done' ? 'var(--txt2)' : 'var(--green)') + '">' + c.code + '</span>' +
+      '<span class="badge ' + (c.status === 'done' ? 'by' : 'bg') + '">' + (c.status === 'done' ? '사용완료' : '사용중') + '</span></div>' +
+      '<div style="font-size:12px;color:var(--txt2)">사용횟수: ' + (c.useCount || 0) + '회</div></div>' +
       '<button class="btn btn-sm btn-r" onclick="delInvite(\'' + c.code + '\')">삭제</button></div>';
   }).join('') : '<div style="color:var(--txt2);font-size:14px">초대코드 없음</div>';
 
@@ -1097,28 +1011,25 @@ async function loadAdmin() {
   pCount.textContent = pending.length ? pending.length + '명' : '';
   pCount.style.display = pending.length ? '' : 'none';
   pEl.innerHTML = pending.length ? pending.map(function(u) {
-    return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px;margin-bottom:4px">' + (u.name||'-') + ' <span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span></div>' +
-      '<div style="font-size:12px;color:var(--txt2)">' + new Date(u.createdAt).toLocaleDateString('ko-KR') + ' 신청</div></div>' +
+    return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px">' + (u.name || '-') + ' <span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span></div></div>' +
       '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
       '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\',3)">승인 3개</button>' +
       '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\',6)">승인 6개</button>' +
       '<button class="btn btn-sm" style="border-color:var(--blue);color:var(--blue)" onclick="approveFree(\'' + u.id + '\')">무료 7일</button>' +
       '<button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">거절</button></div></div>';
-  }).join('') : '<div style="color:var(--txt2);font-size:14px">대기중인 가입 신청 없음</div>';
+  }).join('') : '<div style="color:var(--txt2);font-size:14px">대기중 없음</div>';
 
-  var limitReqs = users.filter(function(u) { return u.limitRequest && u.status === 'approved'; });
-  var extendReqs = users.filter(function(u) { return u.extendRequest && u.status === 'approved' && !limitReqs.find(function(l) { return l.id === u.id; }); });
-  var allReqs = limitReqs.concat(extendReqs);
+  var limitReqs = users.filter(function(u) { return (u.limitRequest || u.extendRequest) && u.status === 'approved'; });
   var lrEl = document.getElementById('limitReqList');
   var lrCount = document.getElementById('limitReqCount');
-  lrCount.textContent = allReqs.length ? allReqs.length + '건' : '';
-  lrCount.style.display = allReqs.length ? '' : 'none';
-  lrEl.innerHTML = allReqs.length ? allReqs.map(function(u) {
-    return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px;margin-bottom:4px">' + (u.name||'-') + ' <span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span></div>' +
-      (u.limitRequest ? '<div style="font-size:12px;color:var(--txt2)">한도: ' + (u.accountLimit||3) + '개 -> ' + u.limitRequest.requestLimit + '개로 변경 요청</div>' : '') +
-      (u.extendRequest ? '<div style="font-size:12px;color:var(--blue)">사용기간 30일 연장 신청</div>' : '') +
+  lrCount.textContent = limitReqs.length ? limitReqs.length + '건' : '';
+  lrCount.style.display = limitReqs.length ? '' : 'none';
+  lrEl.innerHTML = limitReqs.length ? limitReqs.map(function(u) {
+    return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px">' + (u.name || '-') + ' (' + u.nickname + ')</div>' +
+      (u.limitRequest ? '<div style="font-size:12px;color:var(--txt2)">' + (u.limitRequest.requestLimit || '') + '개로 변경 요청</div>' : '') +
+      (u.extendRequest ? '<div style="font-size:12px;color:var(--blue)">30일 연장 신청</div>' : '') +
       '</div><div style="display:flex;gap:4px;flex-wrap:wrap">' +
-      (u.limitRequest ? '<button class="btn btn-sm btn-g" onclick="setLimit(\'' + u.id + '\',' + u.limitRequest.requestLimit + ')">한도 승인</button><button class="btn btn-sm btn-r" onclick="denyLimitReq(\'' + u.id + '\')">거절</button>' : '') +
+      (u.limitRequest ? '<button class="btn btn-sm btn-g" onclick="setLimit(\'' + u.id + '\',' + (u.limitRequest.requestLimit || 3) + ')">한도 승인</button><button class="btn btn-sm btn-r" onclick="denyLimitReq(\'' + u.id + '\')">거절</button>' : '') +
       (u.extendRequest ? '<button class="btn btn-sm btn-g" onclick="extendUserDays(\'' + u.id + '\',30)">연장 승인</button><button class="btn btn-sm btn-r" onclick="denyExtend(\'' + u.id + '\')">거절</button>' : '') +
       '</div></div>';
   }).join('') : '<div style="color:var(--txt2);font-size:14px">요청 없음</div>';
@@ -1129,20 +1040,22 @@ async function loadAdmin() {
   ugCount.textContent = upgradeReqs.length ? upgradeReqs.length + '건' : '';
   ugCount.style.display = upgradeReqs.length ? '' : 'none';
   ugEl.innerHTML = upgradeReqs.length ? upgradeReqs.map(function(u) {
-    return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px;margin-bottom:4px">' + (u.name||'-') + ' <span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span></div>' +
-      '<div style="font-size:12px;color:var(--txt2)">무료 7일 -> 유료 전환 신청</div></div>' +
+    return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px">' + (u.name || '-') + ' (' + u.nickname + ')</div>' +
+      '<div style="font-size:12px;color:var(--txt2)">무료 7일 - 유료 전환 신청</div></div>' +
       '<div style="display:flex;gap:4px">' +
-      '<button class="btn btn-sm btn-g" onclick="approveUpgrade(\'' + u.id + '\')">유료 승인 3개</button>' +
-      '<button class="btn btn-sm btn-g" onclick="approveUpgrade6(\'' + u.id + '\')">유료 승인 6개</button>' +
+      '<button class="btn btn-sm btn-g" onclick="approveUpgrade(\'' + u.id + '\')">승인 3개</button>' +
+      '<button class="btn btn-sm btn-g" onclick="approveUpgrade6(\'' + u.id + '\')">승인 6개</button>' +
       '<button class="btn btn-sm btn-r" onclick="denyUpgrade(\'' + u.id + '\')">거절</button></div></div>';
   }).join('') : '<div style="color:var(--txt2);font-size:14px">신청 없음</div>';
 
   try {
     var settings = await api('/api/settings');
-    var ki = document.getElementById('kakaoLinkInput');
-    if (ki && settings.kakaoLink) { ki.value = settings.kakaoLink; document.getElementById('kakaoLinkStatus').textContent = '현재: ' + settings.kakaoLink; }
-    var pi = document.getElementById('partnerCodeInput');
-    if (pi && settings.partnerCode) { pi.value = settings.partnerCode; document.getElementById('partnerCodeStatus').textContent = '현재 코드: ' + settings.partnerCode; }
+    if (settings.kakaoLink) { document.getElementById('kakaoLinkInput').value = settings.kakaoLink; document.getElementById('kakaoLinkStatus').textContent = '현재: ' + settings.kakaoLink; }
+    if (settings.partnerCode) { document.getElementById('partnerCodeInput').value = settings.partnerCode; document.getElementById('partnerCodeStatus').textContent = '현재 코드: ' + settings.partnerCode; }
+    if (settings.autoSchedulerEnabled) {
+      var badge = document.getElementById('autoSchedStatusBadge');
+      if (badge) { badge.textContent = '전체 활성화'; badge.className = 'badge bg'; }
+    }
   } catch(e) {}
 
   var allActive = users.filter(function(u) { return u.status !== 'pending'; });
@@ -1159,28 +1072,23 @@ async function loadAdmin() {
     }
     var btns = u.role !== 'admin' ? (
       '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">' +
-      '<div style="display:flex;gap:4px">' +
-      (u.status==='approved' ? '<button class="btn btn-sm btn-r" onclick="setStatus(\'' + u.id + '\',\'suspended\')">정지</button>' : '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\',' + (u.accountLimit||3) + ')">활성화</button>') +
-      '</div><div style="display:flex;gap:4px">' +
-      '<button class="btn btn-sm" onclick="extendUserDays(\'' + u.id + '\',10)">+10일</button>' +
-      '<button class="btn btn-sm btn-g" onclick="extendUserDays(\'' + u.id + '\',30)">+30일</button>' +
-      '</div><div style="display:flex;gap:4px">' +
-      '<button class="btn btn-sm ' + ((u.accountLimit||3)===3?'btn-p':'') + '" onclick="setLimit(\'' + u.id + '\',3)">3개</button>' +
-      '<button class="btn btn-sm ' + ((u.accountLimit||3)===6?'btn-p':'') + '" onclick="setLimit(\'' + u.id + '\',6)">6개</button>' +
-      '</div><button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">삭제</button></div>'
+      '<div style="display:flex;gap:4px">' + (u.status === 'approved' ? '<button class="btn btn-sm btn-r" onclick="setStatus(\'' + u.id + '\',\'suspended\')">정지</button>' : '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\',' + (u.accountLimit || 3) + ')">활성화</button>') + '</div>' +
+      '<div style="display:flex;gap:4px"><button class="btn btn-sm" onclick="extendUserDays(\'' + u.id + '\',10)">+10일</button><button class="btn btn-sm btn-g" onclick="extendUserDays(\'' + u.id + '\',30)">+30일</button></div>' +
+      '<div style="display:flex;gap:4px"><button class="btn btn-sm ' + ((u.accountLimit || 3) === 3 ? 'btn-p' : '') + '" onclick="setLimit(\'' + u.id + '\',3)">3개</button><button class="btn btn-sm ' + ((u.accountLimit || 3) === 6 ? 'btn-p' : '') + '" onclick="setLimit(\'' + u.id + '\',6)">6개</button></div>' +
+      '<button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">삭제</button></div>'
     ) : '';
     return '<div class="list-item"><div style="flex:1"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">' +
-      '<span style="font-weight:600;font-size:14px">' + (u.name||'-') + '</span>' +
+      '<span style="font-weight:600;font-size:14px">' + (u.name || '-') + '</span>' +
       '<span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span>' +
-      '<span class="badge ' + (u.role==='admin'?'bb':'by') + '">' + (u.role==='admin'?'관리자':'멤버') + '</span>' +
+      '<span class="badge ' + (u.role === 'admin' ? 'bb' : 'by') + '">' + (u.role === 'admin' ? '관리자' : '멤버') + '</span>' +
       sb + pb + '</div>' +
-      '<div style="font-size:12px;color:var(--txt2)">한도: ' + (u.accountLimit||3) + '개' + expInfo + '</div></div>' + btns + '</div>';
+      '<div style="font-size:12px;color:var(--txt2)">한도: ' + (u.accountLimit || 3) + '개' + expInfo + '</div></div>' + btns + '</div>';
   }
 
   var puEl = document.getElementById('partnerUserList');
   var puCount = document.getElementById('partnerUserCount');
   puCount.textContent = '(' + partnerUsers.length + '명)';
-  puEl.innerHTML = partnerUsers.length ? partnerUsers.map(renderUser).join('') : '<div style="color:var(--txt2);font-size:14px">엑시온 코드로 가입한 유저 없음</div>';
+  puEl.innerHTML = partnerUsers.length ? partnerUsers.map(renderUser).join('') : '<div style="color:var(--txt2);font-size:14px">없음</div>';
 
   var uEl = document.getElementById('userList');
   var uCount = document.getElementById('userCount');
@@ -1193,176 +1101,73 @@ async function makeInvite() {
   if (d.error) return toast(d.error, 'err');
   toast('초대코드: ' + d.code); loadAdmin();
 }
-async function delInvite(code) { await api('/api/invites/' + code, { method: 'DELETE' }); loadAdmin(); toast('삭제됨'); }
+async function delInvite(code) { await api('/api/invites/' + code, { method: 'DELETE' }); loadAdmin(); }
 async function setStatus(id, status, limit) {
   var body = { status: status };
   if (limit) body.accountLimit = limit;
   var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: body });
   if (d.error) return toast(d.error, 'err');
-  toast(status === 'approved' ? '승인됐어!' : status === 'suspended' ? '정지됐어!' : '변경됐어!'); loadAdmin();
+  toast('변경됐어!'); loadAdmin();
 }
 async function setLimit(id, limit) {
-  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', accountLimit: limit }});
-  if (d.error) return toast(d.error, 'err');
-  toast(limit + '개로 변경됐어!'); loadAdmin();
+  await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', accountLimit: limit } });
+  loadAdmin(); toast(limit + '개로 변경됐어!');
 }
 async function delUser(id) {
   if (!confirm('정말 삭제할까?')) return;
-  await api('/api/users/' + id, { method: 'DELETE' }); loadAdmin(); toast('삭제됨');
+  await api('/api/users/' + id, { method: 'DELETE' }); loadAdmin();
 }
-async function denyLimitReq(id) {
-  await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', clearLimitRequest: true }});
-  toast('거절됐어!'); loadAdmin();
-}
+async function denyLimitReq(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', clearLimitRequest: true } }); loadAdmin(); }
 async function extendUserDays(id, days) {
-  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', extendDays: days }});
-  if (d.error) return toast(d.error, 'err');
+  await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', extendDays: days } });
   toast(days + '일 연장됐어!'); loadAdmin();
 }
-async function denyExtend(id) {
-  await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyExtend: true }});
-  toast('거절됐어!'); loadAdmin();
-}
-async function approveUpgrade(id) {
-  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'paid', accountLimit: 3, approveUpgrade: true }});
-  if (d.error) return toast(d.error, 'err');
-  toast('유료 전환 승인! (3개)'); loadAdmin();
-}
-async function approveUpgrade6(id) {
-  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'paid', accountLimit: 6, approveUpgrade: true }});
-  if (d.error) return toast(d.error, 'err');
-  toast('유료 전환 승인! (6개)'); loadAdmin();
-}
-async function denyUpgrade(id) {
-  await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyUpgrade: true }});
-  toast('거절됐어!'); loadAdmin();
-}
-async function approveFree(id) {
-  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'free', planDays: 7, accountLimit: 1 }});
-  if (d.error) return toast(d.error, 'err');
-  toast('무료 7일 승인됐어!'); loadAdmin();
-}
+async function denyExtend(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyExtend: true } }); loadAdmin(); }
+async function approveUpgrade(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'paid', accountLimit: 3, approveUpgrade: true } }); loadAdmin(); }
+async function approveUpgrade6(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'paid', accountLimit: 6, approveUpgrade: true } }); loadAdmin(); }
+async function denyUpgrade(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyUpgrade: true } }); loadAdmin(); }
+async function approveFree(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'free', planDays: 7, accountLimit: 1 } }); loadAdmin(); }
 async function saveKakaoLink() {
   var link = document.getElementById('kakaoLinkInput').value.trim();
-  var d = await api('/api/settings', { method: 'PUT', body: { kakaoLink: link }});
-  if (d.error) return toast(d.error, 'err');
-  toast('링크 저장됐어!');
-  document.getElementById('kakaoLinkStatus').textContent = '현재: ' + link;
+  await api('/api/settings', { method: 'PUT', body: { kakaoLink: link } });
+  toast('링크 저장됐어!'); document.getElementById('kakaoLinkStatus').textContent = '현재: ' + link;
 }
 async function savePartnerCode() {
   var code = document.getElementById('partnerCodeInput').value.trim().toUpperCase();
   if (!code) return toast('코드를 입력해줘', 'err');
-  var d = await api('/api/settings', { method: 'PUT', body: { partnerCode: code }});
+  await api('/api/settings', { method: 'PUT', body: { partnerCode: code } });
+  toast('엑시온 코드 저장됐어!'); document.getElementById('partnerCodeStatus').textContent = '현재: ' + code;
+}
+async function setAutoScheduler(enabled) {
+  var d = await api('/api/settings/auto-scheduler', { method: 'PUT', body: { enabled: enabled } });
   if (d.error) return toast(d.error, 'err');
-  toast('엑시온 코드 저장됐어!');
-  document.getElementById('partnerCodeStatus').textContent = '현재 코드: ' + code;
+  var badge = document.getElementById('autoSchedStatusBadge');
+  if (badge) { badge.textContent = enabled ? '전체 활성화' : '테스트중'; badge.className = 'badge ' + (enabled ? 'bg' : 'by'); }
+  toast(enabled ? '전체 유저 활성화됐어!' : '테스트 전용으로 변경됐어!');
 }
-async function openKakaoLink() {
-  var d = await api('/api/settings');
-  if (d.kakaoLink) window.open(d.kakaoLink, '_blank');
-  else toast('관리자 링크가 설정되지 않았어', 'err');
-}
-async function requestUpgrade() {
-  var d = await api('/api/users/upgrade-request', { method: 'POST' });
-  if (d.error) return toast(d.error, 'err');
-  toast('유료 전환 신청했어!');
-  document.getElementById('upgradeStatus').textContent = '신청 완료 - 관리자 승인 대기중';
-  document.getElementById('upgradeStatus').style.color = 'var(--green)';
-  document.getElementById('upgradeBtn').disabled = true;
-}
-async function requestLimit(limit) {
-  var d = await api('/api/users/limit-request', { method: 'POST', body: { requestLimit: limit }});
-  if (d.error) return toast(d.error, 'err');
-  toast(limit + '개로 변경 요청했어!');
-  document.getElementById('limitRequestStatus').textContent = limit + '개로 변경 요청 완료 - 관리자 승인 대기중';
-  document.getElementById('limitRequestStatus').style.color = 'var(--green)';
-}
-async function requestExtend() {
-  var d = await api('/api/users/limit-request', { method: 'POST', body: { requestExtend: true }});
-  if (d.error) return toast(d.error, 'err');
-  toast('연장 신청했어!');
-  document.getElementById('extendRequestStatus').textContent = '연장 신청 완료 - 관리자 승인 대기중';
-  document.getElementById('extendRequestStatus').style.color = 'var(--green)';
-  document.getElementById('extendReqBtn').disabled = true;
-}
-
-async function checkExpiry() {
-  try {
-    var me = await api('/api/auth/me');
-    var allUsers = await api('/api/users');
-    if (!Array.isArray(allUsers)) return;
-    var myInfo = allUsers.find(function(u) { return u.nickname === me.nickname; });
-    var fc = document.getElementById('freePlanCard');
-    if (fc && myInfo && myInfo.plan === 'free') {
-      fc.style.display = 'block';
-      if (myInfo.upgradeRequest) {
-        document.getElementById('upgradeStatus').textContent = '신청 완료 - 관리자 승인 대기중';
-        document.getElementById('upgradeStatus').style.color = 'var(--green)';
-        document.getElementById('upgradeBtn').disabled = true;
-      }
-    }
-    var daysEl = document.getElementById('expireDaysLeft');
-    var extendBtn = document.getElementById('extendReqBtn');
-    var extendStatus = document.getElementById('extendRequestStatus');
-    if (myInfo && myInfo.expiresAt) {
-      var exp = new Date(myInfo.expiresAt);
-      var diff = Math.ceil((exp - new Date()) / 86400000);
-      if (daysEl) {
-        if (diff < 0) daysEl.innerHTML = '<span style="color:var(--red)">사용 기간이 만료됐어요</span>';
-        else daysEl.innerHTML = '현재 사용기간: <b style="color:var(--txt)">' + diff + '일 남음</b>';
-      }
-      if (myInfo.extendRequest && extendBtn) {
-        extendBtn.disabled = true;
-        if (extendStatus) { extendStatus.textContent = '연장 신청 완료 - 관리자 승인 대기중'; extendStatus.style.color = 'var(--green)'; }
-      }
-      var card = document.getElementById('expireNoticeCard');
-      var text = document.getElementById('expireNoticeText');
-      var contactBtn = document.getElementById('contactBtn');
-      if (!card || !text) return;
-      if (diff < 0) {
-        card.style.display = 'block';
-        card.style.borderColor = 'var(--red)';
-        text.innerHTML = '사용 기간이 만료됐어요. 관리자에게 연락해서 기간 연장 문의해줘요.';
-        if (contactBtn) contactBtn.style.display = 'inline-flex';
-      } else if (diff <= 7) {
-        card.style.display = 'block';
-        card.style.borderColor = 'var(--yellow)';
-        text.innerHTML = '사용 기간이 <b>' + diff + '일 후</b>에 만료돼요. 미리 연장 신청을 해두는 걸 추천해요.';
-      }
-    } else {
-      if (daysEl) daysEl.textContent = '사용기간 정보 없음';
-    }
-  } catch(e) {}
-}
-
-function copy(id) { navigator.clipboard.writeText(document.getElementById(id).value).then(function() { toast('복사됐어!'); }); }
 
 async function loadAutoSched() {
   var d = await api('/api/auto-schedule');
-  var el = document.getElementById('autoSchedList');
   if (d.error === 'test') {
     document.getElementById('autoSchedLocked').style.display = 'block';
     document.getElementById('autoSchedContent').style.display = 'none';
     return;
   }
-  // 계정 select 채우기
   var accs = await api('/api/accounts');
   var sel = document.getElementById('autoAccId');
   sel.innerHTML = (Array.isArray(accs) ? accs : []).map(function(a) {
     return '<option value="' + a.id + '">' + a.name + '</option>';
   }).join('');
-  if (!Array.isArray(d) || !d.length) {
-    el.innerHTML = '<div style="color:var(--txt2);font-size:14px">등록된 자동 스케줄 없음</div>';
-    return;
-  }
+  var el = document.getElementById('autoSchedList');
+  if (!Array.isArray(d) || !d.length) { el.innerHTML = '<div style="color:var(--txt2);font-size:14px">등록된 자동 스케줄 없음</div>'; return; }
   el.innerHTML = d.map(function(s) {
     return '<div class="list-item"><div style="flex:1">' +
-      '<div style="font-weight:600;font-size:14px;margin-bottom:4px">' + s.accountName + ' · ' + s.publishTime + ' 매일</div>' +
-      '<div style="font-size:13px;margin-bottom:4px">' + s.topic + ' / ' + s.tone + (s.coupangKeyword ? ' / 쿠팡키워드: ' + s.coupangKeyword : '') + '</div>' +
+      '<div style="font-weight:600;font-size:14px;margin-bottom:4px">' + s.accountName + ' · 매일 ' + s.publishTime + '</div>' +
+      '<div style="font-size:13px;margin-bottom:4px">' + s.topic + ' / ' + s.tone + '</div>' +
       (s.commentTone ? '<div style="font-size:12px;color:var(--blue)">' + s.commentDelay + '분 후 댓글 자동</div>' : '') +
       '</div><div style="display:flex;gap:6px;align-items:center">' +
       '<span class="badge ' + (s.enabled ? 'bg' : 'br') + '">' + (s.enabled ? '활성' : '비활성') + '</span>' +
-      '<button class="btn btn-sm btn-r" onclick="delAutoSched('' + s.id + '')">삭제</button>' +
+      '<button class="btn btn-sm btn-r" onclick="delAutoSched(\'' + s.id + '\')">삭제</button>' +
       '</div></div>';
   }).join('');
 }
@@ -1370,20 +1175,13 @@ async function loadAutoSched() {
 async function addAutoSched() {
   var accId = document.getElementById('autoAccId').value;
   var topic = document.getElementById('autoTopic').value.trim();
-  var tone = document.getElementById('autoTone').value;
+  var tone2 = document.getElementById('autoTone').value;
   var time = document.getElementById('autoTime').value;
   if (!topic) return toast('주제를 입력해줘', 'err');
-  if (!time) return toast('발행 시간을 선택해줘', 'err');
   var commentEnabled = document.getElementById('autoCommentEnabled').checked;
   var delay = parseInt(document.getElementById('autoDelay').value) || 10;
-  var d = await api('/api/auto-schedule', { method: 'POST', body: {
-    accountId: accId, topic: topic, tone: tone, publishTime: time,
-    commentTone: commentEnabled ? tone : '', commentDelay: delay, enabled: true
-  }});
-  if (d.error) {
-    if (d.error === 'test') return toast('관리자만 사용 가능한 테스트 기능이야', 'err');
-    return toast(d.error, 'err');
-  }
+  var d = await api('/api/auto-schedule', { method: 'POST', body: { accountId: accId, topic: topic, tone: tone2, publishTime: time, commentTone: commentEnabled ? tone2 : '', commentDelay: delay, enabled: true } });
+  if (d.error) return toast(d.error === 'test' ? '관리자만 사용 가능한 테스트 기능이야' : d.error, 'err');
   toast('자동 스케줄 등록됐어!');
   document.getElementById('autoTopic').value = '';
   loadAutoSched();
@@ -1392,17 +1190,6 @@ async function addAutoSched() {
 async function delAutoSched(id) {
   await api('/api/auto-schedule/' + id, { method: 'DELETE' });
   toast('삭제됐어!'); loadAutoSched();
-}
-
-async function setAutoScheduler(enabled) {
-  var d = await api('/api/settings/auto-scheduler', { method: 'PUT', body: { enabled: enabled }});
-  if (d.error) return toast(d.error, 'err');
-  var badge = document.getElementById('autoSchedStatusBadge');
-  if (badge) {
-    badge.textContent = enabled ? '전체 활성화' : '테스트중';
-    badge.className = 'badge ' + (enabled ? 'bg' : 'by');
-  }
-  toast(enabled ? '전체 유저 활성화됐어!' : '관리자 테스트 전용으로 변경됐어!');
 }
 
 init();
