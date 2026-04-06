@@ -1729,20 +1729,63 @@ function toggleExpireHelp() {
 
 async function updateSideExpire() {
   try {
-    var allUsers = await api('/api/users');
     var me = await api('/api/auth/me');
-    if (!Array.isArray(allUsers)) return;
-    var myInfo = allUsers.find(function(u) { return u.nickname === me.nickname; });
-    if (!myInfo || !myInfo.expiresAt) return;
-    var diff = Math.ceil((new Date(myInfo.expiresAt) - new Date()) / 86400000);
-    var expireEl = document.getElementById('sideExpireInfo');
-    var expireText = document.getElementById('sideExpireText');
-    if (!expireEl || !expireText) return;
-    expireEl.style.display = 'block';
-    var warn = diff <= 10;
-    expireEl.style.borderColor = warn ? 'var(--red)' : 'var(--bdr)';
-    expireText.style.color = warn ? 'var(--red)' : 'var(--green)';
-    expireText.textContent = (warn ? '⚠️ ' : '') + diff + '일 남음' + (diff <= 0 ? ' (만료됨)' : '');
+    // 관리자는 사이드바 요금제 정보 숨김
+    if (me.role === 'admin') {
+      var pi = document.getElementById('sidePlanInfo');
+      if (pi) pi.style.display = 'none';
+      return;
+    }
+
+    // 요금제 표시
+    var planNames = { basic: '베이직', pro: '프로', premium: '프리미엄', free: '무료체험', paid: '유료' };
+    var planColors = { basic: 'var(--blue)', pro: 'var(--green)', premium: 'var(--yellow)', free: 'var(--txt2)', paid: 'var(--green)' };
+    var pn = document.getElementById('sidePlanName');
+    if (pn) {
+      pn.textContent = planNames[me.plan] || me.plan || '-';
+      pn.style.color = planColors[me.plan] || 'var(--txt)';
+    }
+
+    // 남은 기간
+    var dl = document.getElementById('sideDaysLeft');
+    if (dl) {
+      if (!me.expiresAt) { dl.textContent = '-'; dl.style.color = 'var(--txt2)'; }
+      else {
+        var diff = Math.ceil((new Date(me.expiresAt) - new Date()) / 86400000);
+        if (diff < 0) { dl.textContent = '만료됨'; dl.style.color = 'var(--red)'; }
+        else { dl.textContent = diff + '일 남음'; dl.style.color = diff <= 10 ? 'var(--red)' : diff <= 20 ? 'var(--yellow)' : 'var(--green)'; }
+      }
+    }
+
+    // 오늘 글생성 횟수 (무료/베이직만 표시)
+    var gc = document.getElementById('sideGenCount');
+    if (gc) {
+      if (me.genLimit) {
+        var remain = Math.max(0, me.genLimit - (me.genUsed || 0));
+        gc.textContent = remain + '/' + me.genLimit + '번 남음';
+        gc.style.color = remain < 20 ? 'var(--red)' : remain < 50 ? 'var(--yellow)' : 'var(--txt)';
+      } else {
+        gc.textContent = '무제한';
+        gc.style.color = 'var(--txt2)';
+      }
+    }
+
+    // 만료 경고 (10일 이하)
+    if (me.expiresAt) {
+      var diff2 = Math.ceil((new Date(me.expiresAt) - new Date()) / 86400000);
+      var expireEl = document.getElementById('sideExpireInfo');
+      var expireText = document.getElementById('sideExpireText');
+      if (expireEl && expireText) {
+        if (diff2 <= 10) {
+          expireEl.style.display = 'block';
+          expireEl.style.borderColor = diff2 < 0 ? 'var(--red)' : 'var(--yellow)';
+          expireText.style.color = diff2 < 0 ? 'var(--red)' : 'var(--yellow)';
+          expireText.textContent = diff2 < 0 ? '⚠️ 만료됨' : '⚠️ ' + diff2 + '일 남음';
+        } else {
+          expireEl.style.display = 'none';
+        }
+      }
+    }
   } catch(e) {}
 }
 
