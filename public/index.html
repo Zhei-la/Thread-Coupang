@@ -139,7 +139,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div id="sideTokenText" style="font-size:12px;font-weight:600"></div>
         <div id="sideTokenHelp" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)">
           <div style="font-size:11px;color:var(--txt2);line-height:1.7;margin-bottom:6px">장기 토큰을 새로 발급받아야 해요.<br>계정 관리에서 기존 계정 삭제 후 새 토큰으로 다시 추가해줘요.</div>
-          <a href="MANUAL_URL_HERE" target="_blank" style="display:flex;align-items:center;justify-content:center;padding:6px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:6px;color:var(--blue);font-size:11px;font-weight:700;text-decoration:none">📖 매뉴얼 보러가기</a>
+          <a href="https://zhei-la.github.io/zheila-threads-manual/" target="_blank" style="display:flex;align-items:center;justify-content:center;padding:6px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:6px;color:var(--blue);font-size:11px;font-weight:700;text-decoration:none">📖 매뉴얼 보러가기</a>
         </div>
       </div>
 
@@ -299,7 +299,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
             https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=앱시크릿&access_token=단기토큰
           </div>
           <div style="color:var(--green);margin-top:6px">응답에서 access_token 값 복사 → 아래 토큰란에 붙여넣기</div>
-          <a href="MANUAL_URL_HERE" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:var(--blue);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none">📖 자세한 토큰 발급 방법 보러가기 →</a>
+          <a href="https://zhei-la.github.io/zheila-threads-manual/" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:8px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:var(--blue);border-radius:8px;font-size:13px;font-weight:600;text-decoration:none">📖 자세한 토큰 발급 방법 보러가기 →</a>
         </div>
       </div>
       <div class="card">
@@ -434,30 +434,32 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 <div class="modal-bg" id="planModal">
   <div class="modal" style="width:520px;max-width:95vw;max-height:90vh;overflow-y:auto">
     <h3>💎 요금제 안내</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
       <div style="padding:12px;background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;text-align:center">
         <div style="font-size:10px;color:var(--txt2);margin-bottom:4px">무료 체험</div>
         <div style="font-size:14px;font-weight:700;margin-bottom:6px">7일</div>
-        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 1개<br>하루 2회 발행<br>글 생성</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 1개 · 하루 2회 발행<br>글 생성 하루 100번</div>
       </div>
       <div style="padding:12px;background:rgba(136,136,136,.08);border:1px solid rgba(136,136,136,.3);border-radius:10px;text-align:center">
         <div style="font-size:10px;color:#aaa;margin-bottom:4px">베이직</div>
-        <div style="font-size:14px;font-weight:700;margin-bottom:2px">4,900원</div>
-        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월</div>
-        <div style="font-size:10px;color:var(--txt2);line-height:1.8">토큰 불필요<br>글 생성+복사<br>하루 200번<br>30일 사용</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:2px">4,900원</div>
+        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월 · 30일</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">토큰 불필요<br>글 생성+복사<br>하루 200번 생성</div>
       </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
       <div style="padding:12px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:10px;text-align:center">
         <div style="font-size:10px;color:var(--green);margin-bottom:4px">프로</div>
-        <div style="font-size:14px;font-weight:700;margin-bottom:2px">9,900원</div>
-        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월</div>
-        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 2개<br>하루 3회 발행<br>예약 발행<br>30일 사용</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:2px">9,900원</div>
+        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월 · 30일</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 2개<br>계정당 하루 3회 발행<br>예약 발행</div>
       </div>
       <div style="padding:12px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:10px;text-align:center;position:relative">
         <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--yellow);color:#000;font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px">추천</div>
         <div style="font-size:10px;color:var(--yellow);margin-bottom:4px">프리미엄</div>
-        <div style="font-size:14px;font-weight:700;margin-bottom:2px">19,900원</div>
-        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월</div>
-        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 6개<br>하루 5회 발행<br>예약+자동발행<br>30일 사용</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:2px">19,900원</div>
+        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월 · 60일</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 6개<br>계정당 하루 5회 발행<br>예약 발행<br>자동 스케줄러 <span style="font-size:9px;background:rgba(245,158,11,.3);color:var(--yellow);padding:1px 5px;border-radius:4px">테스트중</span></div>
       </div>
     </div>
     <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;padding:16px;margin-bottom:16px">
