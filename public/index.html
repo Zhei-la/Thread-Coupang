@@ -439,6 +439,11 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <h2>유료 전환 신청 <span id="upgradeCount" class="badge bb"></span></h2>
         <div id="upgradeList"><div style="color:var(--txt2);font-size:14px">신청 없음</div></div>
       </div>
+
+      <div class="card">
+        <h2>요금제 변경 요청 <span id="planChangeCount" class="badge by"></span></h2>
+        <div id="planChangeList"><div style="color:var(--txt2);font-size:14px">신청 없음</div></div>
+      </div>
       <div class="card">
         <h2>🤖 자동 스케줄러 설정</h2>
         <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">활성화하면 모든 유저가 사용 가능해요.</div>
@@ -830,6 +835,24 @@ async function genComment() {
     showCommentReserve();
     toast('댓글 생성 완료!');
   } catch(e) { toast(e.message, 'err'); }
+}
+
+function trackGenCount() {
+  var todayKey = new Date().toISOString().slice(0,10);
+  var usedKey = 'gen_used_' + todayKey;
+  var used = parseInt(localStorage.getItem(usedKey) || '0');
+  localStorage.setItem(usedKey, used + 1);
+  // 사이드바 즉시 업데이트
+  var gc = document.getElementById('sideGenCount');
+  if (gc && gc.textContent !== '무제한') {
+    var parts = gc.textContent.split('/');
+    if (parts.length === 2) {
+      var limit = parseInt(parts[1]);
+      var remain = Math.max(0, parseInt(parts[0]) - 1);
+      gc.textContent = remain + '/' + limit + '번 남음';
+      gc.style.color = remain < 20 ? 'var(--red)' : remain < 50 ? 'var(--yellow)' : 'var(--txt)';
+    }
+  }
 }
 
 function showCommentReserve() {
