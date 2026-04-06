@@ -238,6 +238,14 @@ app.get('/api/invites', adminAuth, (req, res) => res.json(inviteCodes));
 
 // 설정 (카카오 링크 등)
 app.get('/api/settings', auth, (req, res) => res.json(getSettings()));
+
+// 베이직 유저 주제 태그 저장
+app.put('/api/settings/basic-tags', auth, (req, res) => {
+  const user = users.find(u => u.id === req.userId);
+  const dir = userDir(req.userId);
+  saveJSON(`${dir}/basic_tags.json`, { topics: req.body.topics || [] });
+  res.json({ ok: true });
+});
 app.put('/api/settings', adminAuth, (req, res) => {
   const settings = getSettings();
   if (req.body.kakaoLink !== undefined) settings.kakaoLink = req.body.kakaoLink;
@@ -247,10 +255,11 @@ app.put('/api/settings', adminAuth, (req, res) => {
 });
 
 app.post('/api/invites', adminAuth, (req, res) => {
-  // 기존 active 코드들 모두 사용완료로 변경
-  inviteCodes.forEach(c => {
-    if (c.status !== 'done') c.status = 'done';
-  });
+  // active 코드가 이미 2개면 가장 오래된 것 만료
+  const activeCodes = inviteCodes.filter(c => c.status !== 'done');
+  if (activeCodes.length >= 2) {
+    activeCodes[0].status = 'done'; // 가장 오래된 것 만료
+  }
   const code = crypto.randomBytes(4).toString('hex').toUpperCase();
   const invite = { code, createdBy: req.user.nickname, status: 'active', useCount: 0, createdAt: new Date().toISOString() };
   inviteCodes.push(invite);
@@ -266,7 +275,7 @@ app.delete('/api/invites/:code', adminAuth, (req, res) => {
 
 // 유저 목록 (관리자)
 app.get('/api/users', adminAuth, (req, res) => {
-  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', plan: u.plan||'free', accountLimit: u.accountLimit||2, dailyPublishLimit: u.dailyPublishLimit||null, limitRequest: u.limitRequest||null, extendRequest: u.extendRequest||null, upgradeRequest: u.upgradeRequest||null, joinedVia: u.joinedVia||'normal', approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt })));
+  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', plan: u.plan||'free', accountLimit: u.accountLimit||2, dailyPublishLimit: u.dailyPublishLimit||null, limitRequest: u.limitRequest||null, extendRequest: u.extendRequest||null, upgradeRequest: u.upgradeRequest||null, planChangeRequest: u.planChangeRequest||null, joinedVia: u.joinedVia||'normal', approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt, isExpired: u.expiresAt ? new Date(u.expiresAt) < new Date() : false })));
 });
 
 app.delete('/api/users/:id', adminAuth, (req, res) => {
@@ -289,6 +298,13 @@ app.post('/api/users/upgrade-request', auth, (req, res) => {
 
 // 계정 한도 변경 요청 (유저가 직접)
 app.post('/api/users/limit-request', auth, (req, res) => {
+  if (req.body.requestPlan) {
+    const user = users.find(u => u.id === req.userId);
+    if (!user) return res.status(404).json({ error: '없음' });
+    user.planChangeRequest = { plan: req.body.requestPlan, requestedAt: new Date().toISOString() };
+    saveJSON(`${DATA_ROOT}/users.json`, users);
+    return res.json({ ok: true });
+  }
   const user = users.find(u => u.id === req.userId);
   if (!user) return res.status(404).json({ error: '없음' });
   const { requestLimit, requestExtend } = req.body;
@@ -349,6 +365,18 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
     const base = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
     user.expiresAt = new Date(base.getTime() + Number(req.body.extendDays) * 24 * 60 * 60 * 1000).toISOString();
     user.extendRequest = null;
+  }
+  // 플랜 변경 + 기간 설정 (관리자가 유저 목록에서 클릭)
+  if (req.body.setPlan) {
+    user.plan = req.body.setPlan;
+    if (req.body.setPlan === 'basic') { user.accountLimit = 0; user.dailyPublishLimit = 0; }
+    else if (req.body.setPlan === 'pro') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
+    else if (req.body.setPlan === 'premium') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
+    const planDays = req.body.setPlan === 'premium' ? 60 : 30;
+    const base2 = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
+    user.expiresAt = new Date(base2.getTime() + planDays * 24 * 60 * 60 * 1000).toISOString();
+    if (!user.approvedAt) { user.approvedAt = new Date().toISOString(); user.status = 'approved'; }
+    user.planChangeRequest = null;
   }
   if (req.body.denyExtend) user.extendRequest = null;
   if (req.body.approveUpgrade) {
