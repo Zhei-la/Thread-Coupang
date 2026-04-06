@@ -7,6 +7,19 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const app = express();
+
+// ── 보안 설정 ──
+const ALLOWED_ORIGINS = process.env.BASE_URL ? [process.env.BASE_URL] : [];
+const corsOptions = {
+  origin: function(origin, callback) {
+    if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS 차단'));
+    }
+  },
+  credentials: true
+};
 app.use(cors(corsOptions));
 
 // ── 데이터 루트 경로 (Railway Volume 마운트) ──
