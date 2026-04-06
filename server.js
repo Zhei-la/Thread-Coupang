@@ -231,7 +231,7 @@ app.get('/api/auth/me', auth, (req, res) => {
   const today = getTodayKey();
   const counts = getPublishCount(u.id);
   const genUsed = counts['gen_' + today] || 0;
-  const genLimit = u.plan === 'basic' ? 200 : u.plan === 'free' ? 100 : null;
+  const genLimit = u.plan === 'free' ? 100 : 200; // 무료 100, 나머지 200
   res.json({
     id: u.id,
     nickname: u.nickname,
@@ -459,7 +459,7 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
   if (genUser && genUser.role !== 'admin') {
     const genCount = getPublishCount(req.userId);
     const genKey = 'gen_' + getTodayKey();
-    const genLimit = genUser.plan === 'basic' ? 200 : 100; // 베이직 200, 나머지 100
+    const genLimit = genUser.plan === 'free' ? 100 : 200; // 무료 100, 나머지 200
     if ((genCount[genKey] || 0) >= genLimit) {
       return res.status(429).json({ error: '오늘 글 생성 한도(' + genLimit + '번)를 초과했어. 내일 다시 시도해줘.' });
     }
