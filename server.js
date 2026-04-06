@@ -1292,6 +1292,7 @@ cron.schedule('* * * * *', async () => {
           accountName: account.name,
           topic: selectedTopic,
           tone: sched.tone,
+          postText: text,
           status: 'success',
           publishedAt: new Date().toISOString()
         });
@@ -1331,7 +1332,7 @@ cron.schedule('* * * * *', async () => {
         saveAutoLog(userId, {
           id: Date.now().toString(),
           accountName: account.name,
-          topic: sched.topic,
+          topic: selectedTopic || sched.topic || '-',
           tone: sched.tone,
           status: 'failed',
           error: e.message,
