@@ -36,6 +36,12 @@ function saveJSON(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
+// 입력값 sanitize (XSS 방지)
+function sanitize(str) {
+  if (typeof str !== 'string') return str;
+  return str.replace(/[<>]/g, '').trim().slice(0, 5000);
+}
+
 // ── 데이터 저장소 ──
 let users       = loadJSON(`${DATA_ROOT}/users.json`, []);
 let inviteCodes = loadJSON(`${DATA_ROOT}/invite_codes.json`, []);
@@ -188,6 +194,21 @@ app.use(express.static('public'));
 
 // 첫 번째 유저 여부 확인
 app.get('/api/auth/is-first', (req, res) => res.json({ isFirst: users.length === 0 }));
+
+// 긴급 비밀번호 리셋 (관리자 계정이 로그인 안될 때)
+// 사용법: /api/auth/reset-admin?secret=RESET_2025&newpw=새비밀번호
+app.get('/api/auth/reset-admin', (req, res) => {
+  if (req.query.secret !== 'RESET_2025_THREADS') return res.status(403).json({ error: '권한 없음' });
+  const newpw = req.query.newpw;
+  if (!newpw || newpw.length < 6) return res.status(400).json({ error: '비밀번호 6자 이상' });
+  const admin = users.find(u => u.role === 'admin');
+  if (!admin) return res.status(404).json({ error: '관리자 없음' });
+  admin.passwordHash = hashPw(newpw);
+  delete admin.password;
+  saveJSON(`${DATA_ROOT}/users.json`, users);
+  console.log('[RESET] 관리자 비밀번호 리셋됨');
+  res.json({ ok: true, nickname: admin.nickname, message: '비밀번호 변경 완료' });
+});
 
 // 최초 관리자 가입 (유저 0명일 때만)
 app.post('/api/auth/setup', (req, res) => {
@@ -1411,3 +1432,4 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`서버 실행중: ${PORT}`));
+
