@@ -947,6 +947,185 @@ app.post('/api/upload-video', auth, videoUpload.single('video'), async (req, res
   }
 });
 
+// ==============================
+//  쿠팡 파트너스 API
+// ==============================
+
+async function getCoupangLink(keyword) {
+  const accessKey = process.env.COUPANG_ACCESS_KEY;
+  const secretKey = process.env.COUPANG_SECRET_KEY;
+  if (!accessKey || !secretKey) throw new Error('COUPANG API 키 없음');
+
+  const method = 'GET';
+  const path = `/v2/providers/affiliate_open_api/apis/openapi/products/search?keyword=${encodeURIComponent(keyword)}&limit=5`;
+  const datetime = new Date().toISOString().replace(/[:\-]|\.\d{3}/g, '').slice(0, 15) + 'Z';
+
+  // HMAC-SHA256 서명
+  const message = datetime + method + path;
+  const signature = crypto.createHmac('sha256', secretKey).update(message).digest('hex');
+  const authorization = `CEA algorithm=HmacSHA256, access-key=${accessKey}, signed-date=${datetime}, signature=${signature}`;
+
+  const r = await fetch(`https://api-gateway.coupang.com${path}`, {
+    method,
+    headers: { 'Authorization': authorization, 'Content-Type': 'application/json' }
+  });
+  const d = await r.json();
+  console.log('[COUPANG] 검색 응답 코드:', d.rCode);
+  if (d.rCode !== '0' && d.rCode !== 0) throw new Error('쿠팡 API 오류: ' + d.rMessage);
+
+  const products = d.data?.productData || [];
+  if (!products.length) throw new Error('검색 결과 없음');
+
+  // 첫 번째 상품 링크 반환
+  const product = products[0];
+  return product.productUrl || product.shortenUrl || '';
+}
+
+// ==============================
+//  자동 스케줄러
+// ==============================
+
+function getAutoSchedules(userId) { return loadJSON(`${userDir(userId)}/auto_schedules.json`, []); }
+function saveAutoSchedules(userId, data) { saveJSON(`${userDir(userId)}/auto_schedules.json`, data); }
+
+// 자동 스케줄 목록
+app.get('/api/auto-schedule', auth, (req, res) => {
+  res.json(getAutoSchedules(req.userId));
+});
+
+// 자동 스케줄 등록/수정
+app.post('/api/auto-schedule', auth, (req, res) => {
+  const user = users.find(u => u.id === req.userId);
+  const settings = getSettings();
+  // 관리자이거나 autoSchedulerEnabled 일때만
+  if (user?.role !== 'admin' && !settings.autoSchedulerEnabled) {
+    return res.status(403).json({ error: 'test' });
+  }
+  const { accountId, topic, tone, publishTime, commentTone, commentDelay, enabled, coupangKeyword } = req.body;
+  const accs = getAccounts(req.userId);
+  const account = accs.find(a => a.id === accountId);
+  if (!account) return res.status(404).json({ error: '계정 없음' });
+  const schedules = getAutoSchedules(req.userId);
+  const existing = schedules.find(s => s.id === req.body.id);
+  if (existing) {
+    Object.assign(existing, { accountId, accountName: account.name, topic, tone, publishTime, commentTone, commentDelay, coupangKeyword: coupangKeyword || '', enabled });
+    saveAutoSchedules(req.userId, schedules);
+    return res.json(existing);
+  }
+  const item = { id: Date.now().toString(), accountId, accountName: account.name, topic, tone, publishTime, commentTone: commentTone || '', commentDelay: commentDelay || 10, coupangKeyword: coupangKeyword || '', enabled: enabled !== false, createdAt: new Date().toISOString() };
+  schedules.push(item);
+  saveAutoSchedules(req.userId, schedules);
+  res.json(item);
+});
+
+// 자동 스케줄 삭제
+app.delete('/api/auto-schedule/:id', auth, (req, res) => {
+  let schedules = getAutoSchedules(req.userId);
+  schedules = schedules.filter(s => s.id !== req.params.id);
+  saveAutoSchedules(req.userId, schedules);
+  res.json({ ok: true });
+});
+
+// 자동 스케줄러 활성화 설정 (관리자만)
+app.put('/api/settings/auto-scheduler', adminAuth, (req, res) => {
+  const settings = getSettings();
+  settings.autoSchedulerEnabled = !!req.body.enabled;
+  saveSettings(settings);
+  res.json({ ok: true, enabled: settings.autoSchedulerEnabled });
+});
+
+// 자동 스케줄러 cron (매 분마다 체크)
+cron.schedule('* * * * *', async () => {
+  const settings = getSettings();
+  const now = new Date();
+  const currentTime = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  const dataDir = `${DATA_ROOT}/users`;
+  if (!fs.existsSync(dataDir)) return;
+  const userDirs = fs.readdirSync(dataDir);
+  for (const userId of userDirs) {
+    const user = users.find(u => u.id === userId);
+    if (!user) continue;
+    // 관리자이거나 전체 활성화된 경우만
+    if (user.role !== 'admin' && !settings.autoSchedulerEnabled) continue;
+    const autoSchedules = getAutoSchedules(userId);
+    const toRun = autoSchedules.filter(s => s.enabled && s.publishTime === currentTime);
+    if (!toRun.length) continue;
+    console.log(`[AUTO] 유저 ${userId} - ${toRun.length}개 자동 발행`);
+    for (const sched of toRun) {
+      const accs = getAccounts(userId);
+      const account = accs.find(a => a.id === sched.accountId);
+      if (!account) continue;
+      try {
+        const apiKey = process.env.GROQ_API_KEY;
+        if (!apiKey) continue;
+        // 글 생성
+        const tonePrompts = {
+          '리스트형': '리스트형 SNS 콘텐츠. 번호/불릿 중심, 핵심만, 댓글 유도.',
+          '정보성': '정보형 SNS 콘텐츠. 신뢰감 있는 톤, 핵심 요약, 댓글 유도.',
+          '리뷰형': '리뷰형 SNS 콘텐츠. 실제 경험처럼, 장단점 포함.',
+          '일상': '일상형 SNS 콘텐츠. 말하듯 자연스럽게, 짧고 가볍게.',
+          '공감형': '공감형 SNS 콘텐츠. 공감 상황 제시, 질문형 마무리.',
+          '스토리형': '스토리형 SNS 콘텐츠. 상황->전개->결론 구조.',
+          '쿠팡': '쿠팡 구매 유도. 1~3줄, 어그로, 경험담처럼. 제품명 금지.'
+        };
+        const systemMsg = '반드시 한국어로만. 반말. 이모지 금지. 존댓말 금지. 게시글 텍스트만 출력.';
+        const prompt = (tonePrompts[sched.tone] || '자연스럽게') + '
+주제: ' + sched.topic + '
+위 형식으로 Threads 게시글 작성. 한국어만, 반말로, 이모지 없이.';
+        const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: prompt }], temperature: 0.85, max_tokens: 500 })
+        });
+        const data = await r.json();
+        if (data.error) throw new Error(data.error.message);
+        const text = (data.choices?.[0]?.message?.content || '').trim();
+        if (!text) continue;
+        // 즉시 발행
+        const postId = await publishToThreads(account.accessToken, text, [], '');
+        console.log(`[AUTO] 발행 성공: ${sched.topic} / ${sched.tone}`);
+        // 댓글도 있으면 delay 후 예약
+        if (sched.commentTone) {
+          const delay = sched.commentDelay || 10;
+          const commentAt = new Date(Date.now() + delay * 60 * 1000).toISOString();
+          const commentPrompt = '스레드 댓글 1개만 작성해줘.\n주제: ' + sched.topic + '\n규칙: 반드시 한국어로만, 반말, 1~2문장, 이모지 절대 금지, 존댓말 금지, 댓글 텍스트만 출력.';
+          const rc = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: commentPrompt }], temperature: 0.85, max_tokens: 200 })
+          });
+          const dc = await rc.json();
+          let commentText = (dc.choices?.[0]?.message?.content || '').trim();
+          if (commentText) {
+            // 쿠팡 말투면 링크 자동 추가
+            if (sched.tone === '쿠팡' && sched.coupangKeyword) {
+              try {
+                const coupangUrl = await getCoupangLink(sched.coupangKeyword);
+                if (coupangUrl) {
+                  commentText = '[쿠팡 파트너스 활동으로 수수료를 제공받을 수 있습니다]
+
+' + commentText + '
+
+' + coupangUrl + '
+' + coupangUrl + '
+' + coupangUrl;
+                  console.log('[AUTO] 쿠팡 링크 자동 생성 성공');
+                }
+              } catch(e) {
+                console.log('[AUTO] 쿠팡 링크 생성 실패:', e.message);
+              }
+            }
+            const posts = getScheduled(userId);
+            posts.push({ id: Date.now().toString(), accountId: sched.accountId, accountName: account.name, text: commentText, type: 'comment', imageUrls: [], commentText: '', scheduledAt: commentAt, status: 'pending', createdAt: new Date().toISOString() });
+            saveScheduled(userId, posts);
+            console.log(`[AUTO] 댓글 예약됨: ${delay}분 후`);
+          }
+        }
+      } catch(e) { console.log(`[AUTO] 실패:`, e.message); }
+    }
+  }
+});
+
 // 서버 시작 시 세션 파일 로드
 sessions = loadSessions();
 console.log(`세션 복원: ${Object.keys(sessions).length}개`);
