@@ -896,7 +896,10 @@ function showCommentReserve() {
   if (txt) {
     wrap.style.display = 'block';
     var def = new Date(Date.now() + 10 * 60 * 1000);
-    document.getElementById('commentReserveTime').value = new Date(def.getTime() - def.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    var nowMin = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    var reserveEl = document.getElementById('commentReserveTime');
+    reserveEl.min = nowMin;
+    reserveEl.value = new Date(def.getTime() - def.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   } else {
     wrap.style.display = 'none';
   }
@@ -1060,13 +1063,19 @@ function openSched(type) {
   document.getElementById('schedType').value = type;
   var now = new Date();
   var def = new Date(now.getTime() + 3600000);
-  document.getElementById('schedTime').value = new Date(def.getTime() - def.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  // 현재 시간 이후만 선택 가능 (min 설정)
+  var minVal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  var schedTimeEl = document.getElementById('schedTime');
+  schedTimeEl.min = minVal;
+  schedTimeEl.value = new Date(def.getTime() - def.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   var commentText = document.getElementById('commentText').value.trim();
   var cw = document.getElementById('commentSchedWrap');
   if (type === 'post' && commentText) {
     cw.style.display = 'block';
     var cdef = new Date(now.getTime() + 3600000 + 600000);
-    document.getElementById('commentSchedTime').value = new Date(cdef.getTime() - cdef.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    var commentSchedEl = document.getElementById('commentSchedTime');
+    commentSchedEl.min = minVal;
+    commentSchedEl.value = new Date(cdef.getTime() - cdef.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   } else {
     cw.style.display = 'none';
   }
@@ -1079,6 +1088,7 @@ async function doSched() {
   var type = document.getElementById('schedType').value;
   var scheduledAt = document.getElementById('schedTime').value;
   if (!scheduledAt) return toast('시간을 선택해줘', 'err');
+  if (new Date(scheduledAt) <= new Date()) return toast('현재 시간 이후로 설정해줘', 'err');
   if (type === 'comment') {
     var text = document.getElementById('commentText').value.trim();
     var d = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: text, type: 'comment', scheduledAt: new Date(scheduledAt).toISOString() } });
