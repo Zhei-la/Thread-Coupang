@@ -114,7 +114,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     <nav>
       <div class="nav-item active" onclick="go('write',this)">✏️ 글 작성</div>
       <div class="nav-item" onclick="go('schedule',this)">📅 예약 목록</div>
-      <div class="nav-item" onclick="go('autoSchedule',this)" id="autoSchedNav">🤖 자동 스케줄러 <span id="autoSchedNavBadge" style="font-size:10px;color:var(--yellow);margin-left:4px">테스트중</span></div>
+      <div class="nav-item" onclick="go('autoSchedule',this)" id="autoSchedNav">🤖 자동 스케줄러</div>
       <div class="nav-item" onclick="go('accounts',this)">👤 계정 관리</div>
       <div class="nav-sep" id="adminSep" style="display:none"></div>
       <div class="nav-item" id="adminNav" style="display:none" onclick="go('admin',this)">⚙️ 관리자</div>
@@ -256,7 +256,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     </div>
 
     <div class="page" id="page-autoSchedule">
-      <h1>🤖 자동 스케줄러 <span class="badge by" style="font-size:12px;vertical-align:middle">테스트중</span></h1>
+      <h1>🤖 자동 스케줄러</h1>
       <div id="autoSchedLocked" style="display:none">
         <div class="card" style="border-color:var(--yellow);text-align:center;padding:40px 20px">
           <div style="font-size:48px;margin-bottom:16px">🚧</div>
@@ -446,8 +446,14 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div id="limitRequestStatus" style="margin-bottom:12px;font-size:13px;color:var(--txt2)"></div>
         <div style="border-top:1px solid var(--bdr);padding-top:14px">
           <h2 style="margin-bottom:10px">사용기간 연장 신청</h2>
-          <button class="btn btn-sm btn-p" onclick="requestExtend()" id="extendReqBtn">현재 이용중인 요금제 연장 요청</button>
+          <div id="extendBtnWrap">
+            <button class="btn btn-sm btn-p" onclick="requestExtend()" id="extendReqBtn">현재 이용중인 요금제 연장 요청</button>
+          </div>
           <div id="extendRequestStatus" style="margin-top:10px;font-size:13px;color:var(--txt2)"></div>
+          <div style="margin-top:12px;padding:10px 12px;background:var(--sur2);border-radius:8px;font-size:12px;color:var(--txt2);line-height:1.7">
+            💬 요금제 변경 요청 또는 연장 요청 후 카카오 채널로 문의해주세요.<br>
+            문의 확인 후 변경/연장이 가능합니다.
+          </div>
         </div>
       </div>
     </div>
@@ -481,7 +487,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">활성화하면 모든 유저가 사용 가능해요.</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
           <span style="font-size:14px">상태:</span>
-          <span id="autoSchedStatusBadge" class="badge by">테스트중</span>
+          <span id="autoSchedStatusBadge" class="badge br">비활성화</span>
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-sm btn-g" onclick="setAutoScheduler(true)">전체 활성화</button>
@@ -568,7 +574,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div style="font-size:10px;color:var(--yellow);margin-bottom:4px">프리미엄</div>
         <div style="font-size:16px;font-weight:700;margin-bottom:2px">19,900원</div>
         <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월 · 60일</div>
-        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 6개<br>계정당 하루 5회 발행<br>예약 발행<br>자동 스케줄러 <span style="font-size:9px;background:rgba(245,158,11,.3);color:var(--yellow);padding:1px 5px;border-radius:4px">테스트중</span></div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 6개<br>계정당 하루 5회 발행<br>예약 발행<br>자동 스케줄러 <span style="font-size:9px;background:rgba(34,197,94,.2);color:var(--green);padding:1px 5px;border-radius:4px">프리미엄 전용</span></div>
       </div>
     </div>
     <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;padding:16px;margin-bottom:16px">
@@ -1623,12 +1629,14 @@ async function approveUpgrade6(id) { await api('/api/users/' + id + '/status', {
 async function approvePlanChange(id, plan) {
   var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', approvePlanChange: true } });
   if (d.error) return toast(d.error, 'err');
-  toast('요금제 변경 승인됐어!'); loadAdmin();
+  toast('✅ 요금제 변경 승인됐어!');
+  setTimeout(function() { loadAdmin(); }, 300);
 }
 async function denyPlanChange(id) {
   var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyPlanChange: true } });
   if (d.error) return toast(d.error, 'err');
-  toast('요금제 변경 거절됐어!'); loadAdmin();
+  toast('요금제 변경 거절됐어!');
+  setTimeout(function() { loadAdmin(); }, 300);
 }
 async function denyUpgrade(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyUpgrade: true } }); loadAdmin(); }
 async function approveFree(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'free', planDays: 7, accountLimit: 1 } }); toast('무료 7일 승인!'); loadAdmin(); }
@@ -1686,18 +1694,15 @@ async function setAutoScheduler(enabled) {
 
 async function loadAutoSched() {
   var d = await api('/api/auto-schedule');
-  if (d.error === 'test') {
+  if (d.error === 'test' || d.error === 'disabled' || d.error === 'premium_only') {
     document.getElementById('autoSchedLocked').style.display = 'block';
     document.getElementById('autoSchedContent').style.display = 'none';
-    // 안내 문구 설정
     var lockedMsg = document.getElementById('autoSchedLockedMsg');
     if (lockedMsg) {
-      // 설정 확인
-      var settings2 = await api('/api/settings');
-      if (settings2.autoSchedulerEnabled) {
-        lockedMsg.textContent = '자동 스케줄러는 프리미엄 플랜 전용 기능이에요. 프리미엄으로 업그레이드하면 사용할 수 있어요.';
+      if (d.error === 'disabled') {
+        lockedMsg.innerHTML = '자동 스케줄러가 현재 비활성화 상태예요.<br>관리자가 활성화하면 프리미엄 유저는 사용할 수 있어요.';
       } else {
-        lockedMsg.textContent = '현재 테스트 중인 기능이에요. 프리미엄 이용자도 테스트 준비 중입니다.';
+        lockedMsg.innerHTML = '자동 스케줄러는 <b>프리미엄 플랜 전용</b> 기능이에요.<br>프리미엄으로 업그레이드하면 바로 사용할 수 있어요.';
       }
     }
     return;
@@ -1906,6 +1911,13 @@ async function openPlanModal() {
   var me = await api('/api/auth/me');
   var allUsers = await api('/api/users');
   var myInfo = Array.isArray(allUsers) ? allUsers.find(function(u) { return u.nickname === me.nickname; }) : null;
+  // 무료 플랜은 연장 신청 비활성화
+  var extendWrap = document.getElementById('extendBtnWrap');
+  if (extendWrap) {
+    if (me.plan === 'free' || !me.plan) {
+      extendWrap.innerHTML = '<div style="font-size:12px;color:var(--txt2);padding:8px 0">무료 플랜은 연장 신청이 불가해요. 요금제 변경을 신청해주세요.</div>';
+    }
+  }
   var planName = '무료 체험';
   if (myInfo) {
     if (myInfo.plan === 'paid' && (myInfo.accountLimit || 3) >= 6) planName = '프로 (6계정)';
