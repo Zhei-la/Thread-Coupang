@@ -1205,7 +1205,13 @@ app.post('/api/auto-schedule', auth, (req, res) => {
   const user = users.find(u => u.id === req.userId);
   const settings = getSettings();
   if (user?.role !== 'admin') {
-    return res.status(403).json({ error: 'test' });
+    const settings2 = getSettings();
+    if (!settings2.autoSchedulerEnabled) {
+      return res.status(403).json({ error: 'disabled' });
+    }
+    if (user?.plan !== 'premium') {
+      return res.status(403).json({ error: 'premium_only' });
+    }
   }
   const { accountId, topics, tone, publishTime, commentTone, commentDelay, enabled, toneExample, tonePrompt } = req.body;
   const accs = getAccounts(req.userId);
@@ -1366,10 +1372,27 @@ cron.schedule('* * * * *', async () => {
         if (!selectedTopic) { console.log('[AUTO] 활성 주제 없음 - 건너뜀'); continue; }
         console.log(`[AUTO] 선택된 주제: ${selectedTopic}`);
 
-        const toneExample = sched.toneExample ? '\n\n말투 예시:\n' + sched.toneExample : '';
-        const tonePromptExtra = sched.tonePrompt ? '\n\n추가 스타일 지침:\n' + sched.tonePrompt : '';
-        const systemMsg = `절대 규칙: 주제가 영어 단어(AI, SNS 등)인 경우만 영어 허용. 한자, 일본어, 중국어, 기타 외국어 단 한 글자도 절대 금지. 오직 한국어로만 작성. 이모지 사용 금지. 존댓말 금지. 반말로만 작성. 게시글 텍스트만 출력.
-줄바꿈 규칙: 2~3문장마다 줄바꿈 1번. 너무 자주 줄바꾸지 말 것(한 문장마다 줄바꿈 금지). 문단 전환 시에만 빈 줄 1개. 빈 줄 2개 이상 연속 금지. 자연스러운 호흡으로 작성.` + (sched.toneExample ? ' 아래 말투 예시를 참고해서 비슷한 스타일로 작성해.' : '');
+        const toneExample = '';
+        const tonePromptExtra = '';
+        const toneExtraInstr = sched.toneExample ? '\n\n[말투 예시 - 반드시 이 스타일로 작성]\n' + sched.toneExample : '';
+        const promptExtraInstr = sched.tonePrompt ? '\n\n[추가 스타일 지침 - 반드시 따를 것]\n' + sched.tonePrompt : '';
+        const systemMsg = `[절대 규칙 - 위반 시 재생성]
+- 첫 줄은 반드시 읽는 사람이 멈추게 만드는 후킹 문장으로 시작
+- 자연스러운 한국어로만 작성
+- 이모지 사용 절대 금지
+- 영어, 한자, 일본어, 중국어, 전 세계 어느 언어든 외국어 절대 사용 금지
+  단, 주제에 직접 적혀있는 영어 단어는 그대로 사용 가능
+- 알 수 없는 문자, 깨진 글자, 특수기호 절대 금지
+- 같은 단어 반복 사용 금지
+- 한글과 기본 숫자만 사용
+- 존댓말 금지, 반말로만 작성
+- 게시글 텍스트만 출력 (설명, 주석, 따옴표 없이)
+
+[줄바꿈 규칙]
+- 2~3문장마다 줄바꿈 1번
+- 한 문장마다 줄바꿈 금지 (너무 자주 X)
+- 문단 전환 시에만 빈 줄 1개
+- 빈 줄 2개 이상 연속 금지` + toneExtraInstr + promptExtraInstr;
         const prompt = (tonePrompts[sched.tone] || tonePrompts['일상']) + toneExample + tonePromptExtra + '\n\n주제: ' + selectedTopic + '\n\n위 형식에 맞게 Threads 게시글을 작성해줘. 반드시 한국어로만, 이모지 없이, 줄바꿈 포함해서, 게시글 텍스트만 출력해.';
         const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
