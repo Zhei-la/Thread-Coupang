@@ -847,6 +847,10 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
 // ══════════════════════════════════
 
 app.post('/api/schedule', auth, (req, res) => {
+  const user = users.find(u => u.id === req.userId);
+  if (user?.plan === 'basic') {
+    return res.status(403).json({ error: '베이직 플랜은 예약 발행이 불가해요. 프로 이상으로 업그레이드해줘요.' });
+  }
   const { accountId, text, imageUrls, videoUrl, scheduledAt, commentText } = req.body;
   const accs = getAccounts(req.userId);
   const account = accs.find(a => a.id === accountId);
@@ -887,6 +891,10 @@ app.put('/api/schedule/:id', auth, (req, res) => {
 
 // 예약 즉시 발행
 app.post('/api/schedule/:id/publish-now', auth, async (req, res) => {
+  const user = users.find(u => u.id === req.userId);
+  if (user?.plan === 'basic') {
+    return res.status(403).json({ error: '베이직 플랜은 발행이 불가해요. 프로 이상으로 업그레이드해줘요.' });
+  }
   const posts = getScheduled(req.userId);
   const post = posts.find(p => p.id === req.params.id);
   if (!post) return res.status(404).json({ error: '없음' });
@@ -939,6 +947,14 @@ cron.schedule('* * * * *', async () => {
     const now = new Date();
     const pending = posts.filter(p => p.status === 'pending' && new Date(p.scheduledAt) <= now);
     if (!pending.length) continue;
+    // 베이직 플랜은 cron 발행도 차단
+    const cronUser = users.find(u => u.id === userId);
+    if (cronUser?.plan === 'basic') {
+      // 예약 항목 전부 취소 처리
+      pending.forEach(p => { p.status = 'failed'; p.error = '베이직 플랜 발행 불가'; });
+      saveScheduled(userId, posts);
+      continue;
+    }
     console.log(`[CRON] 유저 ${userId} - 발행 대기 ${pending.length}건`);
     let changed = false;
     for (const post of pending) {
