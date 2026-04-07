@@ -801,7 +801,13 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
 
   // 일별 발행 횟수 체크
   const user = users.find(u => u.id === req.userId);
-  // 관리자 무제한, 무료=2개, 베이직(3계정)=3개, 프로(6계정)=5개
+
+  // 베이직 플랜은 발행 완전 차단
+  if (user?.plan === 'basic') {
+    return res.status(403).json({ error: '베이직 플랜은 글 생성과 복사만 가능해요. 발행하려면 프로 이상으로 업그레이드해줘요.' });
+  }
+
+  // 관리자 무제한, 무료=2개, 프로=3개, 프리미엄=5개
   let dailyLimit = 5;
   if (user?.role === 'admin') dailyLimit = 9999;
   else if (user?.dailyPublishLimit) dailyLimit = user.dailyPublishLimit;
@@ -1432,4 +1438,3 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`서버 실행중: ${PORT}`));
-
