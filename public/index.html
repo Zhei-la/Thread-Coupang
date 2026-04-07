@@ -1620,6 +1620,16 @@ async function extendUserDays(id, days) {
 async function denyExtend(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyExtend: true } }); loadAdmin(); }
 async function approveUpgrade(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'paid', accountLimit: 2, approveUpgrade: true } }); loadAdmin(); }
 async function approveUpgrade6(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'paid', accountLimit: 6, approveUpgrade: true } }); loadAdmin(); }
+async function approvePlanChange(id, plan) {
+  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', approvePlanChange: true } });
+  if (d.error) return toast(d.error, 'err');
+  toast('요금제 변경 승인됐어!'); loadAdmin();
+}
+async function denyPlanChange(id) {
+  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyPlanChange: true } });
+  if (d.error) return toast(d.error, 'err');
+  toast('요금제 변경 거절됐어!'); loadAdmin();
+}
 async function denyUpgrade(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyUpgrade: true } }); loadAdmin(); }
 async function approveFree(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'free', planDays: 7, accountLimit: 1 } }); toast('무료 7일 승인!'); loadAdmin(); }
 
