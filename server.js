@@ -493,7 +493,7 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
 app.get('/api/accounts', auth, (req, res) => {
   const accs = getAccounts(req.userId);
   // 토큰은 앞 6자리만 노출
-  res.json(accs.map(a => ({ ...a, accessToken: (a.accessToken || '').slice(0, 6) + '...' + (a.accessToken || '').slice(-4) })));
+  res.json(accs.map(a => ({ ...a, accessToken: (a.accessToken || '').slice(0, 6) + '...' + (a.accessToken || '').slice(-4), tokenRegisteredAt: a.tokenRegisteredAt || null })));
 });
 
 app.post('/api/accounts', auth, (req, res) => {
@@ -506,7 +506,7 @@ app.post('/api/accounts', auth, (req, res) => {
   if (user?.role !== 'admin' && accs.length >= limit) {
     return res.status(400).json({ error: `계정은 최대 ${limit}개까지 등록 가능해` });
   }
-  const acc = { id: Date.now().toString(), name, accessToken, topics: topics || [] };
+  const acc = { id: Date.now().toString(), name, accessToken, topics: topics || [], tokenRegisteredAt: new Date().toISOString() };
   accs.push(acc);
   saveAccounts(req.userId, accs);
   res.json(acc);
@@ -1314,10 +1314,10 @@ cron.schedule('* * * * *', async () => {
   for (const userId of userDirs) {
     const user = users.find(u => u.id === userId);
     if (!user) continue;
-    // 관리자이거나 전체 활성화 + 프리미엄(6개) 유저만
+    // 관리자이거나 (자동스케줄러 활성화 + 프리미엄 플랜) 유저만
     if (user.role !== 'admin') {
-      if (!settings.autoSchedulerEnabled) { continue; }
-      if ((user.accountLimit || 3) < 6) { continue; }
+      if (!settings.autoSchedulerEnabled) { continue; } // 비활성화면 전체 중지
+      if (user.plan !== 'premium') { continue; } // 프리미엄만 허용
     }
     const autoSchedules = getAutoSchedules(userId);
     console.log(`[AUTO-CRON] 유저 ${user.nickname}(${user.role}) - 스케줄 ${autoSchedules.length}개`);
