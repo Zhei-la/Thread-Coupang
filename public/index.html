@@ -1420,11 +1420,13 @@ async function loadAdmin() {
   pCount.style.display = pending.length ? '' : 'none';
   pEl.innerHTML = pending.length ? pending.map(function(u) {
     return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px">' + (u.name || '-') + ' <span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span></div></div>' +
-      '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
-      '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\',2)">승인 2개(베이직)</button>' +
-      '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\',6)">승인 6개</button>' +
+      '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">' +
       '<button class="btn btn-sm" style="border-color:var(--blue);color:var(--blue)" onclick="approveFree(\'' + u.id + '\')">무료 7일</button>' +
-      '<button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">거절</button></div></div>';
+      '<button class="btn btn-sm" style="border-color:#aaa;color:#aaa" onclick="approvePlan(\'' + u.id + '\',\'basic\')">베이직</button>' +
+      '<button class="btn btn-sm btn-g" onclick="approvePlan(\'' + u.id + '\',\'pro\')">프로</button>' +
+      '<button class="btn btn-sm" style="border-color:var(--yellow);color:var(--yellow)" onclick="approvePlan(\'' + u.id + '\',\'premium\')">프리미엄</button>' +
+      '<button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">거절</button>' +
+      '</div></div>';
   }).join('') : '<div style="color:var(--txt2);font-size:14px">대기중 없음</div>';
 
   var limitReqs = users.filter(function(u) { return (u.limitRequest || u.extendRequest) && u.status === 'approved'; });
