@@ -555,11 +555,13 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
     genCount[genKey] = (genCount[genKey] || 0) + 1;
     savePublishCount(req.userId, genCount);
   }
-  const { topic, tone, type, imageDesc } = req.body;
+  const { topic, tone, type, imageDesc, userPrompt, commentPrompt } = req.body;
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'GROQ_API_KEY 없음' });
 
   const imgContext = imageDesc ? `\n[이미지 분석 결과 - 이 상품/내용으로 글 작성]: ${imageDesc}` : '';
+  const customUserPrompt = userPrompt ? String(userPrompt).slice(0, 500) : '';
+  const customCommentPrompt = commentPrompt ? String(commentPrompt).slice(0, 300) : '';
 
   const tonePrompts = {
     '리스트형': `너는 리스트형 SNS 콘텐츠 작성자다.
@@ -1342,6 +1344,24 @@ function saveAutoLog(userId, log) {
 app.get('/api/auto-logs', auth, (req, res) => {
   const logs = getAutoLogs(req.userId);
   res.json(logs.slice(0, 5)); // 최근 5개만
+});
+
+// ── 매일 자정 만료 처리 cron (KST 기준 00:00 = UTC 15:00) ──
+cron.schedule('0 15 * * *', () => {
+  const now = new Date();
+  let changed = false;
+  users.forEach(u => {
+    if (u.role === 'admin' || !u.expiresAt) return;
+    const exp = new Date(u.expiresAt);
+    // 만료됐는데 아직 approved면 suspended로 변경
+    if (exp < now && u.status === 'approved') {
+      u.status = 'suspended';
+      u._expiredAt = now.toISOString();
+      changed = true;
+      console.log(`[EXPIRE] ${u.nickname} 만료로 정지`);
+    }
+  });
+  if (changed) saveJSON(`${DATA_ROOT}/users.json`, users);
 });
 
 // 자동 스케줄러 cron (매 분마다 체크)
