@@ -591,15 +591,14 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
 - 리스트형 외 번호·불릿 금지.
 
 [줄바꿈 - 필수 규칙]
-- 문장 하나가 끝나면 줄바꿈(엔터) 1번.
-- 내용이 바뀌는 구간에서만 빈 줄(엔터 2번) 1개.
-- 절대로 문장을 같은 줄에 이어붙이지 말 것.
+- 짧은 문장(20자 이하): 2~3줄 연속으로 붙여서 작성. 줄바꿈은 하되 빈 줄 없이.
+- 긴 문장(20자 초과): 그 문장 앞뒤로 빈 줄(엔터 2번) 1개씩.
 - 형식 예시:
   짧은 문장
   짧은 문장
   짧은 문장
 
-  긴 내용의 문장
+  20자가 넘어가는 조금 긴 내용의 문장이 여기 들어감
 
   짧은 문장
   짧은 문장
@@ -662,8 +661,33 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
   // 마침표 제거 (문장 끝 마침표만, 줄임표 ... 는 유지)
   text = text.replace(/\.(?!\.|\d)/g, '');
 
-  // 줄바꿈 정리 - 빈줄 3개 이상 → 2개로
-  text = text.replace(/\n{3,}/g, '\n\n').trim();
+  // 줄바꿈 재정렬: 짧은 줄(20자 이하)은 붙이고, 긴 줄은 빈 줄로 분리
+  const rawLines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const result = [];
+  let i = 0;
+  while (i < rawLines.length) {
+    const line = rawLines[i];
+    if (line.length <= 20) {
+      // 짧은 줄: 이어지는 짧은 줄들 모으기 (최대 3줄)
+      const group = [line];
+      let j = i + 1;
+      while (j < rawLines.length && rawLines[j].length <= 20 && group.length < 3) {
+        group.push(rawLines[j]);
+        j++;
+      }
+      if (result.length > 0 && result[result.length - 1] !== '') result.push('');
+      result.push(...group);
+      i = j;
+    } else {
+      // 긴 줄: 앞뒤 빈 줄
+      if (result.length > 0 && result[result.length - 1] !== '') result.push('');
+      result.push(line);
+      result.push('');
+      i++;
+    }
+  }
+  // 앞뒤 빈줄 정리
+  text = result.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 
   res.json({ text, usedFallback });
 });
@@ -1212,7 +1236,7 @@ cron.schedule('* * * * *', async () => {
 - "~했어" "~하더라" "~인 것 같음" "~임" "~네" 같은 말투.
 - 이모지 금지. 반말만. 제품명 직접 언급 금지.
 - 리스트형 외 번호·불릿 금지.
-- 문장 하나 끝나면 줄바꿈 1번. 내용 바뀔 때만 빈 줄 1개.
+- 짧은 문장(20자 이하)은 2~3줄 붙여서. 긴 문장(20자 초과)은 앞뒤 빈 줄 1개.
 - 텍스트만 출력.` + toneExtraInstr + promptExtraInstr;
 
         const prompt = (toneDesc[sched.tone] || toneDesc['일상']) + '\n\n주제: ' + selectedTopic + '\n\n자연스러운 Threads 게시글. 한국어만. 이모지 없이. 텍스트만 출력.';
