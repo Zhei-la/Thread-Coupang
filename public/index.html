@@ -263,10 +263,11 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <div class="chip active" onclick="pickCoupangCount(this)">1개</div>
           <div class="chip" onclick="pickCoupangCount(this)">2개</div>
           <div class="chip" onclick="pickCoupangCount(this)">3개</div>
+          <div class="chip" onclick="pickCoupangCount(this)">4개</div>
           <div class="chip" onclick="pickCoupangCount(this)">5개</div>
         </div>
         
-        <label class="label">링크 입력 (1개)</label>
+        <label class="label">링크 입력</label>
         <input id="coupangLinks" placeholder="https://coupang.com/..." style="margin-bottom:10px" />
         
         <div style="display:flex;gap:8px">
@@ -1040,22 +1041,40 @@ function showCommentReserve() {
   }
 }
 
+// 쿠팡 삽입 내용 추적 (중복 방지)
+var _lastCoupangBlock = '';
+
 function applyCoupangComment() {
   var link = document.getElementById('coupangLinks').value.trim();
-  var commentText = document.getElementById('commentText').value.trim();
   if (!link) return toast('링크를 먼저 입력해줘', 'err');
   var notice = (document.getElementById('coupangNoticeText').value.trim()) || '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
   var cnt = coupangLinkCount || 1;
   var links = Array(cnt).fill(link).join('\n');
   var pos = coupangPosition || '중간';
-  var result = '';
-  if (pos === '맨 위') result = notice + '\n\n' + commentText + '\n\n' + links;
-  else if (pos === '중간') result = commentText + '\n\n' + notice + '\n\n' + links;
-  else result = commentText + '\n\n' + links + '\n\n' + notice;
-  document.getElementById('commentText').value = result;
+
+  // 댓글 현재 내용에서 이전 쿠팡 블록 제거
+  var commentEl = document.getElementById('commentText');
+  var raw = commentEl.value;
+  if (_lastCoupangBlock) {
+    raw = raw.replace(_lastCoupangBlock, '').trim();
+  }
+
+  // 새 쿠팡 블록 생성
+  var coupangBlock = '';
+  if (pos === '맨 위') {
+    coupangBlock = notice + '\n\n' + links;
+    commentEl.value = coupangBlock + (raw ? '\n\n' + raw : '');
+  } else if (pos === '중간') {
+    coupangBlock = notice + '\n\n' + links;
+    commentEl.value = (raw ? raw + '\n\n' : '') + coupangBlock;
+  } else {
+    coupangBlock = links + '\n\n' + notice;
+    commentEl.value = (raw ? raw + '\n\n' : '') + coupangBlock;
+  }
+
+  _lastCoupangBlock = coupangBlock;
   toast('쿠팡 링크 적용됐어!');
-  return; // 아래 구버전 코드 실행 방지
-  var oldResult = '[쿠팡 파트너스 활동으로 수수료를 제공받을 수 있습니다]';
+  showCommentReserve();
   if (commentText) result += '\n\n' + commentText;
   result += '\n\n' + link + '\n' + link + '\n' + link;
   document.getElementById('commentText').value = result;
@@ -1643,49 +1662,14 @@ async function loadAdmin() {
   var partnerUsers = allActive.filter(function(u) { return u.joinedVia === 'partner'; });
   var normalUsers = allActive.filter(function(u) { return u.joinedVia !== 'partner'; });
 
-  function renderUser(u) {
-    var isExpired = u.expiresAt && new Date(u.expiresAt) < new Date();
-    var sb = isExpired ? '<span class="badge br">기간만료</span>' : (u.status === 'approved' ? '<span class="badge bg">사용중</span>' : '<span class="badge br">정지</span>');
-    var planLabel = u.plan === 'basic' ? '베이직' : u.plan === 'pro' ? '프로' : u.plan === 'premium' ? '프리미엄' : '무료체험';
-    var planColor = u.plan === 'premium' ? 'by' : u.plan === 'pro' ? 'bg' : u.plan === 'basic' ? 'bb' : 'br';
-    var pb = '<span class="badge ' + planColor + '">' + planLabel + '</span>';
-    var expInfo = '';
-    if (u.expiresAt) {
-      var diff = Math.ceil((new Date(u.expiresAt) - new Date()) / 86400000);
-      expInfo = diff < 0 ? '<span style="color:var(--red);font-weight:700">만료됨</span>' : '<b>' + diff + '일 남음</b>';
-    }
-    var statusBtn = u.status === 'approved' && !isExpired
-      ? '<button class="btn btn-sm btn-r" onclick="setStatus(\'' + u.id + '\',\'suspended\')">정지</button>'
-      : '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\')">활성화</button>';
-    var btns = u.role !== 'admin' ? (
-      '<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">' +
-      '<div style="display:flex;gap:4px">' + statusBtn + '<button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">삭제</button></div>' +
-      '<div style="display:flex;gap:4px">' +
-        '<button class="btn btn-sm" style="color:var(--red);border-color:var(--red);padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',-10)">-10일</button>' +
-        '<button class="btn btn-sm" style="color:var(--red);border-color:var(--red);padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',-1)">-1일</button>' +
-        '<button class="btn btn-sm" style="padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',1)">+1일</button>' +
-        '<button class="btn btn-sm" style="padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',10)">+10일</button>' +
-      '</div>' +
-      '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
-        '<button class="btn btn-sm" style="font-size:11px;border-color:var(--blue);color:var(--blue);padding:4px 7px" onclick="extendUserDays(\'' + u.id + '\',1)">무료<br>+1일</button>' +
-        '<button class="btn btn-sm" style="font-size:11px;border-color:#666;color:#aaa;padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'basic\')">베이직<br>30일</button>' +
-        '<button class="btn btn-sm btn-g" style="font-size:11px;padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'pro\')">프로<br>30일</button>' +
-        '<button class="btn btn-sm" style="font-size:11px;border-color:var(--yellow);color:var(--yellow);padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'premium\')">프리미엄<br>60일</button>' +
-      '</div>' +
-      '</div>'
-    ) : '';
-    return '<div class="list-item" style="align-items:flex-start"><div style="flex:1;min-width:0">' +
-      '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap">' +
-      '<span style="font-weight:700;font-size:14px">' + (u.name || '-') + '</span>' +
-      '<span style="color:var(--txt2);font-size:12px">(' + u.nickname + ')</span>' +
-      '<span class="badge ' + (u.role === 'admin' ? 'bb' : 'by') + '">' + (u.role === 'admin' ? '관리자' : '멤버') + '</span>' +
-      sb + pb + '</div>' +
-      '<div style="font-size:12px;color:var(--txt2)">' + expInfo + '</div>' +
-      '</div>' + btns + '</div>';
-  }
-
   _cachedPartnerUsers = partnerUsers;
   _cachedNormalUsers = normalUsers;
+
+  // 검색창 초기화 후 전체 표시
+  var psEl = document.getElementById('partnerSearch');
+  var nsEl = document.getElementById('normalSearch');
+  if (psEl) psEl.value = '';
+  if (nsEl) nsEl.value = '';
 
   var puEl = document.getElementById('partnerUserList');
   var puCount = document.getElementById('partnerUserCount');
@@ -1695,7 +1679,7 @@ async function loadAdmin() {
   var uEl = document.getElementById('userList');
   var uCount = document.getElementById('userCount');
   uCount.textContent = '(' + normalUsers.length + '명)';
-  uEl.innerHTML = normalUsers.map(renderUser).join('') || '<div style="color:var(--txt2);font-size:14px">유저 없음</div>';
+  uEl.innerHTML = normalUsers.length ? normalUsers.map(renderUser).join('') : '<div style="color:var(--txt2);font-size:14px">유저 없음</div>';
 }
 
 async function makeInvite() {
@@ -1732,6 +1716,52 @@ async function setPlanAndExtend(id, plan) {
 var _cachedPartnerUsers = [];
 var _cachedNormalUsers = [];
 
+function renderUser(u) {
+  var isExpired = u.expiresAt && new Date(u.expiresAt) < new Date();
+  var sb = isExpired
+    ? '<span class="badge br">기간만료</span>'
+    : (u.status === 'approved' ? '<span class="badge bg">사용중</span>' : '<span class="badge br">정지</span>');
+  var planLabel = u.plan === 'basic' ? '베이직' : u.plan === 'pro' ? '프로' : u.plan === 'premium' ? '프리미엄' : '무료체험';
+  var planColor = u.plan === 'premium' ? 'by' : u.plan === 'pro' ? 'bg' : u.plan === 'basic' ? 'bb' : 'br';
+  var pb = '<span class="badge ' + planColor + '">' + planLabel + '</span>';
+  var expInfo = '';
+  if (u.expiresAt) {
+    var diff = Math.ceil((new Date(u.expiresAt) - new Date()) / 86400000);
+    expInfo = diff < 0
+      ? '<span style="color:var(--red);font-weight:700">만료됨</span>'
+      : '<b>' + diff + '일 남음</b>';
+  }
+  var statusBtn = (u.status === 'approved' && !isExpired)
+    ? '<button class="btn btn-sm btn-r" onclick="setStatus(\'' + u.id + '\',\'suspended\')">정지</button>'
+    : '<button class="btn btn-sm btn-g" onclick="setStatus(\'' + u.id + '\',\'approved\')">활성화</button>';
+  var delBtn = '<button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">삭제</button>';
+  var dayBtns = '<div style="display:flex;gap:4px">'
+    + '<button class="btn btn-sm" style="color:var(--red);border-color:var(--red);padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',-10)">-10일</button>'
+    + '<button class="btn btn-sm" style="color:var(--red);border-color:var(--red);padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',-1)">-1일</button>'
+    + '<button class="btn btn-sm" style="padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',1)">+1일</button>'
+    + '<button class="btn btn-sm" style="padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',10)">+10일</button>'
+    + '</div>';
+  var planBtns = '<div style="display:flex;gap:4px;flex-wrap:wrap">'
+    + '<button class="btn btn-sm" style="font-size:11px;border-color:var(--blue);color:var(--blue);padding:4px 7px" onclick="extendUserDays(\'' + u.id + '\',1)">무료<br>+1일</button>'
+    + '<button class="btn btn-sm" style="font-size:11px;border-color:#666;color:#aaa;padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'basic\')">베이직<br>30일</button>'
+    + '<button class="btn btn-sm btn-g" style="font-size:11px;padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'pro\')">프로<br>30일</button>'
+    + '<button class="btn btn-sm" style="font-size:11px;border-color:var(--yellow);color:var(--yellow);padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'premium\')">프리미엄<br>60일</button>'
+    + '</div>';
+  var btns = u.role !== 'admin'
+    ? '<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">'
+      + '<div style="display:flex;gap:4px">' + statusBtn + delBtn + '</div>'
+      + dayBtns + planBtns
+      + '</div>'
+    : '';
+  return '<div class="list-item" style="align-items:flex-start"><div style="flex:1;min-width:0">'
+    + '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap">'
+    + '<span style="font-weight:700;font-size:14px">' + (u.name || '-') + '</span>'
+    + '<span style="color:var(--txt2);font-size:12px">(' + u.nickname + ')</span>'
+    + '<span class="badge ' + (u.role === 'admin' ? 'bb' : 'by') + '">' + (u.role === 'admin' ? '관리자' : '멤버') + '</span>'
+    + sb + pb + '</div>'
+    + '<div style="font-size:12px;color:var(--txt2)">' + expInfo + '</div>'
+    + '</div>' + btns + '</div>';
+}
 function filterUsers(type) {
   var searchEl = document.getElementById(type === 'partner' ? 'partnerSearch' : 'normalSearch');
   var listEl = document.getElementById(type === 'partner' ? 'partnerUserList' : 'userList');
@@ -2263,17 +2293,27 @@ async function updateSideExpire() {
       }
     }
 
-    // 만료 경고 (10일 이하)
+    // 만료 경고 (7일 이하 연장 문의 안내)
     if (me.expiresAt) {
       var diff2 = Math.ceil((new Date(me.expiresAt) - new Date()) / 86400000);
       var expireEl = document.getElementById('sideExpireInfo');
       var expireText = document.getElementById('sideExpireText');
       if (expireEl && expireText) {
-        if (diff2 <= 10) {
+        if (diff2 < 0) {
           expireEl.style.display = 'block';
-          expireEl.style.borderColor = diff2 < 0 ? 'var(--red)' : 'var(--yellow)';
-          expireText.style.color = diff2 < 0 ? 'var(--red)' : 'var(--yellow)';
-          expireText.textContent = diff2 < 0 ? '⚠️ 만료됨' : '⚠️ ' + diff2 + '일 남음';
+          expireEl.style.borderColor = 'var(--red)';
+          expireText.style.color = 'var(--red)';
+          expireText.textContent = '⚠️ 사용 기간이 만료됐어요. 카카오로 문의해주세요.';
+        } else if (diff2 <= 7) {
+          expireEl.style.display = 'block';
+          expireEl.style.borderColor = 'var(--yellow)';
+          expireText.style.color = 'var(--yellow)';
+          expireText.textContent = '⏰ ' + diff2 + '일 남음 — 연장 문의를 미리 해두세요!';
+        } else if (diff2 <= 14) {
+          expireEl.style.display = 'block';
+          expireEl.style.borderColor = 'var(--bdr)';
+          expireText.style.color = 'var(--txt2)';
+          expireText.textContent = diff2 + '일 남음';
         } else {
           expireEl.style.display = 'none';
         }
