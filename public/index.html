@@ -200,7 +200,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <label class="label">말투</label>
         <div id="toneChipsWrap">
           <div class="chips" id="toneChips">
-            <div class="chip locked" style="border-color:var(--red);color:var(--red);cursor:default" onclick="pickTone(this)">쿠팡/홍보</div>
+            <div class="chip" data-locked="1" onclick="pickTone(this)">쿠팡/홍보</div>
             <div class="chip active" onclick="pickTone(this)">리스트형</div>
             <div class="chip" onclick="pickTone(this)">정보성</div>
             <div class="chip" onclick="pickTone(this)">리뷰형</div>
@@ -896,6 +896,7 @@ function addCustomTone() {
 }
 
 function showDeleteTone(chip, val) {
+  if (chip.getAttribute('data-locked')) { toast('기본 말투는 삭제할 수 없어!', 'err'); return; }
   if (confirm('"' + val + '" 말투를 삭제할까요?')) {
     chip.remove();
     toast(val + ' 삭제됐어!');
@@ -930,7 +931,6 @@ function loadCoupangSettings() {
 }
 
 function pickTone(el) {
-  if (el.classList.contains('locked')) return; // 쿠팡/홍보 고정 칩은 선택만 토글
   document.querySelectorAll('#toneChips .chip').forEach(function(c) { c.classList.remove('active'); });
   el.classList.add('active');
   tone = el.textContent;
