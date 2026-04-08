@@ -1083,7 +1083,8 @@ function showCommentReserve() {
 }
 
 // 쿠팡 삽입 내용 추적 (중복 방지)
-var _lastCoupangBlock = '';
+var _lastCoupangNotice = '';
+var _lastCoupangLinks = '';
 
 function applyCoupangComment() {
   var link = document.getElementById('coupangLinks').value.trim();
@@ -1091,37 +1092,31 @@ function applyCoupangComment() {
   var notice = (document.getElementById('coupangNoticeText').value.trim()) || '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
   var cnt = coupangLinkCount || 1;
   var links = Array(cnt).fill(link).join('\n');
-  var pos = coupangPosition || '중간';
+  var pos = coupangPosition || '1번';
 
-  // 댓글 현재 내용에서 이전 쿠팡 블록 제거
   var commentEl = document.getElementById('commentText');
   var raw = commentEl.value;
-  if (_lastCoupangBlock) {
-    raw = raw.replace(_lastCoupangBlock, '').trim();
-  }
 
-  // 새 쿠팡 블록 생성
-  // 1번: 파트너스문구 / 댓글생성 / 링크
-  // 2번: 파트너스문구 / 링크 / 댓글생성
-  // 3번: 댓글생성 / 파트너스문구 / 링크
-  var coupangBlock = '';
+  // 이전에 삽입된 문구+링크 제거 (댓글 원문만 남김)
+  if (_lastCoupangNotice) raw = raw.split(_lastCoupangNotice).join('');
+  if (_lastCoupangLinks) raw = raw.split(_lastCoupangLinks).join('');
+  raw = raw.replace(/\n{3,}/g, '\n\n').trim();
+
+  // 위치별 조합
+  // 1번: 파트너스문구 → 댓글 → 링크
+  // 2번: 파트너스문구 → 링크 → 댓글
+  // 3번: 댓글 → 파트너스문구 → 링크
   if (pos === '1번') {
-    commentEl.value = notice + '\n\n' + (raw ? raw + '\n\n' : '') + links;
-    coupangBlock = notice + '\n\n' + links;
+    commentEl.value = notice + (raw ? '\n\n' + raw : '') + '\n\n' + links;
   } else if (pos === '2번') {
     commentEl.value = notice + '\n\n' + links + (raw ? '\n\n' + raw : '');
-    coupangBlock = notice + '\n\n' + links;
   } else {
     commentEl.value = (raw ? raw + '\n\n' : '') + notice + '\n\n' + links;
-    coupangBlock = notice + '\n\n' + links;
   }
 
-  _lastCoupangBlock = coupangBlock;
+  _lastCoupangNotice = notice;
+  _lastCoupangLinks = links;
   toast('쿠팡 링크 적용됐어!');
-  showCommentReserve();
-  if (commentText) result += '\n\n' + commentText;
-  result += '\n\n' + link + '\n' + link + '\n' + link;
-  document.getElementById('commentText').value = result;
   showCommentReserve();
   toast('댓글란에 적용됐어!');
 }
@@ -2424,4 +2419,3 @@ init();
 </script>
 </body>
 </html>
-
