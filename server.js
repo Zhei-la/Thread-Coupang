@@ -576,28 +576,36 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
 
   const toneInstruction = tonePrompts[tone] || tonePrompts['일상'];
 
-  const systemMsg = `너는 한국어 SNS 콘텐츠 작가다.
+  const systemMsg = `너는 SNS에 글 올리는 평범한 한국인이다. AI가 쓴 것처럼 보이면 절대 안 된다.
 
-[언어 규칙]
+[언어]
 - 한국어만. 한자·일본어·영어 절대 금지 (주제에 포함된 영어 단어 제외).
-- 알 수 없는 문자·깨진 글자 절대 금지.
 
-[스타일]
-- 위트 있고 센스 있게. 뻔한 말 절대 금지.
-- 간결하고 포인트 있게. 군더더기 없이.
-- 자연스럽게 읽히는 흐름. 한 문장에 하나의 생각.
-- "이거" "요거" 남발 금지. 꼭 필요할 때만.
+[말투 - 가장 중요]
+- 진짜 사람이 폰으로 빠르게 치는 것처럼 써.
+- 문장 끝에 마침표(.) 절대 금지. 물음표(?)·느낌표(!)도 꼭 필요할 때만.
+- 완성된 문장보다 말하다 끊긴 느낌이 자연스러움.
+- "~했어" "~하더라" "~인 것 같음" "~임" "~네" 같은 말투.
+- 뻔한 표현 금지: "정말", "진짜로", "꼭", "반드시", "최고" 이런 거 남발 금지.
 - 이모지 금지. 반말만. 제품명·브랜드명 직접 언급 금지.
 - 리스트형 외 번호·불릿 금지.
 
-[출력]
-- 게시글 텍스트만. 설명·주석·따옴표 없이.
+[줄바꿈 - 필수 규칙]
+- 문장 하나가 끝나면 줄바꿈(엔터) 1번.
+- 내용이 바뀌는 구간에서만 빈 줄(엔터 2번) 1개.
+- 절대로 문장을 같은 줄에 이어붙이지 말 것.
+- 형식 예시:
+  짧은 문장
+  짧은 문장
+  짧은 문장
 
-[줄바꿈 규칙 - 매우 중요]
-- 짧은 글(전체 3문장 이하): 문장을 이어서 작성. 매 문장마다 줄바꿈 금지.
-- 긴 글(전체 4문장 이상): 2~3문장 단위로 줄바꿈 1번.
-- 빈 줄(\n\n)은 문단이 완전히 바뀔 때만. 남발 절대 금지.
-- 한 문장 쓰고 줄바꿈하는 패턴 절대 금지.`;
+  긴 내용의 문장
+
+  짧은 문장
+  짧은 문장
+
+[출력]
+- 게시글 텍스트만. 설명·주석·따옴표 없이.`;
 
   let prompt = '';
   if (type === 'comment') {
@@ -651,18 +659,11 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
     text = text.replace(/[\u3400-\u4DBF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uF900-\uFAFF]/g, '').replace(/  +/g, ' ').trim();
   }
 
-  // 줄바꿈 후처리
-  // 1. 연속 빈줄 3개 이상 → 1개로
-  text = text.replace(/\n{3,}/g, '\n\n');
-  // 2. 전체 줄 수 세기
-  const lines = text.split('\n').filter(l => l.trim());
-  if (lines.length <= 3) {
-    // 짧은 글: 빈줄 제거하고 줄바꿈 1개만 사용
-    text = lines.join('\n');
-  } else {
-    // 긴 글: 빈줄 2개 이상 연속 → 1개로만 제한
-    text = text.replace(/\n{2,}/g, '\n\n').trim();
-  }
+  // 마침표 제거 (문장 끝 마침표만, 줄임표 ... 는 유지)
+  text = text.replace(/\.(?!\.|\d)/g, '');
+
+  // 줄바꿈 정리 - 빈줄 3개 이상 → 2개로
+  text = text.replace(/\n{3,}/g, '\n\n').trim();
 
   res.json({ text, usedFallback });
 });
@@ -1203,8 +1204,16 @@ cron.schedule('* * * * *', async () => {
 
         const toneExtraInstr = sched.toneExample ? '\n\n[말투 예시 - 반드시 이 스타일로]\n' + sched.toneExample : '';
         const promptExtraInstr = sched.tonePrompt ? '\n\n[추가 지침]\n' + sched.tonePrompt : '';
-        const systemMsg = `너는 한국어 SNS 콘텐츠 작가다.
-한국어만. 이모지 금지. 반말만. 간결하게. 뻔한 말 금지. 리스트형 외 번호불릿 금지. 텍스트만 출력.` + toneExtraInstr + promptExtraInstr;
+        const systemMsg = `너는 SNS에 글 올리는 평범한 한국인이다. AI가 쓴 것처럼 보이면 절대 안 된다.
+- 한국어만. 한자·일본어·영어 절대 금지 (주제에 포함된 영어 단어 제외).
+- 진짜 사람이 폰으로 빠르게 치는 것처럼 써.
+- 문장 끝에 마침표(.) 절대 금지.
+- 완성된 문장보다 말하다 끊긴 느낌이 자연스러움.
+- "~했어" "~하더라" "~인 것 같음" "~임" "~네" 같은 말투.
+- 이모지 금지. 반말만. 제품명 직접 언급 금지.
+- 리스트형 외 번호·불릿 금지.
+- 문장 하나 끝나면 줄바꿈 1번. 내용 바뀔 때만 빈 줄 1개.
+- 텍스트만 출력.` + toneExtraInstr + promptExtraInstr;
 
         const prompt = (toneDesc[sched.tone] || toneDesc['일상']) + '\n\n주제: ' + selectedTopic + '\n\n자연스러운 Threads 게시글. 한국어만. 이모지 없이. 텍스트만 출력.';
 
