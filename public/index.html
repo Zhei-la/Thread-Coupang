@@ -214,8 +214,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           </div>
           <div style="font-size:11px;color:var(--txt2);margin-top:4px">칩 길게 누르면 삭제 가능</div>
         </div>
-        <label class="label" style="margin-top:12px">글 생성 프롬프트 <span style="color:var(--txt2);font-size:11px">(선택 - 내 스타일 지정)</span></label>
-        <textarea id="userPostPrompt" placeholder="예) 3~4문장으로 짧게, 경험담처럼, 마지막에 질문으로 마무리" style="min-height:50px;font-size:13px;margin-bottom:12px"></textarea>
+        <label class="label" style="margin-top:12px">글 생성 프롬프트 <span style="color:var(--txt2);font-size:11px">(선택 - 새로고침해도 유지됨)</span></label>
+        <textarea id="userPostPrompt" placeholder="예) 3~4문장으로 짧게, 경험담처럼, 마지막에 질문으로 마무리" style="min-height:50px;font-size:13px;margin-bottom:6px"></textarea>
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <button class="btn btn-sm" onclick="savePostPrompt()" style="flex:1">💾 저장</button>
+          <button class="btn btn-sm" onclick="clearPostPrompt()" style="color:var(--txt2)">초기화</button>
+        </div>
         <button class="btn btn-p" onclick="genPost()" id="genBtn">🪄 글 생성</button>
         <div style="margin-top:8px;padding:8px 10px;background:rgba(239,68,68,.08);border-radius:6px;font-size:11px;color:var(--txt2);line-height:1.7">
           ⚠️ 발행은 최소 <b>3시간 간격</b>을 권장해요. 너무 자주 발행하면 Threads 제재를 받을 수 있어요.<br>
@@ -232,8 +236,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       </div>
       <div class="card">
         <h2>댓글</h2>
-        <label class="label">댓글 생성 프롬프트 <span style="color:var(--txt2);font-size:11px">(선택)</span></label>
-        <textarea id="userCommentPrompt" placeholder="예) 공감하는 척하면서 궁금증 유발, 1문장으로" style="min-height:44px;font-size:13px;margin-bottom:10px"></textarea>
+        <label class="label">댓글 생성 프롬프트 <span style="color:var(--txt2);font-size:11px">(선택 - 새로고침해도 유지됨)</span></label>
+        <textarea id="userCommentPrompt" placeholder="예) 공감하는 척하면서 궁금증 유발, 1문장으로" style="min-height:44px;font-size:13px;margin-bottom:4px"></textarea>
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <button class="btn btn-sm" onclick="saveCommentPrompt()" style="flex:1">💾 저장</button>
+          <button class="btn btn-sm" onclick="clearCommentPrompt()" style="color:var(--txt2)">초기화</button>
+        </div>
         <textarea id="commentText" placeholder="댓글이 여기 생성됩니다..."></textarea>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button class="btn btn-sm" onclick="genComment()">🪄 댓글 생성</button>
@@ -781,6 +789,7 @@ function enterApp(user) {
   updateSideExpire();
   loadAdBanner();
   loadCoupangSettings();
+  loadSavedPrompts();
   updateSidePlanInfo();
   // 베이직 플랜이면 계정 추가 폼 숨기고 태그 전용 UI 표시
   if (user.plan === 'basic') {
@@ -910,6 +919,33 @@ function saveCoupangSettings() {
   localStorage.setItem('coupangPosition', coupangPosition);
   localStorage.setItem('coupangLinkCount', coupangLinkCount);
   toast('쿠팡 설정 저장됐어!');
+}
+
+function savePostPrompt() {
+  var val = document.getElementById('userPostPrompt').value.trim();
+  localStorage.setItem('userPostPrompt', val);
+  toast('글 프롬프트 저장됐어!');
+}
+function clearPostPrompt() {
+  document.getElementById('userPostPrompt').value = '';
+  localStorage.removeItem('userPostPrompt');
+  toast('초기화됐어!');
+}
+function saveCommentPrompt() {
+  var val = document.getElementById('userCommentPrompt').value.trim();
+  localStorage.setItem('userCommentPrompt', val);
+  toast('댓글 프롬프트 저장됐어!');
+}
+function clearCommentPrompt() {
+  document.getElementById('userCommentPrompt').value = '';
+  localStorage.removeItem('userCommentPrompt');
+  toast('초기화됐어!');
+}
+function loadSavedPrompts() {
+  var post = localStorage.getItem('userPostPrompt');
+  var comment = localStorage.getItem('userCommentPrompt');
+  if (post) document.getElementById('userPostPrompt').value = post;
+  if (comment) document.getElementById('userCommentPrompt').value = comment;
 }
 
 function loadCoupangSettings() {
