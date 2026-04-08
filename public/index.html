@@ -261,9 +261,9 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         
         <label class="label">문구 위치</label>
         <div class="chips" id="coupangPosChips" style="margin-bottom:10px">
-          <div class="chip" onclick="pickCoupangPos(this)">맨 위</div>
-          <div class="chip active" onclick="pickCoupangPos(this)">중간</div>
-          <div class="chip" onclick="pickCoupangPos(this)">맨 아래</div>
+          <div class="chip active" onclick="pickCoupangPos(this)">1번</div>
+          <div class="chip" onclick="pickCoupangPos(this)">2번</div>
+          <div class="chip" onclick="pickCoupangPos(this)">3번</div>
         </div>
         
         <label class="label">링크 개수 <span style="color:var(--txt2);font-size:11px">(최대 5개)</span></label>
@@ -517,6 +517,11 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 
     <div class="page" id="page-admin">
       <h1>⚙️ 관리자</h1>
+      <div id="openaiAlertBanner" style="display:none;margin-bottom:16px;padding:14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);border-radius:10px">
+        <div style="font-weight:700;color:var(--red);margin-bottom:6px">⚠️ OpenAI API 쿼터 초과</div>
+        <div id="openaiAlertMsg" style="font-size:13px;color:var(--txt2);margin-bottom:10px">OpenAI 크레딧이 부족해서 Groq으로 자동 전환됐어요.<br>platform.openai.com → Billing에서 크레딧을 충전해주세요.</div>
+        <button class="btn btn-sm btn-r" onclick="clearOpenaiAlert()">확인 (알림 닫기)</button>
+      </div>
       <div class="card">
         <h2>초대코드</h2>
         <button class="btn btn-p" onclick="makeInvite()" style="margin-bottom:16px">🔑 초대코드 생성</button>
@@ -870,7 +875,7 @@ function pickTopic(el, tag) {
   document.getElementById('topic').value = tag;
 }
 
-var coupangPosition = '중간';
+var coupangPosition = '1번';
 var coupangLinkCount = 1;
 
 function pickCoupangPos(el) {
@@ -1096,16 +1101,19 @@ function applyCoupangComment() {
   }
 
   // 새 쿠팡 블록 생성
+  // 1번: 파트너스문구 / 댓글생성 / 링크
+  // 2번: 파트너스문구 / 링크 / 댓글생성
+  // 3번: 댓글생성 / 파트너스문구 / 링크
   var coupangBlock = '';
-  if (pos === '맨 위') {
+  if (pos === '1번') {
+    commentEl.value = notice + '\n\n' + (raw ? raw + '\n\n' : '') + links;
     coupangBlock = notice + '\n\n' + links;
-    commentEl.value = coupangBlock + (raw ? '\n\n' + raw : '');
-  } else if (pos === '중간') {
+  } else if (pos === '2번') {
+    commentEl.value = notice + '\n\n' + links + (raw ? '\n\n' + raw : '');
     coupangBlock = notice + '\n\n' + links;
-    commentEl.value = (raw ? raw + '\n\n' : '') + coupangBlock;
   } else {
-    coupangBlock = links + '\n\n' + notice;
-    commentEl.value = (raw ? raw + '\n\n' : '') + coupangBlock;
+    commentEl.value = (raw ? raw + '\n\n' : '') + notice + '\n\n' + links;
+    coupangBlock = notice + '\n\n' + links;
   }
 
   _lastCoupangBlock = coupangBlock;
@@ -1716,6 +1724,12 @@ async function loadAdmin() {
   var uCount = document.getElementById('userCount');
   uCount.textContent = '(' + normalUsers.length + '명)';
   uEl.innerHTML = normalUsers.length ? normalUsers.map(renderUser).join('') : '<div style="color:var(--txt2);font-size:14px">유저 없음</div>';
+}
+
+async function clearOpenaiAlert() {
+  await api('/api/settings/openai-alert', { method: 'DELETE' });
+  document.getElementById('openaiAlertBanner').style.display = 'none';
+  toast('알림 닫혔어!');
 }
 
 async function makeInvite() {
