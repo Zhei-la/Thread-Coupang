@@ -199,8 +199,13 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div style="margin-bottom:12px"><input id="topic" placeholder="예: 닭강정, 강아지 간식, 공기청정기" /></div>
         <label class="label">말투</label>
         <div id="toneChipsWrap">
+          <div style="font-size:11px;color:var(--txt2);margin-bottom:6px">중복 선택 가능</div>
+          <div class="chips" id="toneFixedChips" style="margin-bottom:8px">
+            <div class="chip" data-fixed="1" data-tone="쿠팡/홍보" onclick="toggleFixedTone(this)">쿠팡/홍보</div>
+            <div class="chip" data-fixed="1" data-tone="댓글유도형" onclick="toggleFixedTone(this)">댓글유도형</div>
+          </div>
+          <div style="height:1px;background:var(--bdr);margin-bottom:8px"></div>
           <div class="chips" id="toneChips">
-            <div class="chip" data-locked="1" onclick="pickTone(this)">쿠팡/홍보</div>
             <div class="chip active" onclick="pickTone(this)">리스트형</div>
             <div class="chip" onclick="pickTone(this)">정보성</div>
             <div class="chip" onclick="pickTone(this)">리뷰형</div>
@@ -212,7 +217,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
             <input id="customToneInput" placeholder="말투 직접 추가" style="flex:1;font-size:13px" onkeydown="if(event.key==='Enter')addCustomTone()" />
             <button class="btn btn-sm btn-p" onclick="addCustomTone()">+추가</button>
           </div>
-          <div style="font-size:11px;color:var(--txt2);margin-top:4px">칩 길게 누르면 삭제 가능</div>
+          <div style="font-size:11px;color:var(--txt2);margin-top:4px">아래 말투 길게 누르면 삭제 가능</div>
         </div>
         <label class="label" style="margin-top:12px">글 생성 프롬프트 <span style="color:var(--txt2);font-size:11px">(선택 - 새로고침해도 유지됨)</span></label>
         <textarea id="userPostPrompt" placeholder="예) 3~4문장으로 짧게, 경험담처럼, 마지막에 질문으로 마무리" style="min-height:50px;font-size:13px;margin-bottom:6px"></textarea>
@@ -688,6 +693,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 <script>
 var session = localStorage.getItem('sess') || '';
 var tone = '리스트형';
+var fixedTones = []; // 중복 선택 가능한 고정 말투 (쿠팡/홍보, 댓글유도형)
 var myRole = '';
 var mediaMode = 'photo';
 var imgUrls = [], imgFiles = [], vidUrl = '', editImgUrls = [], newTags = [], editTags = [];
@@ -972,12 +978,23 @@ function loadCoupangSettings() {
   }
 }
 
+function toggleFixedTone(el) {
+  el.classList.toggle('active');
+  var t = el.getAttribute('data-tone');
+  if (el.classList.contains('active')) {
+    if (!fixedTones.includes(t)) fixedTones.push(t);
+  } else {
+    fixedTones = fixedTones.filter(function(x) { return x !== t; });
+  }
+  // 쿠팡/홍보 선택 시 링크 카드 표시
+  var card = document.getElementById('coupangLinkCard');
+  if (card) card.style.display = fixedTones.includes('쿠팡/홍보') ? 'block' : 'none';
+}
+
 function pickTone(el) {
   document.querySelectorAll('#toneChips .chip').forEach(function(c) { c.classList.remove('active'); });
   el.classList.add('active');
   tone = el.textContent;
-  var card = document.getElementById('coupangLinkCard');
-  if (card) card.style.display = (tone === '쿠팡/홍보') ? 'block' : 'none';
 }
 
 function incGenCount() {
@@ -1017,7 +1034,7 @@ async function genPost() {
     }
     btn.innerHTML = '<span class="spin"></span> 글 생성 중...';
     var userPrompt = document.getElementById('userPostPrompt') ? document.getElementById('userPostPrompt').value.trim() : '';
-    var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, type: 'post', imageDesc: imageDesc, userPrompt: userPrompt } });
+    var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, fixedTones: fixedTones, type: 'post', imageDesc: imageDesc, userPrompt: userPrompt } });
     if (d.error) throw new Error(d.error);
     document.getElementById('postText').value = d.text;
     incGenCount();
@@ -1032,7 +1049,7 @@ async function genComment() {
   var topic = document.getElementById('topic').value.trim() || '일상';
   try {
     var commentPrompt = document.getElementById('userCommentPrompt') ? document.getElementById('userCommentPrompt').value.trim() : '';
-    var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, type: 'comment', commentPrompt: commentPrompt } });
+    var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, fixedTones: fixedTones, type: 'comment', commentPrompt: commentPrompt } });
     if (d.error) throw new Error(d.error);
     document.getElementById('commentText').value = d.text;
     incGenCount();
