@@ -287,7 +287,24 @@ app.get('/api/auth/me', auth, (req, res) => {
 });
 
 app.get('/api/invites', adminAuth, (req, res) => res.json(inviteCodes));
-app.get('/api/settings', auth, (req, res) => res.json(getSettings()));
+app.get('/api/settings', auth, (req, res) => {
+  const s = getSettings();
+  const u = req.user;
+  if (u?.role !== 'admin') {
+    // 일반 유저에게는 알림 숨김
+    const { _openaiQuotaAlert, ...pub } = s;
+    return res.json(pub);
+  }
+  res.json(s);
+});
+
+// 관리자가 OpenAI 쿼터 알림 확인 후 초기화
+app.delete('/api/settings/openai-alert', adminAuth, (req, res) => {
+  const s = getSettings();
+  delete s._openaiQuotaAlert;
+  saveSettings(s);
+  res.json({ ok: true });
+});
 
 app.put('/api/settings/basic-tags', auth, (req, res) => {
   const dir = userDir(req.userId);
@@ -575,7 +592,12 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
 
 [출력]
 - 게시글 텍스트만. 설명·주석·따옴표 없이.
-- 2~3문장마다 줄바꿈. 문단 전환 시 빈 줄 1개.`;
+
+[줄바꿈 규칙 - 매우 중요]
+- 짧은 글(전체 3문장 이하): 문장을 이어서 작성. 매 문장마다 줄바꿈 금지.
+- 긴 글(전체 4문장 이상): 2~3문장 단위로 줄바꿈 1번.
+- 빈 줄(\n\n)은 문단이 완전히 바뀔 때만. 남발 절대 금지.
+- 한 문장 쓰고 줄바꿈하는 패턴 절대 금지.`;
 
   let prompt = '';
   if (type === 'comment') {
@@ -586,26 +608,63 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
     prompt = toneInstruction + '\n\n주제: ' + (topic||'') + imgContext + extra + '\n\n위 형식으로 자연스러운 Threads 게시글 작성. 한국어만, 반말, 이모지 없이, 텍스트만 출력.';
   }
 
-  try {
-    const r = await fetch(apiUrl, {
+  // OpenAI 먼저 시도, 쿼터 초과 시 Groq fallback
+  async function tryGenerate(url, key, mdl, msgs) {
+    const r = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify({ model, messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: prompt }], temperature: 0.82, max_tokens: 500 })
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: mdl, messages: msgs, temperature: 0.82, max_tokens: 500 })
     });
     const data = await r.json();
     if (data.error) throw new Error(data.error.message);
-    let text = (data.choices?.[0]?.message?.content || '').trim();
-    if (!text) return res.status(500).json({ error: '글 생성 실패' });
-    // 외국어 제거
-    if (/[\u3400-\u4DBF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uF900-\uFAFF]/.test(text)) {
-      text = text.replace(/[\u3400-\u4DBF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uF900-\uFAFF]/g, '').replace(/  +/g, ' ').trim();
+    return (data.choices?.[0]?.message?.content || '').trim();
+  }
+
+  const msgs = [{ role: 'system', content: systemMsg }, { role: 'user', content: prompt }];
+  let text = '';
+  let usedFallback = false;
+
+  try {
+    text = await tryGenerate(apiUrl, apiKey, model, msgs);
+  } catch(e) {
+    const isQuotaErr = e.message.includes('quota') || e.message.includes('billing') || e.message.includes('insufficient') || e.message.includes('429');
+    if (isQuotaErr && openaiKey && groqKey) {
+      // OpenAI 쿼터 초과 → Groq fallback
+      console.log('[GEN] OpenAI 쿼터 초과 - Groq fallback');
+      usedFallback = true;
+      // 관리자 알림 저장
+      const settings = getSettings();
+      settings._openaiQuotaAlert = { at: new Date().toISOString(), msg: e.message };
+      saveSettings(settings);
+      try {
+        text = await tryGenerate('https://api.groq.com/openai/v1/chat/completions', groqKey, 'llama-3.3-70b-versatile', msgs);
+      } catch(e2) { return res.status(500).json({ error: 'OpenAI 쿼터 초과 + Groq도 실패: ' + e2.message }); }
+    } else {
+      return res.status(500).json({ error: e.message });
     }
-    // 줄바꿈 보장
-    if (text.indexOf('\n') === -1 && text.length > 40) {
-      text = text.replace(/([.!?]) /g, '$1\n');
-    }
-    res.json({ text });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  }
+
+  if (!text) return res.status(500).json({ error: '글 생성 실패' });
+
+  // 외국어 제거
+  if (/[\u3400-\u4DBF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uF900-\uFAFF]/.test(text)) {
+    text = text.replace(/[\u3400-\u4DBF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uF900-\uFAFF]/g, '').replace(/  +/g, ' ').trim();
+  }
+
+  // 줄바꿈 후처리
+  // 1. 연속 빈줄 3개 이상 → 1개로
+  text = text.replace(/\n{3,}/g, '\n\n');
+  // 2. 전체 줄 수 세기
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length <= 3) {
+    // 짧은 글: 빈줄 제거하고 줄바꿈 1개만 사용
+    text = lines.join('\n');
+  } else {
+    // 긴 글: 빈줄 2개 이상 연속 → 1개로만 제한
+    text = text.replace(/\n{2,}/g, '\n\n').trim();
+  }
+
+  res.json({ text, usedFallback });
 });
 
 // 이미지 분석 (Groq vision - 그대로 유지)
@@ -1149,14 +1208,33 @@ cron.schedule('* * * * *', async () => {
 
         const prompt = (toneDesc[sched.tone] || toneDesc['일상']) + '\n\n주제: ' + selectedTopic + '\n\n자연스러운 Threads 게시글. 한국어만. 이모지 없이. 텍스트만 출력.';
 
-        const r = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({ model, messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: prompt }], temperature: 0.82, max_tokens: 400 })
-        });
-        const data = await r.json();
-        if (data.error) throw new Error(data.error.message);
-        const text = (data.choices?.[0]?.message?.content || '').trim();
+        let text = '';
+        try {
+          const r = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+            body: JSON.stringify({ model, messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: prompt }], temperature: 0.82, max_tokens: 400 })
+          });
+          const data = await r.json();
+          if (data.error) throw new Error(data.error.message);
+          text = (data.choices?.[0]?.message?.content || '').trim();
+        } catch(genErr) {
+          const isQuota = genErr.message.includes('quota') || genErr.message.includes('billing') || genErr.message.includes('insufficient');
+          if (isQuota && openaiKey && groqKey) {
+            console.log('[AUTO] OpenAI 쿼터 초과 - Groq fallback');
+            const settings2 = getSettings();
+            settings2._openaiQuotaAlert = { at: new Date().toISOString(), msg: genErr.message };
+            saveSettings(settings2);
+            const rf = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+              body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: prompt }], temperature: 0.82, max_tokens: 400 })
+            });
+            const df = await rf.json();
+            if (df.error) throw new Error(df.error.message);
+            text = (df.choices?.[0]?.message?.content || '').trim();
+          } else { throw genErr; }
+        }
         if (!text) continue;
 
         const postId = await publishToThreads(account.accessToken, text, [], '');
