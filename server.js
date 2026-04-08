@@ -49,7 +49,12 @@ let inviteCodes = loadJSON(`${DATA_ROOT}/invite_codes.json`, []);
 let sessions    = {}; // 임시, 아래 init에서 덮어씀
 
 function userDir(userId) {
-  const dir = `${DATA_ROOT}/users/${userId}`;
+  const path = require('path');
+  // Path Traversal 방지
+  const safeUserId = String(userId).replace(/[^a-zA-Z0-9_-]/g, '');
+  const dir = path.resolve(`${DATA_ROOT}/users`, safeUserId);
+  const base = path.resolve(`${DATA_ROOT}/users`);
+  if (!dir.startsWith(base)) throw new Error('경로 접근 차단');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -158,10 +163,15 @@ setInterval(() => {
 // ── 세션 미들웨어 ──
 function auth(req, res, next) {
   const token = req.headers['x-session']; // URL query 세션 제거 (보안)
+  // 토큰 형식 검증 (UUID 형식이어야 함)
+  if (!token || typeof token !== 'string' || token.length > 64 || !/^[a-zA-Z0-9-]+$/.test(token)) {
+    return res.status(401).json({ error: '로그인 필요' });
+  }
   const s = getSession(token);
-  if (!token || !s) return res.status(401).json({ error: '로그인 필요' });
+  if (!s) return res.status(401).json({ error: '로그인 필요' });
   req.userId = s.userId;
   req.user = users.find(u => u.id === req.userId);
+  if (!req.user) return res.status(401).json({ error: '유저 없음' });
   next();
 }
 function adminAuth(req, res, next) {
@@ -224,7 +234,7 @@ app.post('/api/auth/setup', (req, res) => {
 });
 
 // 가입 (유저 0명이면 초대코드 없이 관리자, 이후엔 초대코드 필수)
-app.post('/api/auth/register', rateLimit(5, 60000), (req, res) => {
+app.post('/api/auth/register', rateLimit(3, 60000), (req, res) => {
   const { nickname, password, inviteCode } = req.body;
   if (!nickname || !password) return res.status(400).json({ error: '닉네임과 비밀번호 필요' });
   if (users.find(u => u.nickname === nickname)) return res.status(400).json({ error: '이미 사용중인 닉네임' });
@@ -263,7 +273,7 @@ app.post('/api/auth/register', rateLimit(5, 60000), (req, res) => {
 });
 
 // 로그인
-app.post('/api/auth/login', rateLimit(10, 60000), (req, res) => {
+app.post('/api/auth/login', rateLimit(5, 60000), (req, res) => {
   const nickname = sanitize(req.body.nickname || '');
   const password = req.body.password || '';
   if (!nickname || !password) return res.status(400).json({ error: '닉네임과 비밀번호 필요' });
@@ -654,16 +664,11 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
 
   let prompt = '';
   if (type === 'comment') {
-    prompt = `댓글 1개만 작성해줘.
-주제: ${topic}${imgContext}
-규칙: 반말, 1~2문장, 이모지 금지, 한국어만, 댓글 텍스트만 출력`;
+    const commentExtra = customCommentPrompt ? '\n추가 지침: ' + customCommentPrompt : '';
+    prompt = '댓글 1개만 작성해줘.\n주제: ' + (topic||'') + imgContext + '\n규칙: 반말, 1~2문장, 이모지 금지, 한국어만, 댓글 텍스트만 출력' + commentExtra;
   } else {
-    prompt = `${toneInstruction}
-
-주제: ${topic}${imgContext}
-
-위 형식에 맞게 Threads 게시글을 작성해줘.
-반드시 한국어로만, 반말로, 이모지 없이, 게시글 텍스트만 출력해.`;
+    const userExtra = customUserPrompt ? '\n\n[사용자 추가 지침 - 반드시 반영]\n' + customUserPrompt : '';
+    prompt = toneInstruction + '\n\n주제: ' + (topic||'') + imgContext + userExtra + '\n\n위 형식에 맞게 위트 있고 자연스러운 Threads 게시글을 작성해줘.\n반드시 한국어로만, 반말로, 이모지 없이, 게시글 텍스트만 출력해.';
   }
 
   try {
@@ -734,6 +739,15 @@ app.post('/api/analyze-image', auth, async (req, res) => {
 
 async function publishToThreads(accessToken, text, imageUrls = [], videoUrl = '') {
   let containerId;
+  // 미디어 URL SSRF 검증
+  if (videoUrl) {
+    const vc = validateMediaUrl(videoUrl);
+    if (!vc.ok) throw new Error('영상 URL 보안 오류: ' + vc.reason);
+  }
+  for (const imgUrl of (imageUrls || [])) {
+    const ic = validateMediaUrl(imgUrl);
+    if (!ic.ok) throw new Error('이미지 URL 보안 오류: ' + ic.reason);
+  }
   if (videoUrl) {
     const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'VIDEO', video_url: videoUrl, text, access_token: accessToken }) });
     const d = await r.json(); if (d.error) throw new Error(d.error.message);
@@ -793,7 +807,10 @@ async function replyToThread(accessToken, postId, commentText) {
 }
 
 app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
-  const { accountId, text, imageUrls, videoUrl, commentText } = req.body;
+  const { accountId, imageUrls, videoUrl } = req.body;
+  const text = sanitize(req.body.text || '').slice(0, 500); // Threads 500자 제한
+  const commentText = sanitize(req.body.commentText || '').slice(0, 500);
+  if (!text) return res.status(400).json({ error: '글 내용 필요' });
   const accs = getAccounts(req.userId);
   const account = accs.find(a => a.id === accountId);
   if (!account) {
@@ -823,6 +840,11 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
     return res.status(429).json({ error: `오늘 발행 한도(${dailyLimit}개)를 초과했어. 내일 다시 시도해줘.` });
   }
 
+  // 발행 전 미디어 URL 검증
+  if (videoUrl) { const vc = validateMediaUrl(videoUrl); if (!vc.ok) return res.status(400).json({ error: '영상 URL 오류: ' + vc.reason }); }
+  if (Array.isArray(imageUrls)) {
+    for (const u of imageUrls) { const ic = validateMediaUrl(u); if (!ic.ok) return res.status(400).json({ error: '이미지 URL 오류: ' + ic.reason }); }
+  }
   console.log('[PUBLISH] 발행 시작');
   try {
     const postId = await publishToThreads(account.accessToken, text, imageUrls || [], videoUrl || '');
