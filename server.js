@@ -504,6 +504,9 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
   }
 
   const { topic, tone, type, imageDesc, userPrompt, commentPrompt } = req.body;
+  const fixedTones = Array.isArray(req.body.fixedTones) ? req.body.fixedTones : [];
+  const hasCoupang = fixedTones.includes('쿠팡/홍보');
+  const hasCommentLure = fixedTones.includes('댓글유도형');
   const openaiKey = process.env.OPENAI_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
   const apiKey = openaiKey || groqKey;
@@ -571,10 +574,29 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
 생활용품: 쓰고 나서 예전으로 못 돌아가겠다
 [규칙] 이모지 금지(ㅠㅠ ㅋㅋ 가능). 반말만. 1~2줄 엄수. 구매유도 금지. 제품명 금지.`,
 
-    '쿠팡': `일상 SNS 글. 1~2줄. 경험담처럼. 궁금하게만. 구매유도 금지. 제품명 금지. 반말.`
+    '쿠팡': `일상 SNS 글. 1~2줄. 경험담처럼. 궁금하게만. 구매유도 금지. 제품명 금지. 반말.`,
+
+    '댓글유도형': `SNS 게시글을 작성하되, 중간에 내용을 자연스럽게 끊어서 댓글에서 이어지는 느낌으로 작성.
+글은 정보나 이야기를 전달하다가 핵심 직전에 멈추고, 마지막에 댓글을 보게 유도.
+억지스럽지 않게, 진짜 쓰다가 공간이 부족한 느낌으로.`
   };
 
   const toneInstruction = tonePrompts[tone] || tonePrompts['일상'];
+
+  // 고정 말투 추가 지침
+  let fixedToneInstr = '';
+  if (hasCoupang) {
+    fixedToneInstr += `\n\n[쿠팡/홍보 적용]
+- 글 전체가 광고처럼 보이지 않게. 자연스러운 일상 얘기로.
+- 제품명·브랜드명 직접 언급 금지.`;
+  }
+  if (hasCommentLure) {
+    fixedToneInstr += `\n\n[댓글유도형 적용 - 매우 중요]
+- 글 본문은 내용을 전달하다가 핵심 정보 직전에 갑자기 끊어야 함.
+- 마지막 1~2줄은 반드시 댓글을 봐야 이어지는 느낌으로 끝낼 것.
+- 예시 끝맺음: "나머지는 댓글에", "더 있는데 댓글 봐", "거기서 이어서", "댓글에 적어놨어" 등.
+- 억지 유도 금지. 자연스럽게 끊어지는 느낌.`;
+  }
 
   const systemMsg = `너는 SNS에 글 올리는 평범한 한국인이다. AI가 쓴 것처럼 보이면 절대 안 된다.
 
@@ -608,10 +630,13 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
   let prompt = '';
   if (type === 'comment') {
     const extra = customCommentPrompt ? '\n추가 지침: ' + customCommentPrompt : '';
-    prompt = '댓글 1개만.\n주제: ' + (topic||'') + imgContext + '\n반말, 1~2문장, 이모지 금지, 한국어만, 텍스트만 출력' + extra;
+    const commentLureInstr = hasCommentLure
+      ? '\n\n[중요] 이 댓글은 글 본문에서 끊긴 내용을 이어받아 자연스럽게 완성하는 댓글이야. 본문에서 말하다 멈춘 내용을 여기서 이어서 써줘. 본문과 같은 주제로 자연스럽게 연결되게.'
+      : '';
+    prompt = '댓글 1개만.\n주제: ' + (topic||'') + imgContext + '\n반말, 1~2문장, 이모지 금지, 한국어만, 텍스트만 출력' + commentLureInstr + extra;
   } else {
     const extra = customUserPrompt ? '\n\n[사용자 지침]\n' + customUserPrompt : '';
-    prompt = toneInstruction + '\n\n주제: ' + (topic||'') + imgContext + extra + '\n\n위 형식으로 자연스러운 Threads 게시글 작성. 한국어만, 반말, 이모지 없이, 텍스트만 출력.';
+    prompt = toneInstruction + fixedToneInstr + '\n\n주제: ' + (topic||'') + imgContext + extra + '\n\n위 형식으로 자연스러운 Threads 게시글 작성. 한국어만, 반말, 이모지 없이, 텍스트만 출력.';
   }
 
   // OpenAI 먼저 시도, 쿼터 초과 시 Groq fallback
