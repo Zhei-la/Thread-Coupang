@@ -83,6 +83,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
   <div class="auth-box">
     <div class="auth-logo">ThreadsAuto</div>
     <div class="auth-sub">로그인하거나 초대코드로 가입해줘</div>
+    <a href="https://open.kakao.com/o/sdwT0Zoi" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px;background:#FEE500;color:#000;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:14px">💬 문의하기</a>
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchTab('login',this)">로그인</button>
       <button class="auth-tab" onclick="switchTab('reg',this)">가입</button>
@@ -883,13 +884,22 @@ function addCustomTone() {
   chip.setAttribute('data-custom', '1');
   chip.textContent = val;
   chip.onclick = function() { pickTone(this); };
-  chip.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-    if (confirm('"' + val + '" 말투를 삭제할까?')) { chip.remove(); }
-  });
+  // 삭제: 우클릭(PC) + 모바일 longpress
+  var pressTimer = null;
+  chip.addEventListener('contextmenu', function(e) { e.preventDefault(); showDeleteTone(chip, val); });
+  chip.addEventListener('touchstart', function(e) { pressTimer = setTimeout(function() { showDeleteTone(chip, val); }, 600); });
+  chip.addEventListener('touchend', function() { clearTimeout(pressTimer); });
+  chip.addEventListener('touchmove', function() { clearTimeout(pressTimer); });
   chips.appendChild(chip);
   input.value = '';
   toast('"' + val + '" 말투 추가됐어!');
+}
+
+function showDeleteTone(chip, val) {
+  if (confirm('"' + val + '" 말투를 삭제할까요?')) {
+    chip.remove();
+    toast(val + ' 삭제됐어!');
+  }
 }
 
 function saveCoupangSettings() {
@@ -920,11 +930,12 @@ function loadCoupangSettings() {
 }
 
 function pickTone(el) {
+  if (el.classList.contains('locked')) return; // 쿠팡/홍보 고정 칩은 선택만 토글
   document.querySelectorAll('#toneChips .chip').forEach(function(c) { c.classList.remove('active'); });
   el.classList.add('active');
   tone = el.textContent;
   var card = document.getElementById('coupangLinkCard');
-  if (card) card.style.display = (tone === '쿠팡') ? 'block' : 'none';
+  if (card) card.style.display = (tone === '쿠팡/홍보') ? 'block' : 'none';
 }
 
 function incGenCount() {
