@@ -98,10 +98,23 @@ function post(hostname, p, body, headers) {
     });
 
     const u = new URL(process.env.DISCORD_WEBHOOK);
-    await post(u.hostname, u.pathname + u.search, wb, {
+await new Promise((resolve, reject) => {
+  const req = https.request({
+    hostname: u.hostname,
+    path: u.pathname + u.search,
+    method: 'POST',
+    headers: {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(wb)
-    });
+    }
+  }, res => {
+    res.on('data', () => {});
+    res.on('end', resolve);
+  });
+  req.on('error', reject);
+  req.write(wb);
+  req.end();
+});
 
     console.log('✅ 디스코드 전송 완료');
   } catch(e) {
