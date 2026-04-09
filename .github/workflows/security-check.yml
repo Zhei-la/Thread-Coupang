@@ -1,4 +1,4 @@
-name: 🔒 주간 보안 점검
+name: 보안 점검
 
 on:
   schedule:
@@ -8,150 +8,61 @@ on:
 jobs:
   security-audit:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 코드 체크아웃
-        uses: actions/checkout@v4
-
-      - name: Node.js 설치
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - name: 보안 점검 실행
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_SECURITY_WEBHOOK }}
           REPO_NAME: ${{ github.repository }}
-        run: |
-          node << 'EOF'
+        run: node -e "
           const fs = require('fs');
           const path = require('path');
           const https = require('https');
-
-          const EXTENSIONS = ['.js', '.ts', '.py', '.html', '.yml', '.yaml', '.json'];
-          const SKIP_DIRS = ['node_modules', '.git', 'dist', 'build'];
-          const MAX_CHARS = 12000;
-
-          function collectFiles(dir, files = []) {
-            let entries;
-            try { entries = fs.readdirSync(dir); } catch { return files; }
-            for (const entry of entries) {
-              if (SKIP_DIRS.includes(entry)) continue;
-              const full = path.join(dir, entry);
-              try {
-                const stat = fs.statSync(full);
-                if (stat.isDirectory()) collectFiles(full, files);
-                else if (EXTENSIONS.some(e => full.endsWith(e))) files.push(full);
-              } catch {}
-            }
-            return files;
+          const SKIP = ['node_modules','.git','dist','build'];
+          const EXT = ['.js','.ts','.py','.html','.json'];
+          function collect(dir,out=[]){
+            try{fs.readdirSync(dir).forEach(e=>{
+              if(SKIP.includes(e))return;
+              const f=path.join(dir,e);
+              try{const s=fs.statSync(f);
+                if(s.isDirectory())collect(f,out);
+                else if(EXT.some(x=>f.endsWith(x)))out.push(f);
+              }catch{}
+            });}catch{}return out;
           }
-
-          const files = collectFiles('.');
-          let codeBundle = '';
-          for (const f of files) {
-            try {
-              const content = fs.readFileSync(f, 'utf8');
-              codeBundle += `\n\n--- ${f} ---\n${content}`;
-              if (codeBundle.length > MAX_CHARS) { codeBundle = codeBundle.slice(0, MAX_CHARS) + '\n...(이하 생략)'; break; }
-            } catch {}
+          let code='';
+          for(const f of collect('.')){
+            try{code+='\n---'+f+'---\n'+fs.readFileSync(f,'utf8');
+              if(code.length>10000){code=code.slice(0,10000)+'...';break;}
+            }catch{}
           }
-
-          function callOpenAI(prompt) {
-            return new Promise((resolve, reject) => {
-              const body = JSON.stringify({
-                model: 'gpt-4o-mini',
-                max_tokens: 1500,
-                messages: [{ role: 'user', content: prompt }]
-              });
-              const req = https.request({
-                hostname: 'api.openai.com',
-                path: '/v1/chat/completions',
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-                }
-              }, res => {
-                let data = '';
-                res.on('data', c => data += c);
-                res.on('end', () => resolve(JSON.parse(data)));
-              });
-              req.on('error', reject);
-              req.write(body);
-              req.end();
-            });
-          }
-
-          function sendDiscord(payload) {
-            return new Promise((resolve, reject) => {
-              const url = new URL(process.env.DISCORD_WEBHOOK);
-              const body = JSON.stringify(payload);
-              const req = https.request({
-                hostname: url.hostname,
-                path: url.pathname + url.search,
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-              }, res => { res.on('data', () => {}); res.on('end', resolve); });
-              req.on('error', reject);
-              req.write(body);
-              req.end();
-            });
-          }
-
-          const prompt = `웹 보안 전문가로서 아래 코드를 분석해서 보안 취약점을 점검해주세요.
-
-점검 항목: API키 노출, CORS 취약점, 인증/세션 취약점, XSS/SQL인젝션, 환경변수 관리, 악성코드 패턴
-
-코드:
-${codeBundle}
-
-아래 JSON 형식으로만 응답 (마크다운 없이):
-{
-  "overall": "safe|warning|danger",
-  "summary": "전체 요약 1~2문장",
-  "critical": [{"title": "제목", "detail": "설명", "fix": "수정방법"}],
-  "warning": [{"title": "제목", "detail": "설명", "fix": "수정방법"}],
-  "passed": ["안전한 항목1", "안전한 항목2"]
-}`;
-
-          (async () => {
-            try {
-              const res = await callOpenAI(prompt);
-              const rawText = res.choices[0].message.content;
-              const clean = rawText.replace(/```json|```/g, '').trim();
-              const result = JSON.parse(clean);
-
-              const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
-              const emoji = result.overall === 'danger' ? '🚨' : result.overall === 'warning' ? '⚠️' : '✅';
-              const color = result.overall === 'danger' ? 0xE24B4A : result.overall === 'warning' ? 0xEF9F27 : 0x639922;
-
-              const fields = [];
-              if (result.critical && result.critical.length > 0) {
-                fields.push({ name: '🚨 위험 항목', value: result.critical.map(i => `**${i.title}**\n${i.detail}\n> 수정: ${i.fix}`).join('\n\n').slice(0, 900) });
-              }
-              if (result.warning && result.warning.length > 0) {
-                fields.push({ name: '⚠️ 경고 항목', value: result.warning.map(i => `**${i.title}**\n${i.detail}\n> 수정: ${i.fix}`).join('\n\n').slice(0, 900) });
-              }
-              if (result.passed && result.passed.length > 0) {
-                fields.push({ name: '✅ 안전 확인', value: result.passed.map(p => `• ${p}`).join('\n').slice(0, 500) });
-              }
-
-              await sendDiscord({
-                embeds: [{
-                  title: `${emoji} 주간 보안 점검 — ${process.env.REPO_NAME}`,
-                  description: result.summary,
-                  color,
-                  fields,
-                  footer: { text: `점검 시각: ${now}` }
-                }]
-              });
-              console.log('✅ 디스코드 전송 완료');
-            } catch(e) {
-              console.error('오류:', e.message);
-              await sendDiscord({ content: `❌ 보안 점검 실패 (${process.env.REPO_NAME})\n\`${e.message}\`` });
-              process.exit(1);
-            }
+          const prompt='보안전문가로서 아래 코드의 취약점을 분석하세요.\n코드:\n'+code+'\n\n반드시 JSON만 응답(마크다운없이):\n{\"overall\":\"safe|warning|danger\",\"summary\":\"요약\",\"critical\":[{\"title\":\"제목\",\"detail\":\"설명\",\"fix\":\"수정\"}],\"warning\":[{\"title\":\"제목\",\"detail\":\"설명\",\"fix\":\"수정\"}],\"passed\":[\"항목\"]}';
+          function post(h,p,b,hdrs){return new Promise((res,rej)=>{
+            const r=https.request({hostname:h,path:p,method:'POST',headers:hdrs},x=>{
+              let d='';x.on('data',c=>d+=c);x.on('end',()=>res(JSON.parse(d)));
+            });r.on('error',rej);r.write(b);r.end();
+          });}
+          (async()=>{
+            try{
+              const b=JSON.stringify({model:'gpt-4o-mini',max_tokens:1500,messages:[{role:'user',content:prompt}]});
+              const r=await post('api.openai.com','/v1/chat/completions',b,{'Content-Type':'application/json','Authorization':'Bearer '+process.env.OPENAI_API_KEY});
+              const t=r.choices[0].message.content.replace(/\`\`\`json|\`\`\`/g,'').trim();
+              const j=JSON.parse(t);
+              const e=j.overall==='danger'?'🚨':j.overall==='warning'?'⚠️':'✅';
+              const c=j.overall==='danger'?0xE24B4A:j.overall==='warning'?0xEF9F27:0x639922;
+              const fields=[];
+              if(j.critical&&j.critical.length)fields.push({name:'🚨 위험',value:j.critical.map(i=>i.title+'\n'+i.detail+'\n수정: '+i.fix).join('\n\n').slice(0,900)});
+              if(j.warning&&j.warning.length)fields.push({name:'⚠️ 경고',value:j.warning.map(i=>i.title+'\n'+i.detail+'\n수정: '+i.fix).join('\n\n').slice(0,900)});
+              if(j.passed&&j.passed.length)fields.push({name:'✅ 안전',value:j.passed.map(p=>'• '+p).join('\n').slice(0,500)});
+              const now=new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
+              const wb=JSON.stringify({embeds:[{title:e+' 보안점검 '+process.env.REPO_NAME,description:j.summary,color:c,fields,footer:{text:'점검: '+now}}]});
+              const u=new URL(process.env.DISCORD_WEBHOOK);
+              await post(u.hostname,u.pathname+u.search,wb,{'Content-Type':'application/json','Content-Length':Buffer.byteLength(wb)});
+              console.log('완료');
+            }catch(e){console.error(e.message);process.exit(1);}
           })();
-          EOF
+          "
