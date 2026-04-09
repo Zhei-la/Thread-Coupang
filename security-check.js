@@ -1,6 +1,6 @@
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
 
 const SKIP = ['node_modules', '.git', 'dist', 'build'];
 const EXT = ['.js', '.ts', '.py', '.html', '.json'];
@@ -24,23 +24,24 @@ let code = '';
 for (const f of collect('.')) {
   try {
     code += '\n--- ' + f + ' ---\n' + fs.readFileSync(f, 'utf8');
-    if (code.length > 10000) { code = code.slice(0, 10000) + '...'; break; }
+    if (code.length > 8000) { code = code.slice(0, 8000) + '...'; break; }
   } catch {}
 }
-
-const prompt = `보안 전문가로서 아래 코드의 취약점을 분석하세요.
-코드:
-${code}
-
-반드시 JSON만 응답 (마크다운 없이):
-{"overall":"safe|warning|danger","summary":"요약","critical":[{"title":"제목","detail":"설명","fix":"수정"}],"warning":[{"title":"제목","detail":"설명","fix":"수정"}],"passed":["항목"]}`;
 
 function post(hostname, p, body, headers) {
   return new Promise((resolve, reject) => {
     const req = https.request({ hostname, path: p, method: 'POST', headers }, res => {
       let d = '';
       res.on('data', c => d += c);
-      res.on('end', () => resolve(JSON.parse(d)));
+      res.on('end', () => {
+        console.log('응답 상태:', res.statusCode);
+        console.log('응답 내용:', d.slice(0, 500));
+        try {
+          resolve(JSON.parse(d));
+        } catch(e) {
+          reject(new Error('JSON 파싱 실패: ' + d.slice(0, 200)));
+        }
+      });
     });
     req.on('error', reject);
     req.write(body);
@@ -50,6 +51,8 @@ function post(hostname, p, body, headers) {
 
 (async () => {
   try {
+    const prompt = `보안 전문가로서 아래 코드의 취약점을 분석하세요.\n코드:\n${code}\n\nJSON만 응답(마크다운없이):\n{"overall":"safe","summary":"요약","critical":[],"warning":[],"passed":["항목"]}`;
+
     const body = JSON.stringify({
       model: 'gpt-4o-mini',
       max_tokens: 1500,
@@ -58,9 +61,11 @@ function post(hostname, p, body, headers) {
 
     const r = await post('api.openai.com', '/v1/chat/completions', body, {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY
+      'Authorization': 'Bearer ' + process.env.OPENAI_API_KEY,
+      'Content-Length': Buffer.byteLength(body)
     });
 
+    console.log('OpenAI 응답 OK');
     const text = r.choices[0].message.content.replace(/```json|```/g, '').trim();
     const j = JSON.parse(text);
 
@@ -98,8 +103,8 @@ function post(hostname, p, body, headers) {
       'Content-Length': Buffer.byteLength(wb)
     });
 
-    console.log('✅ 완료');
-  } catch (e) {
+    console.log('✅ 디스코드 전송 완료');
+  } catch(e) {
     console.error('오류:', e.message);
     process.exit(1);
   }
