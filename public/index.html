@@ -206,6 +206,9 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <input id="topic" placeholder="예: 닭강정, 강아지 간식, 공기청정기" style="flex:1" onkeydown="if(event.key==='Enter')saveTopicTag()" />
           <button class="btn btn-sm btn-p" onclick="saveTopicTag()">저장</button>
         </div>
+        <div style="margin-bottom:8px">
+          <button class="btn btn-sm" onclick="setQuickTopic('스하리')" style="font-size:12px">🤝 스하리</button>
+        </div>
         <div id="savedTopicChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
         <label class="label">말투</label>
         <div id="toneChipsWrap">
@@ -1081,6 +1084,11 @@ function initTopicKey() {
   }
   _topicKey = 'savedTopics_' + uid;
 }
+function setQuickTopic(val) {
+  var input = document.getElementById('topic');
+  if (input) { input.value = val; input.focus(); }
+}
+
 function saveTopicTag() {
   var input = document.getElementById('topic');
   var val = input.value.trim();
