@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -393,15 +392,15 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
     user.expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
     user.plan = req.body.plan || 'basic';
     if (req.body.plan === 'basic') { user.accountLimit = 0; user.dailyPublishLimit = 0; }
-    else if (req.body.plan === 'pro') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
-    else if (req.body.plan === 'premium') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
+    else if (req.body.plan === 'legacy') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
+    else if (req.body.plan === 'pro') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
     else if (req.body.plan === 'free') { user.accountLimit = 1; user.dailyPublishLimit = 2; }
   }
   if (req.body.changePlan) {
     user.plan = req.body.plan;
     if (req.body.plan === 'basic') { user.accountLimit = 0; user.dailyPublishLimit = 0; }
-    else if (req.body.plan === 'pro') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
-    else if (req.body.plan === 'premium') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
+    else if (req.body.plan === 'legacy') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
+    else if (req.body.plan === 'pro') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
     const base = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
     user.expiresAt = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
   }
@@ -415,9 +414,9 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
   if (req.body.setPlan) {
     user.plan = req.body.setPlan;
     if (req.body.setPlan === 'basic') { user.accountLimit = 0; user.dailyPublishLimit = 0; }
-    else if (req.body.setPlan === 'pro') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
-    else if (req.body.setPlan === 'premium') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
-    const planDays = req.body.setPlan === 'premium' ? 60 : 30;
+    else if (req.body.setPlan === 'legacy') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
+    else if (req.body.setPlan === 'pro') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
+    const planDays = req.body.planDays || (req.body.setPlan === 'pro' ? 30 : 30);
     const base2 = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
     user.expiresAt = new Date(base2.getTime() + planDays * 24 * 60 * 60 * 1000).toISOString();
     if (!user.approvedAt) { user.approvedAt = new Date().toISOString(); user.status = 'approved'; }
@@ -438,8 +437,8 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
     if (reqPlan) {
       user.plan = reqPlan;
       if (reqPlan === 'basic') { user.accountLimit = 0; user.dailyPublishLimit = 0; user.expiresAt = new Date(Date.now() + 30 * 86400000).toISOString(); }
-      else if (reqPlan === 'pro') { user.accountLimit = 2; user.dailyPublishLimit = 3; user.expiresAt = new Date(Date.now() + 30 * 86400000).toISOString(); }
-      else if (reqPlan === 'premium') { user.accountLimit = 6; user.dailyPublishLimit = 5; user.expiresAt = new Date(Date.now() + 60 * 86400000).toISOString(); }
+      else if (reqPlan === 'legacy') { user.accountLimit = 2; user.dailyPublishLimit = 3; user.expiresAt = new Date(Date.now() + 30 * 86400000).toISOString(); }
+      else if (reqPlan === 'pro') { user.accountLimit = 6; user.dailyPublishLimit = 5; user.expiresAt = new Date(Date.now() + 60 * 86400000).toISOString(); }
     }
     user.planChangeRequest = null;
   }
@@ -1100,7 +1099,7 @@ app.post('/api/auto-schedule', auth, (req, res) => {
   if (user?.role !== 'admin') {
     const settings2 = getSettings();
     if (!settings2.autoSchedulerEnabled) return res.status(403).json({ error: 'disabled' });
-    if (user?.plan !== 'premium') return res.status(403).json({ error: 'premium_only' });
+    if (user?.plan !== 'pro') return res.status(403).json({ error: 'pro_only' });
   }
   const { accountId, topics, tone, publishTime, commentTone, commentDelay, enabled, toneExample, tonePrompt } = req.body;
   const accs = getAccounts(req.userId);
@@ -1202,7 +1201,7 @@ cron.schedule('* * * * *', async () => {
     if (!user) continue;
     if (user.role !== 'admin') {
       if (!settings.autoSchedulerEnabled) continue;
-      if (user.plan !== 'premium') continue;
+      if (user.plan !== 'pro') continue;
     }
     const autoSchedules = getAutoSchedules(userId);
     const maxAuto = user.role === 'admin' ? 999 : 5;
