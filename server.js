@@ -1,4 +1,4 @@
-\const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
@@ -742,7 +742,7 @@ ${chicRule}`;
       const commentLureInstr = hasCommentLure
         ? '\n\n글이 뚝 끊긴 경우: 뒷이야기 자연스럽게 이어서 작성.\n글이 질문으로 끝난 경우: 상황 더 구체화하거나 궁금증 키워.\n공통: 짧고 자연스럽게. 반말. 이모지 없이. 마침표 없이.'
         : '';
-      prompt = '댓글 1개.\n주제: ' + (topic||'') + imgContext + '\n\n읽는 사람이 공감하거나 관심을 갖게 만드는 댓글.\n- 주제에 대한 내 솔직한 감정이나 경험을 짧게.\n- 또는 공감 가는 말 한 마디.\n- 또는 살짝 궁금하게 만드는 한 마디.\n반말. 1~2문장. 마침표 없음. 이모지·해시태그 없음. 텍스트만 출력.' + commentLureInstr + (extra ? '\n' + extra : '');
+      prompt = '게시글 작성자가 자기 글에 직접 다는 댓글 1개.\n주제: ' + (topic||'') + imgContext + '\n\n[핵심 규칙]\n- 글쓴이 본인이 쓴 글의 흐름을 자연스럽게 이어가는 댓글.\n- 남처럼 쓰면 절대 안 됨. "저도요", "맞아요", "공감해요" 금지.\n- 내가 쓴 글에 덧붙이는 느낌. 글에서 못 다한 말, 추가 감정, 뒷얘기.\n- 또는 읽는 사람이 댓글 달고 싶게 살짝 여지 남기기.\n- 반말. 1~2문장. 마침표 없음. 이모지·해시태그 없음. 텍스트만 출력.' + commentLureInstr + (extra ? '\n' + extra : '');
     }
   } else {
     const extra = customUserPrompt ? '\n\n[사용자 지침]\n' + customUserPrompt : '';
