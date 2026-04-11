@@ -85,18 +85,34 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 <div class="auth-wrap" id="authWrap">
   <div class="auth-box">
     <div class="auth-logo">ThreadsAuto</div>
-    <div class="auth-sub">로그인하거나 초대코드로 가입해줘</div>
-    <a href="https://open.kakao.com/o/sdwT0Zoi" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;background:transparent;color:var(--txt2);border:1px solid var(--bdr);border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;margin-bottom:14px;transition:all .2s" onmouseover="this.style.borderColor='var(--txt)';this.style.color='var(--txt)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--txt2)'">문의하기</a>
+    <div class="auth-sub">Threads 자동화 서비스</div>
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchTab('login',this)">로그인</button>
+      <button class="auth-tab active" onclick="switchTab('free',this)">무료사용</button>
+      <button class="auth-tab" onclick="switchTab('login',this)">로그인</button>
       <button class="auth-tab" onclick="switchTab('reg',this)">가입</button>
     </div>
-    <div class="auth-panel active" id="panel-login">
+
+    <!-- 무료사용 탭 -->
+    <div class="auth-panel active" id="panel-free">
+      <div style="font-size:13px;color:var(--txt2);margin-bottom:14px;line-height:1.8;text-align:center">단톡방 공지사항에서 초대코드를 확인해주세요</div>
+      <a href="https://open.kakao.com/o/gehIVJpi" target="_blank" rel="noopener" class="btn" style="width:100%;justify-content:center;margin-bottom:16px;text-decoration:none">💬 초대코드 보러가기</a>
+      <div class="field"><label>초대코드</label><input id="freeCode" placeholder="초대코드 입력" style="text-transform:uppercase" /></div>
+      <div class="field"><label>닉네임</label><input id="freeNick" placeholder="닉네임" /></div>
+      <div class="field"><label>비밀번호</label><input id="freePw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doFreeReg()" /></div>
+      <div class="auth-err" id="freeErr"></div>
+      <div class="auth-hint" id="freeHint"></div>
+      <button class="btn btn-p" style="width:100%" onclick="doFreeReg()">시작하기</button>
+    </div>
+
+    <!-- 로그인 탭 -->
+    <div class="auth-panel" id="panel-login">
       <div class="field"><label>닉네임</label><input id="loginNick" placeholder="닉네임" /></div>
       <div class="field"><label>비밀번호</label><input id="loginPw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()" /></div>
       <div class="auth-err" id="loginErr"></div>
       <button class="btn btn-p" style="width:100%" onclick="doLogin()">로그인</button>
     </div>
+
+    <!-- 가입 탭 -->
     <div class="auth-panel" id="panel-reg">
       <div class="field" id="inviteField"><label>초대코드</label><input id="regCode" placeholder="초대코드 8자리" style="text-transform:uppercase" /></div>
       <div class="field"><label>이름 (실명)</label><input id="regName" placeholder="홍길동" /></div>
@@ -117,16 +133,16 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     <div class="logo">ThreadsAuto</div>
     <nav>
       <div class="nav-item active" onclick="go('write',this)">✏️ 글 작성</div>
-      <div class="nav-item" onclick="go('schedule',this)">📅 예약 목록</div>
-      <div class="nav-item" onclick="go('autoSchedule',this)" id="autoSchedNav">🤖 자동 스케줄러</div>
-      <div class="nav-item" onclick="go('accounts',this)">👤 계정 관리</div>
+      <div class="nav-item" style="opacity:0.3;cursor:not-allowed;pointer-events:none">📅 예약 목록 🔒</div>
+      <div class="nav-item" id="autoSchedNav" style="opacity:0.3;cursor:not-allowed;pointer-events:none">🤖 자동 스케줄러 🔒</div>
+      <div class="nav-item" style="opacity:0.3;cursor:not-allowed;pointer-events:none">👤 계정 관리 🔒</div>
       <div class="nav-sep" id="adminSep" style="display:none"></div>
       <div class="nav-item" id="adminNav" style="display:none" onclick="go('admin',this)">⚙️ 관리자</div>
     </nav>
     <div class="sidebar-foot">
-      <div style="font-weight:600;font-size:14px;margin-bottom:2px" id="sideNick"></div>
-      <div style="font-size:11px;color:var(--txt2);margin-bottom:6px" id="sideRole"></div>
-      <div id="sidePlanInfo" style="margin-bottom:8px;padding:8px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr);font-size:11px;line-height:1.8">
+      <div style="font-weight:600;font-size:14px;margin-bottom:2px;display:none" id="sideNick"></div>
+      <div style="font-size:11px;color:var(--txt2);margin-bottom:6px;display:none" id="sideRole"></div>
+      <div id="sidePlanInfo" style="display:none;margin-bottom:8px;padding:8px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr);font-size:11px;line-height:1.8">
         <div style="display:flex;justify-content:space-between">
           <span style="color:var(--txt2)">요금제</span>
           <span id="sidePlanName" style="font-weight:700;color:var(--yellow)">-</span>
@@ -161,9 +177,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         </div>
       </div>
 
-      <a href="https://open.kakao.com/o/sdwT0Zoi" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:transparent;color:var(--txt2);border:1px solid var(--bdr);border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;margin-bottom:8px;transition:all .2s" onmouseover="this.style.borderColor='var(--txt)';this.style.color='var(--txt)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--txt2)'">문의하기</a>
-      <label class="label">계정 선택</label>
-      <select id="globalAcc" onchange="onAccChange();updateTokenInfo()" style="margin-bottom:10px"></select>
+      <a href="https://open.kakao.com/o/sdwT0Zoi" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:transparent;color:var(--txt2);border:1px solid var(--bdr);border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;margin-bottom:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--txt)';this.style.color='var(--txt)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--txt2)'">문의하기</a>
+      <div style="font-size:11px;color:var(--txt2);line-height:1.7;text-align:center;margin-bottom:8px;padding:0 4px">
+        예약·자동·계정 기능은<br>프로 사용자만 이용 가능해요 🔒
+      </div>
+      <label class="label" style="display:none">계정 선택</label>
+      <select id="globalAcc" onchange="onAccChange();updateTokenInfo()" style="margin-bottom:10px;display:none"></select>
       <!-- 광고 배너 -->
       <div id="adBannerWrap" style="margin-bottom:10px"></div>
       <button class="btn btn-r btn-sm" style="width:100%" onclick="doLogout()">로그아웃</button>
@@ -173,38 +192,32 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
   <main class="main">
     <div class="page active" id="page-write">
       <h1>✏️ 글 작성</h1>
-      <div class="card">
-        <h2>미디어 (선택)</h2>
-        <div class="chips" style="margin-bottom:14px">
-          <div class="chip active" id="tabPhoto" onclick="switchMedia('photo')">📷 사진</div>
-          <div class="chip" id="tabVideo" onclick="switchMedia('video')">🎬 영상</div>
-        </div>
+      <div class="card" style="display:none">
         <div id="mediaPhoto">
-          <div class="upload-area" onclick="document.getElementById('imgInput').click()">📷 클릭해서 사진 추가</div>
           <input type="file" id="imgInput" multiple accept="image/*" style="display:none" onchange="handleImg(this)">
           <div class="preview-list" id="previewList"></div>
         </div>
         <div id="mediaVideo" style="display:none">
-          <div id="vidUploadArea" class="upload-area" onclick="document.getElementById('vidInput').click()">
-            🎬 클릭해서 영상 추가<br>
-            <span style="font-size:11px;color:var(--txt2)">MP4 · 최대 1분 · 1GB 이하</span>
-          </div>
           <input type="file" id="vidInput" accept="video/mp4" style="display:none" onchange="handleVid(this)">
           <div id="vidPreview" style="position:relative;margin-top:8px"></div>
+          <div id="vidUploadArea" style="display:none"></div>
         </div>
-        <div id="imgAnalysisResult" style="display:none;margin-top:10px;padding:10px;background:var(--sur2);border-radius:8px;font-size:13px;color:var(--txt2)"></div>
+        <div id="imgAnalysisResult" style="display:none"></div>
       </div>
       <div class="card">
         <h2>주제 & 설정</h2>
-        <label class="label">주제 태그</label>
-        <div class="chips" id="topicTags" style="margin-bottom:10px"><span style="font-size:13px;color:var(--txt2)">계정을 선택하면 표시돼요</span></div>
-        <label class="label">주제 직접 입력</label>
-        <div style="margin-bottom:12px"><input id="topic" placeholder="예: 닭강정, 강아지 간식, 공기청정기" /></div>
+        <div id="topicTags" style="display:none"></div>
+        <label class="label">주제 입력</label>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <input id="topic" placeholder="예: 닭강정, 강아지 간식, 공기청정기" style="flex:1" onkeydown="if(event.key==='Enter')saveTopicTag()" />
+          <button class="btn btn-sm btn-p" onclick="saveTopicTag()">저장</button>
+        </div>
+        <div id="savedTopicChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
         <label class="label">말투</label>
         <div id="toneChipsWrap">
           <div style="font-size:11px;color:var(--txt2);margin-bottom:6px">중복 선택 가능</div>
           <div class="chips" id="toneFixedChips" style="margin-bottom:8px">
-            <div class="chip" data-fixed="1" data-tone="쿠팡/홍보" onclick="toggleFixedTone(this)">쿠팡/홍보</div>
+            <div class="chip" id="coupangChip" data-fixed="1" data-tone="쿠팡/홍보" onclick="toggleFixedTone(this)" style="opacity:0.35;cursor:not-allowed;pointer-events:none">🔒 쿠팡/홍보</div>
             <div class="chip" data-fixed="1" data-tone="댓글유도형" onclick="toggleFixedTone(this)">댓글유도형</div>
           </div>
           <div style="height:1px;background:var(--bdr);margin-bottom:8px"></div>
@@ -230,8 +243,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         </div>
         <button class="btn btn-p" onclick="genPost()" id="genBtn">🪄 글 생성</button>
         <div style="margin-top:8px;padding:8px 10px;background:rgba(239,68,68,.08);border-radius:6px;font-size:11px;color:var(--txt2);line-height:1.7">
-          ⚠️ 발행은 최소 <b>3시간 간격</b>을 권장해요. 너무 자주 발행하면 Threads 제재를 받을 수 있어요.<br>
-          발생하는 불이익은 본인 책임입니다.
+          ⚠️ 너무 빠른 생성 시 IP 차단될 수 있어요.
         </div>
       </div>
       <div class="card">
@@ -240,6 +252,9 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn btn-sm" onclick="genPost()">🔄 재생성</button>
           <button class="btn btn-sm" onclick="copyEl('postText')">📋 복사</button>
+        </div>
+        <div style="margin-top:10px;padding:8px 10px;background:rgba(239,68,68,.08);border-radius:6px;font-size:11px;color:var(--txt2);line-height:1.7">
+          ⚠️ 너무 빠른 생성 시 IP 차단될 수 있어요.
         </div>
       </div>
       <div class="card">
@@ -254,11 +269,48 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button class="btn btn-sm" onclick="genComment()">🪄 댓글 생성</button>
           <button class="btn btn-sm" onclick="copyEl('commentText')">📋 복사</button>
-          <button class="btn btn-sm" onclick="openSched('comment')">📅 댓글만 예약</button>
+          <button class="btn btn-sm" onclick="openSched('comment')" style="display:none">📅 댓글만 예약</button>
         </div>
-        <div style="margin-top:10px;font-size:11px;color:var(--txt2);padding:8px;background:var(--sur2);border-radius:6px;line-height:1.6">
-          ⚠️ 글/댓글 생성을 너무 빠르게 연속으로 누르면 어뷰징으로 감지되어 일시적으로 제한될 수 있어요.
+        <div style="margin-top:10px;font-size:11px;color:var(--txt2);padding:8px;background:rgba(239,68,68,.08);border-radius:6px;line-height:1.6">
+          ⚠️ 너무 빠른 생성 시 IP 차단될 수 있어요.
         </div>
+      </div>
+
+      <!-- 요금제 안내 카드 (무료 유저만 표시) -->
+      <div class="card" id="freePlanBannerCard" style="display:none;border-color:rgba(245,158,11,.4)">
+        <h2 style="color:var(--yellow)">💎 요금제 상세 안내</h2>
+        <div style="font-size:13px;color:var(--txt2);margin-bottom:14px;line-height:1.7">더 많은 기능을 사용하고 싶다면 요금제를 확인해봐요!</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div style="padding:10px;background:rgba(99,153,34,.08);border:1px solid rgba(99,153,34,.4);border-radius:8px;text-align:center">
+            <div style="font-size:10px;color:var(--green);margin-bottom:3px">🎁 이벤트</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">7일</div>
+            <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">· 무료</div>
+            <div style="font-size:10px;color:var(--txt2);line-height:1.7">계정 1개 · 하루 2회 발행<br>글 생성 하루 100번<br><span style="color:var(--green)">관리자 승인자만 이용 가능</span></div>
+          </div>
+          <div style="padding:10px;background:rgba(136,136,136,.08);border:1px solid rgba(136,136,136,.3);border-radius:8px;text-align:center">
+            <div style="font-size:10px;color:#aaa;margin-bottom:3px">베이직</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">0원</div>
+            <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">· 30일</div>
+            <div style="font-size:10px;color:var(--txt2);line-height:1.7">글 생성+복사<br>평생 무료사용<br>자동발행X<br><span style="color:#888">🔒 쿠팡 키워드 사용 불가</span></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          <div style="padding:10px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:8px;text-align:center;position:relative">
+            <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--yellow);color:#000;font-size:8px;font-weight:700;padding:1px 8px;border-radius:100px">추천</div>
+            <div style="font-size:10px;color:var(--yellow);margin-bottom:3px">프로 · 1개월</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">9,900원</div>
+            <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">/월 · 30일</div>
+            <div style="font-size:10px;color:var(--txt2);line-height:1.7">계정 6개 · 하루 5회 발행<br>예약 발행 · 자동 스케줄러<br><span style="color:var(--green)">✓ 쿠팡 키워드 사용 가능</span></div>
+          </div>
+          <div style="padding:10px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:8px;text-align:center;position:relative">
+            <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-size:8px;font-weight:700;padding:1px 8px;border-radius:100px">할인</div>
+            <div style="font-size:10px;color:var(--yellow);margin-bottom:3px">프로 · 3개월</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:2px">23,900원</div>
+            <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">/3개월 · 90일</div>
+            <div style="font-size:10px;color:var(--txt2);line-height:1.7">계정 6개 · 하루 5회 발행<br>예약 발행 · 자동 스케줄러<br><span style="color:var(--green)">✓ 월 7,967원 (20% 할인)</span></div>
+          </div>
+        </div>
+        <button class="btn" style="width:100%;justify-content:center;border-color:var(--yellow);color:var(--yellow)" onclick="openPlanModal()">요금제 자세히 보기</button>
       </div>
       <div class="card" id="coupangLinkCard" style="display:none">
         <h2>🛒 쿠팡/홍보 설정</h2>
@@ -291,19 +343,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <button class="btn btn-p btn-sm" onclick="applyCoupangComment()" style="flex:1">✅ 댓글에 적용</button>
         </div>
       </div>
-      <div class="card">
-        <h2>발행</h2>
-        <div id="commentReserveWrap" style="display:none;margin-bottom:12px;padding:12px;background:var(--sur2);border-radius:8px;border:1px solid var(--blue)">
-          <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--blue)">💬 댓글 예약 시간</div>
-          <div style="font-size:11px;color:var(--txt2);margin-bottom:8px">글은 바로 올라가고 댓글은 이 시간에 달려요</div>
-          <input type="datetime-local" id="commentReserveTime" style="width:100%;font-size:16px;padding:10px 14px;background:var(--sur);border:1px solid var(--bdr);color:var(--txt);border-radius:8px;-webkit-appearance:none;appearance:none" />
-          <button class="btn btn-r btn-sm" style="margin-top:8px;width:100%;justify-content:center" onclick="cancelCommentReserve()">✕ 댓글 예약 취소</button>
+      <div class="card" style="display:none">
+        <div id="commentReserveWrap">
+          <input type="datetime-local" id="commentReserveTime" />
         </div>
-        <div style="display:flex;gap:12px;justify-content:center;">
-          <button class="btn btn-g" id="pubNowBtn" onclick="pubNow()" style="flex:1;max-width:240px">⚡ 즉시 발행</button>
-          <button class="btn btn-r" id="pubCancelBtn" onclick="cancelPubNow()" style="display:none;flex:1;max-width:120px">✕ 취소</button>
-          <button class="btn" onclick="openSched('post')" style="flex:1;max-width:240px">📅 예약 발행</button>
-        </div>
+        <button id="pubNowBtn" onclick="pubNow()"></button>
+        <button id="pubCancelBtn" onclick="cancelPubNow()" style="display:none"></button>
       </div>
     </div>
 
@@ -328,14 +373,14 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <h2 style="color:var(--yellow);font-size:18px;margin-bottom:12px">준비 중입니다</h2>
           <div id="autoSchedLockedMsg" style="font-size:14px;color:var(--txt2);line-height:1.7;margin-bottom:20px">자동 스케줄러 기능을 열심히 준비하고 있어요.<br>곧 만나볼 수 있어요!</div>
           <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:16px;text-align:left">
-            <div style="font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:10px">💎 프리미엄 업그레이드 시 사용 가능해요</div>
+            <div style="font-size:13px;font-weight:700;color:var(--yellow);margin-bottom:10px">💎 프로 업그레이드 시 사용 가능해요</div>
             <div style="font-size:13px;color:var(--txt2);line-height:1.8">
               <div>✓ 프로 플랜 (6계정) 전용 기능</div>
               <div>✓ 매일 지정 시간에 글 자동 생성 + 발행</div>
               <div>✓ 최대 3개 스케줄 동시 운영</div>
               <div>✓ 자동 댓글 예약 기능 포함</div>
             </div>
-            <button class="btn btn-sm" style="margin-top:12px;border-color:var(--yellow);color:var(--yellow);width:100%;justify-content:center" onclick="openPlanModal()">💎 프리미엄 업그레이드 문의하기</button>
+            <button class="btn btn-sm" style="margin-top:12px;border-color:var(--yellow);color:var(--yellow);width:100%;justify-content:center" onclick="openPlanModal()">💎 프로 업그레이드 문의하기</button>
           </div>
         </div>
       </div>
@@ -416,13 +461,13 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       <div class="card">
         <h2>Threads 계정 추가</h2>
         <div id="basicPlanNotice" style="display:none;padding:12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:8px;margin-bottom:14px;font-size:13px;color:var(--yellow);line-height:1.6">
-          베이직 플랜은 글 생성+복사 전용이에요.<br>
+          무료 플랜은 글 생성+복사 전용이에요.<br>
           주제 태그를 저장하면 글 생성 시 자동으로 표시돼요.<br>
-          발행 기능은 <b>프로 이상</b>에서 사용할 수 있어요.
+          발행 기능은 <b>베이직 이상</b>에서 사용할 수 있어요.
           <button class="btn btn-sm" style="margin-top:8px;border-color:var(--yellow);color:var(--yellow);display:block;width:100%;justify-content:center" onclick="openPlanModal()">💎 업그레이드 문의하기</button>
         </div>
         <div id="basicTagOnly" style="display:none;margin-bottom:16px">
-          <label class="label">주제 태그 저장 (베이직 전용)</label>
+          <label class="label">주제 태그 저장 (무료 전용)</label>
           <div style="font-size:12px;color:var(--txt2);margin-bottom:8px">태그를 저장하면 글 작성 시 바로 선택할 수 있어요</div>
           <div style="display:flex;gap:8px;margin-bottom:8px">
             <input id="basicTagInput" placeholder="예: AI, 쿠팡, 여행" style="flex:1" onkeydown="if(event.key==='Enter'){addBasicTag();event.preventDefault()}" />
@@ -432,7 +477,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <button class="btn btn-p btn-sm" style="width:100%;justify-content:center" onclick="saveBasicTags()">저장하기</button>
         </div>
         <div id="accAddForm">
-          <!-- 일반 계정 추가 폼 (프로/프리미엄) -->
+          <!-- 일반 계정 추가 폼 (베이직/프로) -->
           <div id="normalAccForm">
             <div style="margin-bottom:12px"><label class="label">계정 이름</label><input id="accName" placeholder="예: 메인 계정" /></div>
             <div style="margin-bottom:12px"><label class="label">장기 액세스 토큰</label><input id="accToken" placeholder="THAAMr..." /></div>
@@ -446,9 +491,9 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
             </div>
             <button class="btn btn-p" onclick="addAcc()">+ 계정 추가</button>
           </div>
-          <!-- 베이직 전용: 주제태그만 -->
+          <!-- 무료 전용: 주제태그만 -->
           <div id="basicAccForm" style="display:none">
-            <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">베이직 플랜은 주제 태그만 저장할 수 있어요.</div>
+            <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">무료 플랜은 주제 태그만 저장할 수 있어요.</div>
             <div style="margin-bottom:16px">
               <label class="label">주제 태그 (입력 후 Enter)</label>
               <div style="display:flex;gap:8px;margin-bottom:8px">
@@ -480,7 +525,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <button class="btn btn-sm btn-p" onclick="openKakaoLink()" id="contactBtn" style="display:none">💬 관리자에게 문의하기</button>
       </div>
       <div class="card" id="freePlanCard" style="display:none;border-color:var(--blue)">
-        <h2 style="color:var(--blue)">무료 체험 중</h2>
+        <h2 style="color:var(--blue)">🎁 이벤트 체험 중</h2>
         <div style="font-size:13px;color:var(--txt2);margin-bottom:12px">유료로 전환하면 더 많은 기능을 쓸 수 있어요.</div>
         <button class="btn btn-sm btn-p" onclick="requestUpgrade()" id="upgradeBtn">💎 유료 전환 신청하기</button>
         <div id="upgradeStatus" style="margin-top:8px;font-size:13px;color:var(--txt2)"></div>
@@ -492,19 +537,13 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <div>
             <button class="btn btn-sm" style="width:100%;justify-content:space-between" onclick="requestPlanChange('basic')">
               <span>베이직으로 변경 요청</span>
-              <span style="font-size:11px;color:var(--txt2)">4,900원/월 · 글생성+복사 · 30일</span>
+              <span style="font-size:11px;color:var(--txt2)">0원 · 글생성+복사 · 30일</span>
             </button>
           </div>
           <div>
-            <button class="btn btn-sm btn-g" style="width:100%;justify-content:space-between" onclick="requestPlanChange('pro')">
+            <button class="btn btn-sm" style="width:100%;justify-content:space-between;border-color:var(--yellow);color:var(--yellow)" onclick="requestPlanChange('pro')">
               <span>프로로 변경 요청</span>
-              <span style="font-size:11px;color:#000">9,900원/월 · 계정 2개 · 하루 3회 · 30일</span>
-            </button>
-          </div>
-          <div>
-            <button class="btn btn-sm" style="width:100%;justify-content:space-between;border-color:var(--yellow);color:var(--yellow)" onclick="requestPlanChange('premium')">
-              <span>프리미엄으로 변경 요청</span>
-              <span style="font-size:11px;color:var(--txt2)">19,900원/월 · 계정 6개 · 하루 5회 · 60일</span>
+              <span style="font-size:11px;color:var(--txt2)">9,900원/월 · 계정 6개 · 하루 5회 · 60일</span>
             </button>
           </div>
         </div>
@@ -620,35 +659,37 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
   <div class="modal" style="width:520px;max-width:95vw;max-height:90vh;overflow-y:auto">
     <h3>💎 요금제 안내</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <div style="padding:12px;background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;text-align:center">
-        <div style="font-size:10px;color:var(--txt2);margin-bottom:4px">무료 체험</div>
-        <div style="font-size:14px;font-weight:700;margin-bottom:6px">7일</div>
-        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 1개 · 하루 2회 발행<br>글 생성 하루 100번</div>
+      <div style="padding:12px;background:rgba(99,153,34,.08);border:1px solid rgba(99,153,34,.4);border-radius:10px;text-align:center">
+        <div style="font-size:10px;color:var(--green);margin-bottom:4px">🎁 이벤트</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:2px">7일</div>
+        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">· 무료</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 1개 · 하루 2회 발행<br>글 생성 하루 100번<br><span style="color:var(--green)">관리자 승인자만 이용 가능</span></div>
       </div>
       <div style="padding:12px;background:rgba(136,136,136,.08);border:1px solid rgba(136,136,136,.3);border-radius:10px;text-align:center">
         <div style="font-size:10px;color:#aaa;margin-bottom:4px">베이직</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:2px">4,900원</div>
-        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월 · 30일</div>
-        <div style="font-size:10px;color:var(--txt2);line-height:1.8">토큰 불필요<br>글 생성+복사<br>하루 200번 생성</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:2px">0원</div>
+        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">· 30일</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">글 생성+복사<br>평생 무료사용<br>자동발행X<br><span style="color:#888">🔒 쿠팡 키워드 사용 불가</span></div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
-      <div style="padding:12px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:10px;text-align:center">
-        <div style="font-size:10px;color:var(--green);margin-bottom:4px">프로</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:2px">9,900원</div>
-        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월 · 30일</div>
-        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 2개<br>계정당 하루 3회 발행<br>예약 발행</div>
-      </div>
       <div style="padding:12px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:10px;text-align:center;position:relative">
         <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--yellow);color:#000;font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px">추천</div>
-        <div style="font-size:10px;color:var(--yellow);margin-bottom:4px">프리미엄</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:2px">19,900원</div>
-        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월 · 60일</div>
-        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 6개<br>계정당 하루 5회 발행<br>예약 발행<br>자동 스케줄러 <span style="font-size:9px;background:rgba(34,197,94,.2);color:var(--green);padding:1px 5px;border-radius:4px">프리미엄 전용</span></div>
+        <div style="font-size:10px;color:var(--yellow);margin-bottom:4px">프로 · 1개월</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:2px">9,900원</div>
+        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/월 · 30일</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 6개 · 하루 5회 발행<br>예약 발행 · 자동 스케줄러<br><span style="color:var(--green)">✓ 쿠팡 키워드 사용 가능</span></div>
+      </div>
+      <div style="padding:12px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:10px;text-align:center;position:relative">
+        <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-size:9px;font-weight:700;padding:2px 8px;border-radius:100px">할인</div>
+        <div style="font-size:10px;color:var(--yellow);margin-bottom:4px">프로 · 3개월</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:2px">23,900원</div>
+        <div style="font-size:9px;color:var(--txt2);margin-bottom:6px">/3개월 · 90일</div>
+        <div style="font-size:10px;color:var(--txt2);line-height:1.8">계정 6개 · 하루 5회 발행<br>예약 발행 · 자동 스케줄러<br><span style="color:var(--green)">✓ 월 7,967원 (20% 할인)</span></div>
       </div>
     </div>
     <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;padding:16px;margin-bottom:16px">
-      <div style="font-size:13px;font-weight:600;margin-bottom:12px">📋 업그레이드 문의 (아래 내용 복사 후 카카오로 전송)</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px">📋 업그레이드 문의<br><span style="font-size:11px;font-weight:400;color:var(--txt2)">(아래 내용 복사 후 카카오톡으로 전송)</span></div>
       <div id="planInquiryText" style="font-size:13px;color:var(--txt2);line-height:2;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:12px;font-family:monospace">로딩 중...</div>
       <button class="btn btn-sm btn-p" style="margin-top:10px;width:100%;justify-content:center" onclick="copyPlanInquiry()">📋 문의 내용 복사하기</button>
     </div>
@@ -696,7 +737,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 <script>
 var session = localStorage.getItem('sess') || '';
 var tone = '리스트형';
-var fixedTones = []; // 중복 선택 가능한 고정 말투 (쿠팡/홍보, 댓글유도형)
+var fixedTones = [];
 var myRole = '';
 var mediaMode = 'photo';
 var imgUrls = [], imgFiles = [], vidUrl = '', editImgUrls = [], newTags = [], editTags = [];
@@ -770,6 +811,30 @@ function switchTab(tab, el) {
   document.getElementById('panel-' + tab).classList.add('active');
 }
 
+async function doFreeReg() {
+  var code = document.getElementById('freeCode').value.trim().toUpperCase();
+  var nick = document.getElementById('freeNick').value.trim();
+  var pw   = document.getElementById('freePw').value;
+  var errEl  = document.getElementById('freeErr');
+  var hintEl = document.getElementById('freeHint');
+  errEl.textContent = ''; hintEl.textContent = '';
+  if (!code) return errEl.textContent = '초대코드를 입력해줘';
+  if (!nick) return errEl.textContent = '닉네임을 입력해줘';
+  if (!pw || pw.length < 4) return errEl.textContent = '비밀번호는 4자리 이상 입력해줘';
+  var d = await api('/api/auth/register', { method: 'POST', body: { nickname: nick, password: pw, inviteCode: code } });
+  if (d.error) return errEl.textContent = d.error;
+  if (d.pending) {
+    hintEl.textContent = '가입 완료! 관리자 승인 후 로그인 가능해.';
+    hintEl.style.color = 'var(--green)';
+    document.getElementById('freeCode').value = '';
+    document.getElementById('freeNick').value = '';
+    document.getElementById('freePw').value = '';
+    return;
+  }
+  session = d.token; localStorage.setItem('sess', session);
+  enterApp(d);
+}
+
 async function init() {
   try {
     var r = await fetch('/api/auth/is-first');
@@ -799,13 +864,33 @@ function enterApp(user) {
   } else {
     checkExpiry();
   }
+  // 무료/이벤트 유저만 요금제 안내 카드 표시
+  var banner = document.getElementById('freePlanBannerCard');
+  if (banner) banner.style.display = (user.plan === 'free' || user.plan === 'basic') ? '' : 'none';
+  // 프로(premium)만 쿠팡/홍보 칩 활성화
+  var coupangChip = document.getElementById('coupangChip');
+  if (coupangChip) {
+    if (user.plan === 'pro' || user.role === 'admin') {
+      coupangChip.style.opacity = '';
+      coupangChip.style.cursor = '';
+      coupangChip.style.pointerEvents = '';
+      coupangChip.textContent = '쿠팡/홍보';
+    } else {
+      coupangChip.style.opacity = '0.35';
+      coupangChip.style.cursor = 'not-allowed';
+      coupangChip.style.pointerEvents = 'none';
+      coupangChip.textContent = '🔒 쿠팡/홍보';
+    }
+  }
   loadAccs();
   updateSideExpire();
   loadAdBanner();
   loadCoupangSettings();
+  initTopicKey();
+  renderSavedTopics();
   loadSavedPrompts();
   updateSidePlanInfo();
-  // 베이직 플랜이면 계정 추가 폼 숨기고 태그 전용 UI 표시
+  // 무료 플랜이면 계정 추가 폼 숨기고 태그 전용 UI 표시
   if (user.plan === 'basic') {
     var notice = document.getElementById('basicPlanNotice');
     var form = document.getElementById('accAddForm');
@@ -960,6 +1045,41 @@ function loadSavedPrompts() {
   var comment = localStorage.getItem('userCommentPrompt');
   if (post) document.getElementById('userPostPrompt').value = post;
   if (comment) document.getElementById('userCommentPrompt').value = comment;
+}
+
+var _topicKey = 'savedTopics_default';
+function initTopicKey() {
+  var uid = localStorage.getItem('browserUid');
+  if (!uid) {
+    uid = 'u_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    localStorage.setItem('browserUid', uid);
+  }
+  _topicKey = 'savedTopics_' + uid;
+}
+function saveTopicTag() {
+  var input = document.getElementById('topic');
+  var val = input.value.trim();
+  if (!val) return;
+  var tags = JSON.parse(localStorage.getItem(_topicKey) || '[]');
+  if (!tags.includes(val)) { tags.push(val); localStorage.setItem(_topicKey, JSON.stringify(tags)); }
+  input.value = '';
+  renderSavedTopics();
+}
+function deleteTopicTag(val) {
+  var tags = JSON.parse(localStorage.getItem(_topicKey) || '[]');
+  tags = tags.filter(function(t) { return t !== val; });
+  localStorage.setItem(_topicKey, JSON.stringify(tags));
+  renderSavedTopics();
+}
+function renderSavedTopics() {
+  var wrap = document.getElementById('savedTopicChips');
+  if (!wrap) return;
+  var tags = JSON.parse(localStorage.getItem(_topicKey) || '[]');
+  if (!tags.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = tags.map(function(t) {
+    return '<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--sur2);border:1px solid var(--bdr);border-radius:100px;font-size:12px;cursor:pointer" onclick="document.getElementById(\'topic\').value=\'' + t.replace(/'/g,"\\'") + '\'">' +
+      t + '<span onclick="event.stopPropagation();deleteTopicTag(\'' + t.replace(/'/g,"\\'") + '\')" style="color:var(--txt2);font-size:11px;margin-left:2px">✕</span></span>';
+  }).join('');
 }
 
 function loadCoupangSettings() {
@@ -1637,10 +1757,10 @@ async function loadAdmin() {
   pEl.innerHTML = pending.length ? pending.map(function(u) {
     return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px">' + (u.name || '-') + ' <span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span></div></div>' +
       '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">' +
-      '<button class="btn btn-sm" style="border-color:var(--blue);color:var(--blue)" onclick="approveFree(\'' + u.id + '\')">무료 7일</button>' +
-      '<button class="btn btn-sm" style="border-color:#aaa;color:#aaa" onclick="approvePlan(\'' + u.id + '\',\'basic\')">베이직</button>' +
-      '<button class="btn btn-sm btn-g" onclick="approvePlan(\'' + u.id + '\',\'pro\')">프로</button>' +
-      '<button class="btn btn-sm" style="border-color:var(--yellow);color:var(--yellow)" onclick="approvePlan(\'' + u.id + '\',\'premium\')">프리미엄</button>' +
+      '<button class="btn btn-sm" style="border-color:var(--blue);color:var(--blue)" onclick="approveFree(\'' + u.id + '\')">🎁 이벤트 7일</button>' +
+      '<button class="btn btn-sm" style="border-color:#aaa;color:#aaa" onclick="approvePlan(\'' + u.id + '\',\'basic\')">무료</button>' +
+      '<button class="btn btn-sm" style="border-color:var(--yellow);color:var(--yellow)" onclick="approvePlan(\'' + u.id + '\',\'pro\')">프로 1개월</button>' +
+      '<button class="btn btn-sm" style="border-color:var(--green);color:var(--green)" onclick="approvePremium90(\'' + u.id + '\')">프로 3개월</button>' +
       '<button class="btn btn-sm btn-r" onclick="delUser(\'' + u.id + '\')">거절</button>' +
       '</div></div>';
   }).join('') : '<div style="color:var(--txt2);font-size:14px">대기중 없음</div>';
@@ -1669,9 +1789,9 @@ async function loadAdmin() {
     return '<div class="list-item"><div style="flex:1"><div style="font-weight:600;font-size:14px">' + (u.name || '-') + ' <span style="color:var(--txt2);font-size:13px">(' + u.nickname + ')</span></div>' +
       '<div style="font-size:12px;color:var(--txt2)">유료 전환 신청</div></div>' +
       '<div style="display:flex;gap:4px;flex-wrap:wrap">' +
-      '<button class="btn btn-sm" style="border-color:#666;color:#aaa" onclick="approvePlan(\'' + u.id + '\',\'basic\')">베이직 30일</button>' +
-      '<button class="btn btn-sm btn-g" onclick="approvePlan(\'' + u.id + '\',\'pro\')">프로 30일</button>' +
-      '<button class="btn btn-sm" style="border-color:var(--yellow);color:var(--yellow)" onclick="approvePlan(\'' + u.id + '\',\'premium\')">프리미엄 60일</button>' +
+      '<button class="btn btn-sm" style="border-color:#666;color:#aaa" onclick="approvePlan(\'' + u.id + '\',\'basic\')">무료 30일</button>' +
+      '<button class="btn btn-sm" style="border-color:var(--yellow);color:var(--yellow)" onclick="approvePlan(\'' + u.id + '\',\'pro\')">프로 1개월</button>' +
+      '<button class="btn btn-sm" style="border-color:var(--green);color:var(--green)" onclick="approvePremium90(\'' + u.id + '\')">프로 3개월</button>' +
       '<button class="btn btn-sm btn-r" onclick="denyUpgrade(\'' + u.id + '\')">거절</button></div></div>';
   }).join('') : '<div style="color:var(--txt2);font-size:14px">신청 없음</div>';
 
@@ -1679,7 +1799,7 @@ async function loadAdmin() {
   var planChangeReqs = users.filter(function(u) { return u.planChangeRequest; });
   var pcEl = document.getElementById('planChangeList');
   var pcCount = document.getElementById('planChangeCount');
-  var planNames2 = { basic: '베이직', pro: '프로', premium: '프리미엄', free: '무료체험' };
+  var planNames2 = { basic: '무료', pro: '베이직', pro: '프로', free: '이벤트' };
   if (pcCount) { pcCount.textContent = planChangeReqs.length ? planChangeReqs.length + '건' : ''; pcCount.style.display = planChangeReqs.length ? '' : 'none'; }
   if (pcEl) {
     pcEl.innerHTML = planChangeReqs.length ? planChangeReqs.map(function(u) {
@@ -1710,7 +1830,7 @@ async function loadAdmin() {
     var navBadge2 = document.getElementById('autoSchedNavBadge');
     if (settings.autoSchedulerEnabled) {
       var badge = document.getElementById('autoSchedStatusBadge');
-      if (badge) { badge.textContent = '프리미엄 활성화'; badge.className = 'badge bg'; }
+      if (badge) { badge.textContent = '프로 활성화'; badge.className = 'badge bg'; }
       if (navBadge2) { navBadge2.textContent = ''; navBadge2.style.display = 'none'; }
     } else {
       if (navBadge2) { navBadge2.textContent = '테스트중'; navBadge2.style.display = ''; }
@@ -1770,9 +1890,11 @@ async function delUser(id) {
 }
 
 async function setPlanAndExtend(id, plan) {
-  var planNames = { basic: '베이직(30일)', pro: '프로(30일)', premium: '프리미엄(60일)' };
+  var planNames = { basic: '무료(30일)', pro: '프로 1개월', pro90: '프로 3개월' };
   if (!confirm(planNames[plan] + ' 으로 변경하고 기간 연장할까?')) return;
-  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', setPlan: plan } });
+  var body = { status: 'approved', setPlan: plan === 'pro90' ? 'pro' : plan };
+  if (plan === 'pro90') body.planDays = 90;
+  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: body });
   if (d.error) return toast(d.error, 'err');
   toast(planNames[plan] + ' 적용됐어!'); loadAdmin();
 }
@@ -1786,8 +1908,8 @@ function renderUser(u) {
   var sb = isExpired
     ? '<span class="badge br">기간만료</span>'
     : (u.status === 'approved' ? '<span class="badge bg">사용중</span>' : '<span class="badge br">정지</span>');
-  var planLabel = u.plan === 'basic' ? '베이직' : u.plan === 'pro' ? '프로' : u.plan === 'premium' ? '프리미엄' : '무료체험';
-  var planColor = u.plan === 'premium' ? 'by' : u.plan === 'pro' ? 'bg' : u.plan === 'basic' ? 'bb' : 'br';
+  var planLabel = u.plan === 'basic' ? '무료' : u.plan === 'pro' ? '베이직' : u.plan === 'pro' ? '프로' : '이벤트';
+  var planColor = u.plan === 'pro' ? 'by' : u.plan === 'pro' ? 'bg' : u.plan === 'basic' ? 'bb' : 'br';
   var pb = '<span class="badge ' + planColor + '">' + planLabel + '</span>';
   var expInfo = '';
   if (u.expiresAt) {
@@ -1807,10 +1929,10 @@ function renderUser(u) {
     + '<button class="btn btn-sm" style="padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',10)">+10일</button>'
     + '</div>';
   var planBtns = '<div style="display:flex;gap:4px;flex-wrap:wrap">'
-    + '<button class="btn btn-sm" style="font-size:11px;border-color:var(--blue);color:var(--blue);padding:4px 7px" onclick="extendUserDays(\'' + u.id + '\',1)">무료<br>+1일</button>'
-    + '<button class="btn btn-sm" style="font-size:11px;border-color:#666;color:#aaa;padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'basic\')">베이직<br>30일</button>'
-    + '<button class="btn btn-sm btn-g" style="font-size:11px;padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'pro\')">프로<br>30일</button>'
-    + '<button class="btn btn-sm" style="font-size:11px;border-color:var(--yellow);color:var(--yellow);padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'premium\')">프리미엄<br>60일</button>'
+    + '<button class="btn btn-sm" style="font-size:11px;border-color:var(--blue);color:var(--blue);padding:4px 7px" onclick="extendUserDays(\'' + u.id + '\',1)">이벤트<br>+1일</button>'
+    + '<button class="btn btn-sm" style="font-size:11px;border-color:#666;color:#aaa;padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'basic\')">무료<br>30일</button>'
+    + '<button class="btn btn-sm" style="font-size:11px;border-color:var(--yellow);color:var(--yellow);padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'pro\')">프로<br>1개월</button>'
+    + '<button class="btn btn-sm" style="font-size:11px;border-color:var(--green);color:var(--green);padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'pro90\')">프로<br>3개월</button>'
     + '</div>';
   var btns = u.role !== 'admin'
     ? '<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">'
@@ -1866,17 +1988,23 @@ async function denyPlanChange(id) {
   setTimeout(function() { loadAdmin(); }, 300);
 }
 async function denyUpgrade(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyUpgrade: true } }); loadAdmin(); }
-async function approveFree(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'free', planDays: 7, accountLimit: 1 } }); toast('무료 7일 승인!'); loadAdmin(); }
+async function approveFree(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'free', planDays: 7, accountLimit: 1 } }); toast('🎁 이벤트 7일 승인!'); loadAdmin(); }
+
+async function approvePremium90(id) {
+  var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'pro', planDays: 90, accountLimit: 6 } });
+  if (d.error) return toast(d.error, 'err');
+  toast('프로 3개월 승인됐어!'); loadAdmin();
+}
 
 async function approvePlan(id, plan) {
-  var planNames = { basic: '베이직', pro: '프로', premium: '프리미엄' };
+  var planNames = { basic: '무료', pro: '베이직', pro: '프로' };
   var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: plan } });
   if (d.error) return toast(d.error, 'err');
   toast(planNames[plan] + ' 승인됐어!'); loadAdmin();
 }
 
 async function changePlan(id, plan) {
-  var planNames = { basic: '베이직', pro: '프로', premium: '프리미엄' };
+  var planNames = { basic: '무료', pro: '베이직', pro: '프로' };
   if (!confirm(planNames[plan] + '으로 변경할까?')) return;
   var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: plan, changePlan: true } });
   if (d.error) return toast(d.error, 'err');
@@ -1910,26 +2038,26 @@ async function setAutoScheduler(enabled) {
   var d = await api('/api/settings/auto-scheduler', { method: 'PUT', body: { enabled: enabled } });
   if (d.error) return toast(d.error, 'err');
   var badge = document.getElementById('autoSchedStatusBadge');
-  if (badge) { badge.textContent = enabled ? '프리미엄 활성화' : '테스트중'; badge.className = 'badge ' + (enabled ? 'bg' : 'by'); }
+  if (badge) { badge.textContent = enabled ? '프로 활성화' : '테스트중'; badge.className = 'badge ' + (enabled ? 'bg' : 'by'); }
   var navBadge = document.getElementById('autoSchedNavBadge');
   if (navBadge) {
     if (enabled) { navBadge.textContent = ''; navBadge.style.display = 'none'; }
     else { navBadge.textContent = '테스트중'; navBadge.style.display = ''; }
   }
-  toast(enabled ? '프리미엄 유저 활성화됐어!' : '테스트 전용으로 변경됐어!');
+  toast(enabled ? '프로 유저 활성화됐어!' : '테스트 전용으로 변경됐어!');
 }
 
 async function loadAutoSched() {
   var d = await api('/api/auto-schedule');
-  if (d.error === 'test' || d.error === 'disabled' || d.error === 'premium_only') {
+  if (d.error === 'test' || d.error === 'disabled' || d.error === 'pro_only') {
     document.getElementById('autoSchedLocked').style.display = 'block';
     document.getElementById('autoSchedContent').style.display = 'none';
     var lockedMsg = document.getElementById('autoSchedLockedMsg');
     if (lockedMsg) {
       if (d.error === 'disabled') {
-        lockedMsg.innerHTML = '자동 스케줄러가 현재 비활성화 상태예요.<br>관리자가 활성화하면 프리미엄 유저는 사용할 수 있어요.';
+        lockedMsg.innerHTML = '자동 스케줄러가 현재 비활성화 상태예요.<br>관리자가 활성화하면 프로 유저는 사용할 수 있어요.';
       } else {
-        lockedMsg.innerHTML = '자동 스케줄러는 <b>프리미엄 플랜 전용</b> 기능이에요.<br>프리미엄으로 업그레이드하면 바로 사용할 수 있어요.';
+        lockedMsg.innerHTML = '자동 스케줄러는 <b>프로 플랜 전용</b> 기능이에요.<br>프로로 업그레이드하면 바로 사용할 수 있어요.';
       }
     }
     return;
@@ -2145,15 +2273,18 @@ async function openPlanModal() {
       extendWrap.innerHTML = '<div style="font-size:12px;color:var(--txt2);padding:8px 0">무료 플랜은 연장 신청이 불가해요. 요금제 변경을 신청해주세요.</div>';
     }
   }
-  var planName = '무료 체험';
+  var planName = '이벤트';
   if (myInfo) {
-    if (myInfo.plan === 'paid' && (myInfo.accountLimit || 3) >= 6) planName = '프로 (6계정)';
+    if (myInfo.plan === 'paid' && (myInfo.accountLimit || 3) >= 6) planName = '베이직 (6계정)';
     else if (myInfo.plan === 'paid') planName = '베이직 (3계정)';
-    else planName = '무료 체험';
+    else if (myInfo.plan === 'pro') planName = '프로';
+    else if (myInfo.plan === 'pro') planName = '베이직';
+    else if (myInfo.plan === 'basic') planName = '무료';
+    else planName = '이벤트';
   }
   var namePart = myInfo ? (myInfo.name || '-') : '-';
   var nickPart = myInfo ? myInfo.nickname : '-';
-  var inquiryText = '이름: ' + namePart + '\n닉네임: ' + nickPart + '\n현재 등급: ' + planName + '\n변경할 등급: ';
+  var inquiryText = '프로 업그레이드 요청드립니다\n이용 기간: 1개월 / 3개월 (선택)\n\n이름: ' + namePart + '\n닉네임: ' + nickPart + '\n현재 등급: ' + planName;
   document.getElementById('planInquiryText').style.whiteSpace = 'pre';
   document.getElementById('planInquiryText').textContent = inquiryText;
   document.getElementById('planModal').classList.add('open');
@@ -2190,7 +2321,7 @@ async function saveBasicTags() {
 }
 
 async function requestPlanChange(plan) {
-  var planNames = { basic: '베이직', pro: '프로', premium: '프리미엄' };
+  var planNames = { basic: '무료', pro: '베이직', pro: '프로' };
   var d = await api('/api/users/limit-request', { method: 'POST', body: { requestPlan: plan } });
   if (d.error) return toast(d.error, 'err');
   toast(planNames[plan] + '으로 변경 요청했어! 관리자 승인 후 변경돼.');
@@ -2206,8 +2337,8 @@ async function updateSidePlanInfo() {
     var myInfo = allUsers.find(function(u) { return u.nickname === me.nickname; });
     if (!myInfo) return;
 
-    var planMap = { basic: '베이직', pro: '프로', premium: '프리미엄', free: '무료체험' };
-    var planColors = { basic: '#aaa', pro: 'var(--green)', premium: 'var(--yellow)', free: 'var(--blue)' };
+    var planMap = { basic: '무료', pro: '베이직', pro: '프로', free: '이벤트' };
+    var planColors = { basic: '#aaa', pro: 'var(--green)', pro: 'var(--yellow)', free: 'var(--blue)' };
     var planName = planMap[myInfo.plan] || '멤버';
     var planColor = planColors[myInfo.plan] || 'var(--txt)';
 
@@ -2246,7 +2377,7 @@ function updateAccForm(plan) {
     if (badge) badge.textContent = '(0/1)';
   } else if (plan === 'pro') {
     if (badge) badge.textContent = '(0/2)';
-  } else if (plan === 'premium') {
+  } else if (plan === 'pro') {
     if (badge) badge.textContent = '(0/6)';
   } else {
     if (badge) badge.textContent = '';
@@ -2273,8 +2404,8 @@ async function saveBasicTags() {
 
 async function updateSidePlan(user) {
   try {
-    var planMap = { basic: '베이직', pro: '프로', premium: '프리미엄', free: '무료 체험' };
-    var planColor = { basic: '#aaa', pro: 'var(--green)', premium: 'var(--yellow)', free: 'var(--blue)' };
+    var planMap = { basic: '무료', pro: '베이직', pro: '프로', free: '이벤트' };
+    var planColor = { basic: '#aaa', pro: 'var(--green)', pro: 'var(--yellow)', free: 'var(--blue)' };
     var plan = user.plan || 'free';
     var nameEl = document.getElementById('sidePlanName');
     if (nameEl) {
@@ -2326,8 +2457,8 @@ async function updateSideExpire() {
     }
 
     // 요금제 표시
-    var planNames = { basic: '베이직', pro: '프로', premium: '프리미엄', free: '무료체험', paid: '유료' };
-    var planColors = { basic: 'var(--blue)', pro: 'var(--green)', premium: 'var(--yellow)', free: 'var(--txt2)', paid: 'var(--green)' };
+    var planNames = { basic: '무료', pro: '베이직', pro: '프로', free: '이벤트', paid: '유료' };
+    var planColors = { basic: 'var(--blue)', pro: 'var(--green)', pro: 'var(--yellow)', free: 'var(--txt2)', paid: 'var(--green)' };
     var pn = document.getElementById('sidePlanName');
     if (pn) {
       pn.textContent = planNames[me.plan] || me.plan || '-';
