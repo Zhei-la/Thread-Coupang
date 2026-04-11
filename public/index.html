@@ -127,9 +127,9 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     <div class="logo">ThreadsAuto</div>
     <nav>
       <div class="nav-item active" onclick="go('write',this)">✏️ 글 작성</div>
-      <div class="nav-item" style="opacity:0.3;cursor:not-allowed;pointer-events:none">📅 예약 목록 🔒</div>
-      <div class="nav-item" id="autoSchedNav" style="opacity:0.3;cursor:not-allowed;pointer-events:none">🤖 자동 스케줄러 🔒</div>
-      <div class="nav-item" style="opacity:0.3;cursor:not-allowed;pointer-events:none">👤 계정 관리 🔒</div>
+      <div class="nav-item" id="navSchedule" onclick="go('schedule',this)">📅 예약 목록</div>
+      <div class="nav-item" id="autoSchedNav" onclick="go('autoSchedule',this)">🤖 자동 스케줄러</div>
+      <div class="nav-item" id="navAccounts" onclick="go('accounts',this)">👤 계정 관리</div>
       <div class="nav-sep" id="adminSep" style="display:none"></div>
       <div class="nav-item" id="adminNav" style="display:none" onclick="go('admin',this)">⚙️ 관리자</div>
     </nav>
@@ -861,6 +861,26 @@ function enterApp(user) {
   // 무료/이벤트 유저만 요금제 안내 카드 표시
   var banner = document.getElementById('freePlanBannerCard');
   if (banner) banner.style.display = (user.plan === 'free' || user.plan === 'basic') ? '' : 'none';
+
+  // 베이직(basic)만 사이드바 메뉴 잠금, 프로/관리자는 정상
+  var isBasic = (user.plan === 'basic' || user.plan === 'free') && user.role !== 'admin';
+  var lockStyle = { opacity: '0.3', cursor: 'not-allowed', pointerEvents: 'none' };
+  var unlockStyle = { opacity: '', cursor: '', pointerEvents: '' };
+  ['navSchedule', 'autoSchedNav', 'navAccounts'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (isBasic) {
+      el.style.opacity = '0.3';
+      el.style.cursor = 'not-allowed';
+      el.style.pointerEvents = 'none';
+      if (!el.textContent.includes('🔒')) el.textContent = el.textContent + ' 🔒';
+    } else {
+      el.style.opacity = '';
+      el.style.cursor = '';
+      el.style.pointerEvents = '';
+      el.textContent = el.textContent.replace(' 🔒', '');
+    }
+  });
   // 프로(premium)만 쿠팡/홍보 칩 활성화
   var coupangChip = document.getElementById('coupangChip');
   if (coupangChip) {
