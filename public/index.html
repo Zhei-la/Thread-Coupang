@@ -87,25 +87,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     <div class="auth-logo">ThreadsAuto</div>
     <div class="auth-sub">Threads 자동화 서비스</div>
     <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchTab('free',this)">무료사용</button>
-      <button class="auth-tab" onclick="switchTab('login',this)">로그인</button>
+      <button class="auth-tab active" onclick="switchTab('login',this)">로그인</button>
       <button class="auth-tab" onclick="switchTab('reg',this)">가입</button>
     </div>
 
-    <!-- 무료사용 탭 -->
-    <div class="auth-panel active" id="panel-free">
-      <div style="font-size:13px;color:var(--txt2);margin-bottom:14px;line-height:1.8;text-align:center">단톡방 공지사항에서 초대코드를 확인해주세요</div>
-      <a href="https://open.kakao.com/o/gehIVJpi" target="_blank" rel="noopener" class="btn" style="width:100%;justify-content:center;margin-bottom:16px;text-decoration:none">💬 초대코드 보러가기</a>
-      <div class="field"><label>초대코드</label><input id="freeCode" placeholder="초대코드 입력" style="text-transform:uppercase" /></div>
-      <div class="field"><label>닉네임</label><input id="freeNick" placeholder="닉네임" /></div>
-      <div class="field"><label>비밀번호</label><input id="freePw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doFreeReg()" /></div>
-      <div class="auth-err" id="freeErr"></div>
-      <div class="auth-hint" id="freeHint"></div>
-      <button class="btn btn-p" style="width:100%" onclick="doFreeReg()">시작하기</button>
-    </div>
-
     <!-- 로그인 탭 -->
-    <div class="auth-panel" id="panel-login">
+    <div class="auth-panel active" id="panel-login">
       <div class="field"><label>닉네임</label><input id="loginNick" placeholder="닉네임" /></div>
       <div class="field"><label>비밀번호</label><input id="loginPw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()" /></div>
       <div class="auth-err" id="loginErr"></div>
@@ -120,7 +107,14 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
       <div class="field"><label>비밀번호</label><input id="regPw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doReg()" /></div>
       <div class="auth-err" id="regErr"></div>
       <div class="auth-hint" id="regHint"></div>
-      <button class="btn btn-p" style="width:100%" onclick="doReg()">가입하기</button>
+      <button class="btn btn-p" style="width:100%;margin-bottom:10px" onclick="doReg()">가입하기</button>
+      <a href="https://open.kakao.com/o/sdwT0Zoi" target="_blank" rel="noopener" class="btn" style="width:100%;justify-content:center;text-decoration:none">💬 문의하기</a>
+    </div>
+
+    <!-- 무료사용 탭 (hidden - JS 참조용) -->
+    <div style="display:none">
+      <input id="freeCode" /><input id="freeNick" /><input id="freePw" />
+      <div id="freeErr"></div><div id="freeHint"></div>
     </div>
   </div>
 </div>
@@ -2570,4 +2564,3 @@ init();
 </script>
 </body>
 </html>
-
