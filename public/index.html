@@ -212,11 +212,15 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div id="savedTopicChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
         <label class="label">말투</label>
         <div id="toneChipsWrap">
-          <div style="font-size:11px;color:var(--txt2);margin-bottom:6px">중복 선택 가능</div>
-          <div class="chips" id="toneFixedChips" style="margin-bottom:8px">
+          <div style="font-size:11px;color:var(--txt2);margin-bottom:6px">중복 선택 가능 (하소연↔기분좋음 제외)</div>
+          <div class="chips" id="toneFixedChips" style="margin-bottom:6px">
             <div class="chip" id="coupangChip" data-fixed="1" data-tone="쿠팡/홍보" onclick="toggleFixedTone(this)" style="opacity:0.35;cursor:not-allowed;pointer-events:none">🔒 쿠팡/홍보</div>
             <div class="chip" data-fixed="1" data-tone="댓글유도형" onclick="toggleFixedTone(this)">댓글유도형</div>
             <div class="chip" data-fixed="1" data-tone="시크하게" onclick="toggleFixedTone(this)">😎 시크하게</div>
+          </div>
+          <div class="chips" style="margin-bottom:8px">
+            <div class="chip" id="moodBad" data-mood="bad" data-tone="하소연" onclick="toggleMoodTone(this)">😮‍💨 하소연</div>
+            <div class="chip" id="moodGood" data-mood="good" data-tone="기분좋음" onclick="toggleMoodTone(this)">😊 기분좋음</div>
           </div>
           <div style="height:1px;background:var(--bdr);margin-bottom:8px"></div>
           <div class="chips" id="toneChips">
@@ -269,12 +273,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <button class="btn btn-sm" onclick="saveCommentPrompt()" style="flex:1">💾 저장</button>
           <button class="btn btn-sm" onclick="clearCommentPrompt()" style="color:var(--txt2)">초기화</button>
         </div>
-        <textarea id="commentText" placeholder="댓글이 여기 생성됩니다..."></textarea>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <button class="btn btn-sm" onclick="genComment()">🪄 댓글 생성</button>
-          <button class="btn btn-sm" onclick="copyEl('commentText')">📋 복사</button>
-          <button class="btn btn-sm" onclick="openSched('comment')" style="display:none">📅 댓글만 예약</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <button class="btn btn-sm" onclick="genComment()" id="commentGenBtn">🪄 댓글 생성</button>
+          <button class="btn btn-sm" onclick="regenComments()" id="commentRegenBtn" style="display:none">🔄 재생성</button>
         </div>
+        <div id="commentList" style="display:flex;flex-direction:column;gap:8px"></div>
+        <textarea id="commentText" style="display:none"></textarea>
         <div style="margin-top:10px;font-size:11px;color:var(--txt2);padding:8px;background:rgba(239,68,68,.08);border-radius:6px;line-height:1.6">
           ⚠️ 너무 빠른 생성 시 IP 차단될 수 있어요.
         </div>
@@ -753,20 +757,17 @@ var genCooldownUntil = 0;
 
 function checkGenAbuse() {
   var now = Date.now();
-  // 쿨다운 중이면 차단
   if (now < genCooldownUntil) {
     var remain = Math.ceil((genCooldownUntil - now) / 1000);
     toast('너무 빠르게 생성을 누르고 있어. ' + remain + '초 후에 다시 시도해줘.', 'err');
     return false;
   }
-  // 5초 이내 클릭만 카운트 (5초 넘으면 정상 사용)
   genClickTimes = genClickTimes.filter(function(t) { return now - t < 60000; });
   genClickTimes.push(now);
-  // 5초 이내 20번 이상이면 3분 쿨다운
-  if (genClickTimes.length >= 20) {
-    genCooldownUntil = now + 3 * 60 * 1000;
+  if (genClickTimes.length >= 40) {
+    genCooldownUntil = now + 60 * 1000;
     genClickTimes = [];
-    toast('연속으로 너무 많이 눌렀어. 3분 후에 다시 사용할 수 있어.', 'err');
+    toast('1분에 40번 넘게 눌렀어. 1분 후에 다시 사용할 수 있어.', 'err');
     return false;
   }
   return true;
@@ -1142,9 +1143,27 @@ function toggleFixedTone(el) {
   } else {
     fixedTones = fixedTones.filter(function(x) { return x !== t; });
   }
-  // 쿠팡/홍보 선택 시 링크 카드 표시
   var card = document.getElementById('coupangLinkCard');
   if (card) card.style.display = fixedTones.includes('쿠팡/홍보') ? 'block' : 'none';
+}
+
+function toggleMoodTone(el) {
+  var mood = el.getAttribute('data-mood');
+  var oppositeId = mood === 'bad' ? 'moodGood' : 'moodBad';
+  var oppositeEl = document.getElementById(oppositeId);
+  var t = el.getAttribute('data-tone');
+  if (el.classList.contains('active')) {
+    el.classList.remove('active');
+    fixedTones = fixedTones.filter(function(x) { return x !== t; });
+    return;
+  }
+  if (oppositeEl && oppositeEl.classList.contains('active')) {
+    var oppositeT = oppositeEl.getAttribute('data-tone');
+    oppositeEl.classList.remove('active');
+    fixedTones = fixedTones.filter(function(x) { return x !== oppositeT; });
+  }
+  el.classList.add('active');
+  if (!fixedTones.includes(t)) fixedTones.push(t);
 }
 
 function pickLength(el) {
@@ -1206,19 +1225,124 @@ async function genPost() {
   btn.innerHTML = '🪄 글 생성';
 }
 
+function buildCommentPrompt() {
+  var topic = document.getElementById('topic').value.trim() || '일상';
+  var commentPrompt = document.getElementById('userCommentPrompt') ? document.getElementById('userCommentPrompt').value.trim() : '';
+  var toneStr = (fixedTones.length ? fixedTones.join(', ') + ', ' : '') + tone;
+  var postContent = document.getElementById('postText') ? document.getElementById('postText').value.trim() : '';
+  var isShahriTopic = topic.includes('스하리');
+
+  if (isShahriTopic) {
+    return `스레드 스하리 활동에 관한 내 솔직한 감정이나 다짐을 담은 댓글 5개를 써줘. 각각 분위기 다르게.
+
+[아래 방향에서 골고루 선택]
+- 뒷삭 없이 반하리 꼭 간다는 다짐
+- 뒷삭할 거면 스하리하지 말라는 경고
+- 늦게라도 반하리 꼭 갈 거라는 약속
+- 스하리 받으면 기분 좋다는 솔직한 감정
+- 뒷삭 당했을 때 서운한 감정
+
+[나쁜 예시 - 절대 금지]
+× "스하리 감사해요" × "같이 스하리 해요" × 존댓말
+
+[좋은 예시]
+○ "뒷삭할 거면 스하리하지 마셈" ○ "반하리 늦어도 꼭 감 기다려"
+
+반말. 마침표 없음. 이모지·해시태그 없음.${commentPrompt ? '\n추가 지침: ' + commentPrompt : ''}
+
+출력 형식:
+1. 댓글 내용
+2. 댓글 내용
+3. 댓글 내용
+4. 댓글 내용
+5. 댓글 내용
+
+번호와 댓글만 출력. 설명 없이.`;
+  }
+
+  return `아래는 내가 스레드에 올린 글이야.
+이 글에 내가 직접 다는 댓글 5개를 써줘. 각각 분위기가 다르게.
+
+내 글:
+${postContent || ('주제: ' + topic)}
+
+말투: ${toneStr}${commentPrompt ? '\n추가 지침: ' + commentPrompt : ''}
+
+━━━ 반드시 지킬 것 ━━━
+- 나(글쓴이)가 내 글 밑에 다는 댓글임
+- 글 내용에서 자연스럽게 이어지는 말
+- 글에서 못 다한 감정, 뒷얘기, 추가 하고 싶은 말
+- 또는 읽는 사람이 반응하고 싶게 여지 남기기
+- 댓글마다 분위기 다르게 (담담, 투정, 여유, 솔직, 궁금증 유발 등)
+
+━━━ 절대 금지 ━━━
+- "매력적이야", "작품이야" 같은 칭찬 투 절대 금지
+- "저도요", "맞아요", "공감해요" 같은 제3자 반응 절대 금지
+- 글 내용이랑 상관없는 말 절대 금지
+- 마침표(.) 금지 / 이모지 금지 / 존댓말 금지
+- 포장하거나 예쁘게 마무리하려는 시도 금지
+
+출력 형식 (반드시):
+1. 댓글 내용
+2. 댓글 내용
+3. 댓글 내용
+4. 댓글 내용
+5. 댓글 내용
+
+번호와 댓글만 출력. 설명 없이.`;
+}
+
+function renderCommentList(comments) {
+  var list = document.getElementById('commentList');
+  var regenBtn = document.getElementById('commentRegenBtn');
+  if (!list) return;
+  list.innerHTML = comments.map(function(c) {
+    var escaped = c.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+    return '<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px">' +
+      '<div style="flex:1;font-size:13px;line-height:1.7;color:var(--txt);white-space:pre-wrap">' + c + '</div>' +
+      '<button class="btn btn-sm" style="flex-shrink:0;font-size:12px" onclick="copyComment(\'' + escaped + '\')">📋</button>' +
+      '</div>';
+  }).join('');
+  if (regenBtn) regenBtn.style.display = '';
+  var ct = document.getElementById('commentText');
+  if (ct && comments[0]) ct.value = comments[0];
+}
+
+function copyComment(text) {
+  navigator.clipboard.writeText(text).then(function() { toast('복사됐어!'); });
+}
+
 async function genComment() {
   if (!checkGenAbuse()) return;
-  var topic = document.getElementById('topic').value.trim() || '일상';
+  var genBtn = document.getElementById('commentGenBtn');
+  var regenBtn = document.getElementById('commentRegenBtn');
+  if (genBtn) { genBtn.disabled = true; genBtn.textContent = '생성 중...'; }
+  if (regenBtn) regenBtn.disabled = true;
   try {
-    var commentPrompt = document.getElementById('userCommentPrompt') ? document.getElementById('userCommentPrompt').value.trim() : '';
-    var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, fixedTones: fixedTones, type: 'comment', commentPrompt: commentPrompt } });
+    var prompt = buildCommentPrompt();
+    var topic = document.getElementById('topic').value.trim() || '일상';
+    var commentPromptVal = document.getElementById('userCommentPrompt') ? document.getElementById('userCommentPrompt').value.trim() : '';
+    var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, fixedTones: fixedTones, type: 'comment', commentPrompt: commentPromptVal, customCommentPrompt: prompt } });
     if (d.error) throw new Error(d.error);
-    document.getElementById('commentText').value = d.text;
+    var raw = d.text || '';
+    var lines = raw.split('\n').filter(function(l) { return l.trim(); });
+    var comments = [], cur = '';
+    lines.forEach(function(l) {
+      var m = l.match(/^\d+\.\s*/);
+      if (m) { if (cur.trim()) comments.push(cur.trim()); cur = l.replace(m[0], ''); }
+      else { cur += (cur ? '\n' : '') + l; }
+    });
+    if (cur.trim()) comments.push(cur.trim());
+    if (!comments.length) comments = [raw];
+    renderCommentList(comments);
     incGenCount();
-    showCommentReserve();
-    toast('댓글 생성 완료!');
-  } catch(e) { toast(e.message, 'err'); }
+    toast('댓글 5개 생성 완료!');
+  } catch(e) { toast(e.message || '생성 실패', 'err'); }
+  if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🪄 댓글 생성'; }
+  if (regenBtn) regenBtn.disabled = false;
 }
+
+async function regenComments() { await genComment(); }
 
 function trackGenCount() {
   var todayKey = new Date().toISOString().slice(0,10);
