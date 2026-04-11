@@ -1,4 +1,4 @@
-const express = require('express');
+\const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
@@ -722,10 +722,28 @@ ${chicRule}`;
 텍스트만 출력.`;
   } else if (type === 'comment') {
     const extra = customCommentPrompt ? '\n추가 지침: ' + customCommentPrompt : '';
-    const commentLureInstr = hasCommentLure
-      ? '\n\n[댓글 작성 규칙]\n글이 뚝 끊긴 경우: 끊긴 이후 뒷이야기 자연스럽게 이어서 작성. 구체적인 정보나 경험으로.\n글이 질문으로 끝난 경우: 상황 더 구체화하거나 다른 각도로 궁금증 키워. "나도 몰라" "나도 같은 상황" 금지.\n공통: 짧고 자연스럽게. 반말. 이모지 없이. 마침표 없이.'
-      : '';
-    prompt = '댓글 1개만.\n주제: ' + (topic||'') + imgContext + '\n반말, 1~2문장, 이모지·해시태그 금지, 한국어만, 텍스트만 출력' + commentLureInstr + extra;
+
+    if (isShahri) {
+      prompt = `스레드 스하리 활동에 관한 내 솔직한 감정이나 다짐을 담은 댓글 1개를 써줘.
+
+[아래 중 하나를 랜덤 선택]
+- 뒷삭 없이 반하리 꼭 간다는 다짐
+- 뒷삭할 거면 스하리하지 말라는 경고
+- 늦게라도 반하리 꼭 갈 거라는 약속
+- 스하리 받으면 기분 좋다는 솔직한 감정
+- 뒷삭 당했을 때 서운한 감정
+- 반하리 안 하는 사람에 대한 섭섭함
+
+[규칙]
+- 반말. 1~3줄. 마침표 없음. 이모지·해시태그 없음.
+- 매번 다른 표현으로. 고정 문장 금지.
+- 텍스트만 출력.` + (extra ? '\n' + extra : '');
+    } else {
+      const commentLureInstr = hasCommentLure
+        ? '\n\n글이 뚝 끊긴 경우: 뒷이야기 자연스럽게 이어서 작성.\n글이 질문으로 끝난 경우: 상황 더 구체화하거나 궁금증 키워.\n공통: 짧고 자연스럽게. 반말. 이모지 없이. 마침표 없이.'
+        : '';
+      prompt = '댓글 1개.\n주제: ' + (topic||'') + imgContext + '\n\n읽는 사람이 공감하거나 관심을 갖게 만드는 댓글.\n- 주제에 대한 내 솔직한 감정이나 경험을 짧게.\n- 또는 공감 가는 말 한 마디.\n- 또는 살짝 궁금하게 만드는 한 마디.\n반말. 1~2문장. 마침표 없음. 이모지·해시태그 없음. 텍스트만 출력.' + commentLureInstr + (extra ? '\n' + extra : '');
+    }
   } else {
     const extra = customUserPrompt ? '\n\n[사용자 지침]\n' + customUserPrompt : '';
     prompt = toneInstruction + fixedToneInstr + '\n\n주제: ' + (topic||'') + imgContext + extra + '\n\n위 형식으로 자연스러운 Threads 게시글 작성. 한국어만, 반말, 이모지·해시태그 없이, 텍스트만 출력.';
