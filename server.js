@@ -507,6 +507,31 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
   const fixedTones = Array.isArray(req.body.fixedTones) ? req.body.fixedTones : [];
   const hasCoupang = fixedTones.includes('쿠팡/홍보');
   const hasCommentLure = fixedTones.includes('댓글유도형');
+  const hasSirk = fixedTones.includes('시크하게');
+  const postLength = req.body.postLength || 'short';
+  const lengthRules = {
+    short: `[글 길이 - 짧게]
+- 반드시 6~8줄 이내로 작성.
+- 2줄씩 붙여 쓰고 → 빈 줄 → 2줄씩 붙여 쓰기 반복.
+- 1줄 단독으로 끊는 거 금지.
+- 예시 (마침표 절대 없음):
+  요즘 이거 쓰는데
+  생각보다 괜찮더라
+
+  처음엔 별로였는데
+  손이 가네`,
+
+    medium: `[글 길이 - 중간]
+- 9~14줄 분량으로 작성.
+- 2~4줄씩 붙여 쓰고 → 빈 줄 → 반복.
+- 1줄 단독 금지.`,
+
+    long: `[글 길이 - 길게]
+- 15~20줄 분량으로 작성.
+- 2~4줄씩 붙여 쓰고 → 빈 줄 → 반복.
+- 1줄 단독 금지.`
+  };
+  const lengthInstr = lengthRules[postLength] || lengthRules.short;
   const openaiKey = process.env.OPENAI_API_KEY;
   const groqKey = process.env.GROQ_API_KEY;
   const apiKey = openaiKey || groqKey;
@@ -615,35 +640,42 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
 - "댓글에", "나머지는", "알려줄게" 같은 직접 유도 표현 절대 금지
 - 자연스럽게 말하다 끝나는 느낌`;
   }
+  if (hasSirk) {
+    fixedToneInstr += `\n\n[😎 시크하게]\n- 건조하고 툭 던지는 식. 감정 과잉 절대 금지.\n- 귀찮은 듯한 뉘앙스. 설명하려 하지 마.\n- 공감하되 티 내지 마. 위트는 있되 노력한 티 없게.\n- 예시: "그냥 해봤는데 됨" / "별거 없었음" / "왜 이게 돼"`;
+  }
+
+  const sirkInstr = hasSirk ? `
+
+[😎 시크하게]
+- 담백하게. 있는 그대로.
+- 쿨한 척·멋있는 척 금지. 억지로 무관심한 척도 금지.
+- 건조하게 툭 뱉는 것과 감정 없는 척은 다름.
+- 설명하려 하지 마. 이유 붙이지 마.
+- 예시: "그냥 해봤는데 됨" / "별거 없음" / "왜 되는지 모르겠음"` : '';
 
   const systemMsg = `너는 SNS에 글 올리는 평범한 한국인이다. AI가 쓴 것처럼 보이면 절대 안 된다.
 
 [언어]
-- 한국어만. 한자·일본어·영어 절대 금지 (주제에 포함된 영어 단어 제외).
+- 한국어만. 한자·일본어·영어 절대 금지 (주제 속 영어 단어 제외).
+- 이모지 완전 금지. 해시태그(#) 완전 금지.
 
 [말투 - 가장 중요]
 - 진짜 사람이 폰으로 빠르게 치는 것처럼 써.
-- 문장 끝에 마침표(.) 절대 금지. 물음표(?)·느낌표(!)도 꼭 필요할 때만.
-- 완성된 문장보다 말하다 끊긴 느낌이 자연스러움.
-- "~했어" "~하더라" "~인 것 같음" "~임" "~네" 같은 말투.
-- 뻔한 표현 금지: "정말", "진짜로", "꼭", "반드시", "최고" 이런 거 남발 금지.
-- 이모지 금지. 반말만. 제품명·브랜드명 직접 언급 금지.
+- 마침표(.) 어디에도 절대 금지. 예시: "좋더라" O / "좋더라." X
+- 물음표(?)·느낌표(!)도 꼭 필요할 때만.
+- 착한 척·다정한 척·희망찬 마무리 금지.
+- 느끼한 표현 금지: "빛나는", "특별한 하루", "나만의 방식", "설레는" 등.
+- 멋있어 보이려는 척 금지. 과장 남발 금지.
+- "함께라면", "할 수 있어", "오늘도 화이팅" 같은 교과서 표현 금지.
+- "정말", "진짜로", "꼭", "반드시", "최고" 남발 금지.
+- 그냥 툭 뱉듯이. "~했어" "~하더라" "~인 것 같음" "~임" "~네".
+- 반말만. 제품명·브랜드명 직접 언급 금지.
 - 리스트형 외 번호·불릿 금지.
 
-[줄바꿈 - 필수 규칙]
-- 내용이 자연스럽게 이어지는 문장들은 줄바꿈만 하고 빈 줄 없이 붙여서 써.
-- 내용이 전환되거나 새로운 생각으로 넘어갈 때만 빈 줄(엔터 2번) 1개.
-- 앞뒤 문장이 같은 흐름이면 무조건 붙여. 억지로 나누지 마.
-- 형식 예시:
-  요즘 챗지피티랑 대화 많이 해봤어
-  생각보다 진짜 똑똑하더라
-  가끔은 내가 뭘 물어보는지도 잊어버릴 정도
-
-  근데 어이없는 대답할 때도 있음
-  그런거 보면 또 귀여워
+${lengthInstr}
 
 [출력]
-- 게시글 텍스트만. 설명·주석·따옴표 없이.`;
+- 게시글 텍스트만. 설명·주석·따옴표 없이.${sirkInstr}`;
 
   let prompt = '';
   if (type === 'comment') {
@@ -651,10 +683,10 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
     const commentLureInstr = hasCommentLure
       ? '\n\n[댓글 작성 규칙 - 두 가지 경우]\n\n글이 말하다 뚝 끊긴 경우:\n- 끊긴 이후 결과나 뒷이야기를 자연스럽게 이어서 써줘\n- 구체적인 정보나 경험으로\n\n글이 질문으로 끝난 경우:\n- 같은 사람이 댓글 다는 거임. 절대로 "나도 몰라", "나도 같은 상황" 이런 말 금지\n- 질문에 대한 상황을 더 구체적으로 추가 설명하거나, 다른 각도로 궁금증을 더 키워\n- 예시: 사료 안 먹는 강아지면 → "3일째인데 물은 먹음, 산책은 잘 하는데 밥만 거부함"\n- 읽는 사람이 댓글로 도움주고 싶게 만드는 방향으로\n\n공통: 짧고 자연스럽게. 반말. 이모지 없이. 마침표 없이.'
       : '';
-    prompt = '댓글 1개만.\n주제: ' + (topic||'') + imgContext + '\n반말, 1~2문장, 이모지 금지, 한국어만, 텍스트만 출력' + commentLureInstr + extra;
+    prompt = '댓글 1개만.\n주제: ' + (topic||'') + imgContext + '\n반말, 1~2문장, 이모지·해시태그 금지, 한국어만, 텍스트만 출력' + commentLureInstr + extra;
   } else {
     const extra = customUserPrompt ? '\n\n[사용자 지침]\n' + customUserPrompt : '';
-    prompt = toneInstruction + fixedToneInstr + '\n\n주제: ' + (topic||'') + imgContext + extra + '\n\n위 형식으로 자연스러운 Threads 게시글 작성. 한국어만, 반말, 이모지 없이, 텍스트만 출력.';
+    prompt = toneInstruction + fixedToneInstr + '\n\n주제: ' + (topic||'') + imgContext + extra + '\n\n위 형식으로 자연스러운 Threads 게시글 작성. 한국어만, 반말, 이모지·해시태그 없이, 텍스트만 출력.';
   }
 
   // OpenAI 먼저 시도, 쿼터 초과 시 Groq fallback
@@ -699,6 +731,12 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
   if (/[\u3400-\u4DBF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uF900-\uFAFF]/.test(text)) {
     text = text.replace(/[\u3400-\u4DBF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uF900-\uFAFF]/g, '').replace(/  +/g, ' ').trim();
   }
+
+  // 이모지 제거
+  text = text.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27FF}]|[\u{2B00}-\u{2BFF}]/gu, '').trim();
+
+  // 해시태그 제거
+  text = text.replace(/#\S+/g, '').replace(/  +/g, ' ').trim();
 
   // 마침표 제거 (문장 끝 마침표만, 줄임표 ... 는 유지)
   text = text.replace(/\.(?!\.|\d)/g, '');
