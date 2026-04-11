@@ -505,9 +505,14 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
 
   const { topic, tone, type, imageDesc, userPrompt, commentPrompt } = req.body;
   const fixedTones = Array.isArray(req.body.fixedTones) ? req.body.fixedTones : [];
+  // 프론트에서 직접 빌드한 프롬프트가 있으면 우선 사용
+  const builtPrompt = req.body.customCommentPrompt ? String(req.body.customCommentPrompt).slice(0, 3000) : '';
   const hasCoupang = fixedTones.includes('쿠팡/홍보');
   const hasCommentLure = fixedTones.includes('댓글유도형');
   const isChic = fixedTones.includes('시크하게');
+  const hasBad = fixedTones.includes('하소연');
+  const hasGood = fixedTones.includes('기분좋음');
+  const hasShahriTone = fixedTones.includes('스하리말투');
   const postLength = req.body.postLength || 'short';
   const lengthRules = {
     short: `[글 길이 - 짧게]
@@ -640,6 +645,41 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
 - "댓글에", "나머지는", "알려줄게" 같은 직접 유도 표현 절대 금지
 - 자연스럽게 말하다 끝나는 느낌`;
   }
+  if (hasBad) {
+    fixedToneInstr += `\n\n━━━ 하소연 모드 ━━━
+- 속상하거나 짜증나거나 허무한 감정을 솔직하게 털어놓는 글
+- 아래 방향 중 하나를 랜덤으로 골라서 매번 다르게:
+  1. 아무도 스하리 안 해줌 — 혼자 하는 느낌
+  2. 뒷삭 당한 서운함
+  3. 팔로워가 도무지 안 늘어나는 현실
+  4. 반하리 기다렸는데 안 옴
+  5. 스하리 문화 자체에 살짝 지침
+  6. 열심히 했는데 반응 없는 허무함
+  7. 뒷삭하는 사람 이해 안 됨
+  8. 혼자 열심히 하는 게 바보같은 느낌
+  9. 오늘따라 스레드 하기 싫은 날
+  10. 맞팔인 줄 알았는데 아닌 경우
+- 과장하지 말고 있는 그대로 툭 뱉는 느낌
+- 극적으로 슬픈 척 금지 — 담담하게`;
+  }
+  if (hasGood) {
+    fixedToneInstr += `\n\n━━━ 기분좋음 모드 ━━━
+- 오늘 기분 좋은 일이 있었던 것처럼 가볍게 자랑하는 글
+- 아래 방향 중 하나를 랜덤으로 골라서 매번 다르게:
+  1. 팔로워가 갑자기 훅 늘었음
+  2. 스하리 해줬는데 반하리까지 빠르게 옴
+  3. 오늘 반응이 유독 좋은 날
+  4. 좋은 스치니 만난 기분
+  5. 뒷삭 없이 팔로워 유지되는 게 뿌듯함
+  6. 댓글이나 반응이 많이 달린 날
+  7. 스하리 먼저 갔는데 결과가 좋았음
+  8. 팔로워 목표치에 가까워지는 느낌
+  9. 오늘 스레드 하길 잘했다는 기분
+  10. 좋은 스치니랑 이어진 것 같아서 기분 좋음
+- 과하게 흥분하거나 감사하다는 척 금지
+- 슬쩍 기분 좋은 티 내는 정도, 부담 없이 가볍게`;
+  }
+
   const chicRule = isChic ? `
 
 ━━━ 시크 모드 (최우선 적용) ━━━
@@ -683,21 +723,34 @@ ${chicRule}`;
 
   let prompt = '';
   if (isShahri && type !== 'comment') {
-    prompt = `스레드(Threads) SNS에서 스하리할 사람을 찾는 게시글을 써줘.
+    // 스하리 말투 칩 선택 시 부정/긍정 반반 랜덤
+    const shahriMood = hasShahriTone
+      ? (Math.random() < 0.5 ? 'negative' : 'positive')
+      : null;
 
-[스레드 전용 용어]
-- 스하리: 팔로우+좋아요+리포스트를 먼저 해주는 것
-- 반하리: 받은 스하리를 그대로 돌려주는 것 (답례)
-- 스치니: 스레드 사용자 간 호칭
-- 스팔/쓰팔: 스레드 팔로우
-- 뒷삭: 맞팔 후 언팔하는 행위
+    const shahriNegative = `[부정/하소연 방향 - 이 중 하나 랜덤 선택]
+1. 아무도 스하리 안 해줘서 서운한 느낌
+2. 스하리 했는데 뒷삭 당해서 억울한 느낌
+3. 반하리 안 해주는 사람에 대한 섭섭함
+4. 팔로워가 안 늘어서 현타 오는 느낌
+5. 스하리 먼저 했는데 무반응이라 뻘쭘한 느낌
+6. 뒷삭할 거면 스하리하지 말라고 경고하는 느낌
+7. 혼자 스레드 하는 게 외롭다고 투정하는 느낌`;
 
-[규칙]
-- 반말 필수. 2~4줄. 마침표 없음. 이모지·해시태그 없음.
-- 아래 20가지 감정/방향 중 하나를 랜덤으로 골라서 완전히 새로운 표현으로 창작.
-- 절대로 고정된 문장 쓰지 말 것. 매번 다른 단어, 다른 감정, 다른 상황으로.
+    const shahriPositive = `[긍정/자랑 방향 - 이 중 하나 랜덤 선택]
+1. 스하리 해줘서 팔로워 많이 늘었다고 자랑하는 느낌
+2. 다들 스하리 너무 잘 해줘서 기분 좋다는 느낌
+3. 반하리 다 받아서 뿌듯한 느낌
+4. 오늘 스하리 몇 개 받았다고 신나는 느낌
+5. 스하리 덕분에 팔로워 목표 달성했다고 좋아하는 느낌
+6. 스하리 해줬더니 바로 반하리 와서 기분 좋은 느낌
+7. 스하리 하면서 좋은 스치니 생겼다는 느낌`;
 
-[감정/방향 목록 - 랜덤 1개 선택]
+    const shahriMoodInstr = shahriMood === 'negative'
+      ? shahriNegative
+      : shahriMood === 'positive'
+        ? shahriPositive
+        : `[감정/방향 목록 - 랜덤 1개 선택]
 ※ 긍정적인 느낌(1~10)과 솔직/툴툴대는 느낌(11~20) 중 랜덤으로 하나만 선택.
 
 [긍정/따뜻한 방향]
@@ -722,13 +775,30 @@ ${chicRule}`;
 17. 스하리 안 하면 삐질 거라고 장난스럽게 말하는 느낌
 18. 이미 스하리 다 해놨으니 반하리만 해달라는 느낌
 19. 오늘만 특별히 스하리 이벤트 연다고 선언하는 느낌
-20. 팔로워 0명인 척 살짝 과장해서 귀엽게 구걸하는 느낌
+20. 팔로워 0명인 척 살짝 과장해서 귀엽게 구걸하는 느낌`;
+
+    prompt = `스레드(Threads) SNS에서 스하리할 사람을 찾는 게시글을 써줘.
+
+[스레드 전용 용어]
+- 스하리: 팔로우+좋아요+리포스트를 먼저 해주는 것
+- 반하리: 받은 스하리를 그대로 돌려주는 것 (답례)
+- 스치니: 스레드 사용자 간 호칭
+- 스팔/쓰팔: 스레드 팔로우
+- 뒷삭: 맞팔 후 언팔하는 행위
+
+[규칙]
+- 반말 필수. 2~4줄. 마침표 없음. 이모지·해시태그 없음.
+- 아래 20가지 감정/방향 중 하나를 랜덤으로 골라서 완전히 새로운 표현으로 창작.
+- 절대로 고정된 문장 쓰지 말 것. 매번 다른 단어, 다른 감정, 다른 상황으로.
+
+${shahriMoodInstr}
 
 텍스트만 출력.`;
   } else if (type === 'comment') {
-    const extra = customCommentPrompt ? '\n추가 지침: ' + customCommentPrompt : '';
-
-    if (isShahri) {
+    // 프론트에서 직접 빌드한 프롬프트가 있으면 그걸 그대로 사용
+    if (builtPrompt) {
+      prompt = builtPrompt;
+    } else if (isShahri) {
       prompt = `스레드 스하리 활동에 관한 내 솔직한 감정이나 다짐을 담은 댓글 1개를 써줘.
 
 [아래 중 하나를 랜덤 선택]
