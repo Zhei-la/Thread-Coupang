@@ -213,6 +213,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
           <div class="chips" id="toneFixedChips" style="margin-bottom:8px">
             <div class="chip" id="coupangChip" data-fixed="1" data-tone="쿠팡/홍보" onclick="toggleFixedTone(this)" style="opacity:0.35;cursor:not-allowed;pointer-events:none">🔒 쿠팡/홍보</div>
             <div class="chip" data-fixed="1" data-tone="댓글유도형" onclick="toggleFixedTone(this)">댓글유도형</div>
+            <div class="chip" data-fixed="1" data-tone="시크하게" onclick="toggleFixedTone(this)">😎 시크하게</div>
           </div>
           <div style="height:1px;background:var(--bdr);margin-bottom:8px"></div>
           <div class="chips" id="toneChips">
@@ -228,6 +229,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
             <button class="btn btn-sm btn-p" onclick="addCustomTone()">+추가</button>
           </div>
           <div style="font-size:11px;color:var(--txt2);margin-top:4px">아래 말투 길게 누르면 삭제 가능</div>
+        </div>
+        <label class="label" style="margin-top:12px">글 길이</label>
+        <div class="chips" id="lengthChips" style="margin-bottom:12px">
+          <div class="chip active" onclick="pickLength(this)" data-length="short">짧게 (3~4줄)</div>
+          <div class="chip" onclick="pickLength(this)" data-length="medium">중간 (5~8줄)</div>
+          <div class="chip" onclick="pickLength(this)" data-length="long">길게 (8~12줄)</div>
         </div>
         <label class="label" style="margin-top:12px">글 생성 프롬프트 <span style="color:var(--txt2);font-size:11px">(선택 - 새로고침해도 유지됨)</span></label>
         <textarea id="userPostPrompt" placeholder="예) 3~4문장으로 짧게, 경험담처럼, 마지막에 질문으로 마무리" style="min-height:50px;font-size:13px;margin-bottom:6px"></textarea>
@@ -734,6 +741,7 @@ var tone = '리스트형';
 var fixedTones = [];
 var myRole = '';
 var mediaMode = 'photo';
+var postLength = 'short';
 var imgUrls = [], imgFiles = [], vidUrl = '', editImgUrls = [], newTags = [], editTags = [];
 
 // 글 생성 어뷰징 방지
@@ -791,6 +799,7 @@ function go(name, el) {
   document.getElementById('page-' + name).classList.add('active');
   if (el) el.classList.add('active');
   localStorage.setItem('page', name);
+  location.hash = name;
   if (name === 'schedule') loadSched();
   if (name === 'accounts') loadAccs();
   if (name === 'admin') loadAdmin();
@@ -913,7 +922,9 @@ function enterApp(user) {
     if (form) form.style.display = 'none';
     if (tagOnly) tagOnly.style.display = 'block';
   }
-  var saved = localStorage.getItem('page') || 'write';
+  var hash = location.hash.replace('#', '');
+  var validPages = ['write', 'schedule', 'autoSchedule', 'accounts', 'admin'];
+  var saved = (hash && validPages.includes(hash)) ? hash : (localStorage.getItem('page') || 'write');
   go(saved, null);
 }
 
@@ -1128,6 +1139,12 @@ function toggleFixedTone(el) {
   if (card) card.style.display = fixedTones.includes('쿠팡/홍보') ? 'block' : 'none';
 }
 
+function pickLength(el) {
+  document.querySelectorAll('#lengthChips .chip').forEach(function(c) { c.classList.remove('active'); });
+  el.classList.add('active');
+  postLength = el.getAttribute('data-length');
+}
+
 function pickTone(el) {
   document.querySelectorAll('#toneChips .chip').forEach(function(c) { c.classList.remove('active'); });
   el.classList.add('active');
@@ -1171,7 +1188,7 @@ async function genPost() {
     }
     btn.innerHTML = '<span class="spin"></span> 글 생성 중...';
     var userPrompt = document.getElementById('userPostPrompt') ? document.getElementById('userPostPrompt').value.trim() : '';
-    var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, fixedTones: fixedTones, type: 'post', imageDesc: imageDesc, userPrompt: userPrompt } });
+    var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, fixedTones: fixedTones, type: 'post', imageDesc: imageDesc, userPrompt: userPrompt, postLength: postLength } });
     if (d.error) throw new Error(d.error);
     document.getElementById('postText').value = d.text;
     incGenCount();
@@ -2581,6 +2598,15 @@ async function loadAdBanner() {
 }
 
 init();
+
+window.addEventListener('hashchange', function() {
+  var hash = location.hash.replace('#', '');
+  var validPages = ['write', 'schedule', 'autoSchedule', 'accounts', 'admin'];
+  if (hash && validPages.includes(hash)) {
+    var navEl = document.querySelector('.nav-item[onclick*="' + hash + '"]');
+    go(hash, navEl);
+  }
+});
 </script>
 </body>
 </html>
