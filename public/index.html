@@ -136,9 +136,9 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
     <div class="sidebar-foot">
       <div style="font-weight:600;font-size:14px;margin-bottom:2px;display:none" id="sideNick"></div>
       <div style="font-size:11px;color:var(--txt2);margin-bottom:6px;display:none" id="sideRole"></div>
-      <div id="sidePlanInfo" style="display:none;margin-bottom:8px;padding:8px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr);font-size:11px;line-height:1.8">
+      <div id="sidePlanInfo" style="margin-bottom:8px;padding:8px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr);font-size:11px;line-height:1.8">
         <div style="display:flex;justify-content:space-between">
-          <span style="color:var(--txt2)">요금제</span>
+          <span style="color:var(--txt2)">등급</span>
           <span id="sidePlanName" style="font-weight:700;color:var(--yellow)">-</span>
         </div>
         <div style="display:flex;justify-content:space-between">
@@ -543,9 +543,15 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div style="font-size:13px;color:var(--txt2);margin-bottom:14px" id="expireDaysLeft"></div>
         <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
           <div>
+            <button class="btn btn-sm" style="width:100%;justify-content:space-between;border-color:var(--green);color:var(--green)" onclick="requestPlanChange('free')">
+              <span>이벤트로 변경 요청</span>
+              <span style="font-size:11px;color:var(--txt2)">7일 무료 · 관리자 승인 필요</span>
+            </button>
+          </div>
+          <div>
             <button class="btn btn-sm" style="width:100%;justify-content:space-between" onclick="requestPlanChange('basic')">
               <span>베이직으로 변경 요청</span>
-              <span style="font-size:11px;color:var(--txt2)">0원 · 글생성+복사 · 30일</span>
+              <span style="font-size:11px;color:var(--txt2)">0원 · 글생성+복사 · 영구</span>
             </button>
           </div>
           <div>
@@ -2438,12 +2444,11 @@ async function openPlanModal() {
   }
   var planName = '이벤트';
   if (myInfo) {
-    if (myInfo.plan === 'paid' && (myInfo.accountLimit || 3) >= 6) planName = '베이직 (6계정)';
-    else if (myInfo.plan === 'paid') planName = '베이직 (3계정)';
-    else if (myInfo.plan === 'pro') planName = '프로';
-    else if (myInfo.plan === 'pro') planName = '베이직';
-    else if (myInfo.plan === 'basic') planName = '무료';
-    else planName = '이벤트';
+    if (myInfo.plan === 'pro') planName = '프로';
+    else if (myInfo.plan === 'basic') planName = '베이직 (무료)';
+    else if (myInfo.plan === 'free') planName = '이벤트 (7일 체험)';
+    else if (myInfo.plan === 'paid') planName = '유료';
+    else planName = myInfo.plan || '이벤트';
   }
   var namePart = myInfo ? (myInfo.name || '-') : '-';
   var nickPart = myInfo ? myInfo.nickname : '-';
@@ -2484,7 +2489,7 @@ async function saveBasicTags() {
 }
 
 async function requestPlanChange(plan) {
-  var planNames = { basic: '무료', pro: '베이직', pro: '프로' };
+  var planNames = { free: '이벤트', basic: '베이직', pro: '프로' };
   var d = await api('/api/users/limit-request', { method: 'POST', body: { requestPlan: plan } });
   if (d.error) return toast(d.error, 'err');
   toast(planNames[plan] + '으로 변경 요청했어! 관리자 승인 후 변경돼.');
@@ -2500,9 +2505,9 @@ async function updateSidePlanInfo() {
     var myInfo = allUsers.find(function(u) { return u.nickname === me.nickname; });
     if (!myInfo) return;
 
-    var planMap = { basic: '무료', pro: '베이직', pro: '프로', free: '이벤트' };
-    var planColors = { basic: '#aaa', pro: 'var(--green)', pro: 'var(--yellow)', free: 'var(--blue)' };
-    var planName = planMap[myInfo.plan] || '멤버';
+    var planMap = { basic: '베이직', pro: '프로', free: '이벤트' };
+    var planColors = { basic: '#aaa', pro: 'var(--yellow)', free: 'var(--green)' };
+    var planName = planMap[myInfo.plan] || (myInfo.plan || '멤버');
     var planColor = planColors[myInfo.plan] || 'var(--txt)';
 
     var nameEl = document.getElementById('sidePlanName');
@@ -2515,13 +2520,15 @@ async function updateSidePlanInfo() {
         daysEl.textContent = diff < 0 ? '만료됨' : diff + '일 남음';
         daysEl.style.color = diff <= 10 ? 'var(--red)' : 'var(--txt)';
       }
+    } else {
+      var daysEl = document.getElementById('sideDaysLeft');
+      if (daysEl) { daysEl.textContent = myInfo.plan === 'basic' ? '영구' : '-'; }
     }
 
-    // 오늘 글생성 횟수
-    var genLimit = myInfo.plan === 'basic' ? 200 : 100;
+    // 등급별 하루 생성 한도 표시
+    var genLimit = myInfo.plan === 'pro' ? '무제한' : myInfo.plan === 'basic' ? '200번' : myInfo.plan === 'free' ? '100번' : '-';
     var genEl = document.getElementById('sideGenCount');
-    // 서버에서 오늘 생성 횟수 가져오기 (publish_count의 gen_ 키)
-    if (genEl) genEl.textContent = '하루 ' + genLimit + '번';
+    if (genEl) genEl.textContent = '하루 ' + genLimit;
 
   } catch(e) {}
 }
