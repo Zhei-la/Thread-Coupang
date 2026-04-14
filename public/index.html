@@ -903,7 +903,7 @@ function enterApp(user) {
   // 프로(premium)만 쿠팡/홍보 칩 활성화
   var coupangChip = document.getElementById('coupangChip');
   if (coupangChip) {
-    if (user.plan === 'pro' || user.role === 'admin') {
+    if (user.plan === 'pro' || user.plan === 'free' || user.role === 'admin') {
       coupangChip.style.opacity = '';
       coupangChip.style.cursor = '';
       coupangChip.style.pointerEvents = '';
@@ -2059,10 +2059,11 @@ async function delUser(id) {
 }
 
 async function setPlanAndExtend(id, plan) {
-  var planNames = { basic: '무료(30일)', pro: '프로 1개월', pro90: '프로 3개월' };
-  if (!confirm(planNames[plan] + ' 으로 변경하고 기간 연장할까?')) return;
+  var planNames = { basic: '베이직(영구)', pro: '프로 1개월', pro90: '프로 3개월' };
+  if (!confirm(planNames[plan] + ' 으로 변경할까?')) return;
   var body = { status: 'approved', setPlan: plan === 'pro90' ? 'pro' : plan };
   if (plan === 'pro90') body.planDays = 90;
+  if (plan === 'basic') body.clearExpiry = true;
   var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: body });
   if (d.error) return toast(d.error, 'err');
   toast(planNames[plan] + ' 적용됐어!'); loadAdmin();
@@ -2098,8 +2099,8 @@ function renderUser(u) {
     + '<button class="btn btn-sm" style="padding:4px 7px;font-size:12px" onclick="extendUserDays(\'' + u.id + '\',10)">+10일</button>'
     + '</div>';
   var planBtns = '<div style="display:flex;gap:4px;flex-wrap:wrap">'
-    + '<button class="btn btn-sm" style="font-size:11px;border-color:var(--blue);color:var(--blue);padding:4px 7px" onclick="extendUserDays(\'' + u.id + '\',1)">이벤트<br>+1일</button>'
-    + '<button class="btn btn-sm" style="font-size:11px;border-color:#666;color:#aaa;padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'basic\')">무료<br>30일</button>'
+    + '<button class="btn btn-sm" style="font-size:11px;border-color:var(--blue);color:var(--blue);padding:4px 7px" onclick="approveFree(\'' + u.id + '\')">🎁 이벤트<br>7일</button>'
+    + '<button class="btn btn-sm" style="font-size:11px;border-color:#666;color:#aaa;padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'basic\')">베이직<br>영구</button>'
     + '<button class="btn btn-sm" style="font-size:11px;border-color:var(--yellow);color:var(--yellow);padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'pro\')">프로<br>1개월</button>'
     + '<button class="btn btn-sm" style="font-size:11px;border-color:var(--green);color:var(--green);padding:4px 7px" onclick="setPlanAndExtend(\'' + u.id + '\',\'pro90\')">프로<br>3개월</button>'
     + '</div>';
@@ -2749,3 +2750,5 @@ window.addEventListener('hashchange', function() {
 </script>
 </body>
 </html>
+
+
