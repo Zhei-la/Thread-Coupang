@@ -253,7 +253,7 @@ app.post('/api/auth/login', rateLimit(5, 60000), (req, res) => {
   if (!user) return res.status(401).json({ error: '닉네임 또는 비밀번호 오류' });
   if (user.status === 'pending') return res.status(403).json({ error: 'pending' });
   if (user.status === 'suspended') return res.status(403).json({ error: 'suspended' });
-  if (user.expiresAt && new Date() > new Date(user.expiresAt) && user.role !== 'admin') {
+  if (user.expiresAt && new Date() > new Date(user.expiresAt) && user.role !== 'admin' && user.plan !== 'basic') {
     return res.status(403).json({ error: 'expired' });
   }
   const stored = user.passwordHash || user.password || '';
@@ -413,12 +413,16 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
   }
   if (req.body.setPlan) {
     user.plan = req.body.setPlan;
-    if (req.body.setPlan === 'basic') { user.accountLimit = 0; user.dailyPublishLimit = 0; }
-    else if (req.body.setPlan === 'legacy') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
-    else if (req.body.setPlan === 'pro') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
-    const planDays = req.body.planDays || (req.body.setPlan === 'pro' ? 30 : 30);
-    const base2 = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
-    user.expiresAt = new Date(base2.getTime() + planDays * 24 * 60 * 60 * 1000).toISOString();
+    if (req.body.setPlan === 'basic') {
+      user.accountLimit = 0; user.dailyPublishLimit = 0;
+      user.expiresAt = null; // 베이직은 기간 없음
+    } else if (req.body.setPlan === 'legacy') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
+    else if (req.body.setPlan === 'pro') {
+      user.accountLimit = 6; user.dailyPublishLimit = 5;
+      const planDays = req.body.planDays || 30;
+      const base2 = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
+      user.expiresAt = new Date(base2.getTime() + planDays * 24 * 60 * 60 * 1000).toISOString();
+    }
     if (!user.approvedAt) { user.approvedAt = new Date().toISOString(); user.status = 'approved'; }
     user.planChangeRequest = null;
   }
@@ -1383,9 +1387,16 @@ cron.schedule('0 15 * * *', () => {
   let changed = false;
   users.forEach(u => {
     if (u.role === 'admin' || !u.expiresAt) return;
+    if (u.plan === 'basic') { u.expiresAt = null; changed = true; return; } // 베이직은 기간 없음
     if (new Date(u.expiresAt) < now && u.status === 'approved') {
-      u.status = 'suspended'; u._expiredAt = now.toISOString(); changed = true;
-      console.log(`[EXPIRE] ${u.nickname} 만료로 정지`);
+      // 정지 대신 베이직으로 강등
+      u.plan = 'basic';
+      u.expiresAt = null;
+      u.accountLimit = 0;
+      u.dailyPublishLimit = 0;
+      u._downgradedAt = now.toISOString();
+      changed = true;
+      console.log(`[EXPIRE] ${u.nickname} 만료 → 베이직 강등`);
     }
   });
   if (changed) saveJSON(`${DATA_ROOT}/users.json`, users);
@@ -1533,3 +1544,4 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`서버 실행중: ${PORT}`));
+
