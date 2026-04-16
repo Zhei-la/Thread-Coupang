@@ -173,7 +173,7 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
 
       <a href="https://open.kakao.com/o/sdwT0Zoi" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:transparent;color:var(--txt2);border:1px solid var(--bdr);border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;margin-bottom:6px;transition:all .2s" onmouseover="this.style.borderColor='var(--txt)';this.style.color='var(--txt)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--txt2)'">문의하기</a>
       <div style="font-size:11px;color:var(--txt2);line-height:1.7;text-align:center;margin-bottom:8px;padding:0 4px">
-        예약·자동·계정 기능은<br>프로 사용자만 이용 가능해요 🔒
+        예약·자동·계정 기능은<br>베이직 제외 모두 이용 가능해요 🔒
       </div>
       <label class="label" style="display:none">계정 선택</label>
       <select id="globalAcc" onchange="onAccChange();updateTokenInfo()" style="margin-bottom:10px;display:none"></select>
@@ -879,10 +879,10 @@ function enterApp(user) {
   }
   // 무료/이벤트 유저만 요금제 안내 카드 표시
   var banner = document.getElementById('freePlanBannerCard');
-  if (banner) banner.style.display = (user.plan === 'free' || user.plan === 'basic') ? '' : 'none';
+  if (banner) banner.style.display = (user.plan === 'basic' || user.plan === 'free') ? '' : 'none';
 
   // 베이직(basic)만 사이드바 메뉴 잠금, 프로/관리자는 정상
-  var isBasic = (user.plan === 'basic' || user.plan === 'free') && user.role !== 'admin';
+  var isBasic = user.plan === 'basic' && user.role !== 'admin';
   var lockStyle = { opacity: '0.3', cursor: 'not-allowed', pointerEvents: 'none' };
   var unlockStyle = { opacity: '', cursor: '', pointerEvents: '' };
   ['navSchedule', 'autoSchedNav', 'navAccounts'].forEach(function(id) {
