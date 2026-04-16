@@ -1307,7 +1307,7 @@ app.post('/api/auto-schedule', auth, (req, res) => {
   if (user?.role !== 'admin') {
     const settings2 = getSettings();
     if (!settings2.autoSchedulerEnabled) return res.status(403).json({ error: 'disabled' });
-    if (user?.plan !== 'pro') return res.status(403).json({ error: 'pro_only' });
+    if (user?.plan !== 'pro' && user?.plan !== 'free') return res.status(403).json({ error: 'pro_only' });
   }
   const { accountId, topics, tone, publishTime, commentTone, commentDelay, enabled, toneExample, tonePrompt } = req.body;
   const accs = getAccounts(req.userId);
@@ -1416,7 +1416,7 @@ cron.schedule('* * * * *', async () => {
     if (!user) continue;
     if (user.role !== 'admin') {
       if (!settings.autoSchedulerEnabled) continue;
-      if (user.plan !== 'pro') continue;
+      if (user.plan !== 'pro' && user.plan !== 'free') continue;
     }
     const autoSchedules = getAutoSchedules(userId);
     const maxAuto = user.role === 'admin' ? 999 : 5;
@@ -1544,4 +1544,3 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`서버 실행중: ${PORT}`));
-
