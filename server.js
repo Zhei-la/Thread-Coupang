@@ -439,10 +439,10 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
   if (req.body.approvePlanChange) {
     const reqPlan = user.planChangeRequest ? user.planChangeRequest.plan : null;
     if (reqPlan) {
-      user.plan = reqPlan;
-      if (reqPlan === 'basic') { user.accountLimit = 0; user.dailyPublishLimit = 0; user.expiresAt = new Date(Date.now() + 30 * 86400000).toISOString(); }
-      else if (reqPlan === 'legacy') { user.accountLimit = 2; user.dailyPublishLimit = 3; user.expiresAt = new Date(Date.now() + 30 * 86400000).toISOString(); }
-      else if (reqPlan === 'pro') { user.accountLimit = 6; user.dailyPublishLimit = 5; user.expiresAt = new Date(Date.now() + 60 * 86400000).toISOString(); }
+      if (reqPlan === 'basic') { user.plan = 'basic'; user.accountLimit = 0; user.dailyPublishLimit = 0; user.expiresAt = null; }
+      else if (reqPlan === 'pro') { user.plan = 'pro'; user.accountLimit = 6; user.dailyPublishLimit = 5; user.expiresAt = new Date(Date.now() + 30 * 86400000).toISOString(); }
+      else if (reqPlan === 'pro90') { user.plan = 'pro'; user.accountLimit = 6; user.dailyPublishLimit = 5; user.expiresAt = new Date(Date.now() + 90 * 86400000).toISOString(); }
+      else if (reqPlan === 'free') { user.plan = 'free'; user.accountLimit = 2; user.dailyPublishLimit = 5; user.expiresAt = new Date(Date.now() + 7 * 86400000).toISOString(); }
     }
     user.planChangeRequest = null;
   }
