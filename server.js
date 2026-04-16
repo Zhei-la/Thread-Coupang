@@ -394,7 +394,7 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
     if (req.body.plan === 'basic') { user.accountLimit = 0; user.dailyPublishLimit = 0; }
     else if (req.body.plan === 'legacy') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
     else if (req.body.plan === 'pro') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
-    else if (req.body.plan === 'free') { user.accountLimit = 1; user.dailyPublishLimit = 2; }
+    else if (req.body.plan === 'free') { user.accountLimit = 2; user.dailyPublishLimit = 5; }
   }
   if (req.body.changePlan) {
     user.plan = req.body.plan;
@@ -1015,13 +1015,14 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
   if (user?.plan === 'basic') return res.status(403).json({ error: '베이직 플랜은 발행 불가. 프로 이상으로 업그레이드해줘요.' });
   let dailyLimit = 5;
   if (user?.role === 'admin') dailyLimit = 9999;
+  else if (user?.plan === 'free') dailyLimit = 5;        // 이벤트: 반자동 하루 5회
+  else if (user?.plan === 'pro') dailyLimit = 100;       // 프로: 사실상 무제한 (100회)
   else if (user?.dailyPublishLimit) dailyLimit = user.dailyPublishLimit;
-  else if (user?.plan === 'free') dailyLimit = 2;
-  else dailyLimit = 3;
+  else dailyLimit = 5;
   const today = getTodayKey();
   const counts = getPublishCount(req.userId);
   if (dailyLimit < 9999 && (counts[today] || 0) >= dailyLimit) {
-    return res.status(429).json({ error: `오늘 발행 한도(${dailyLimit}개) 초과.` });
+    return res.status(429).json({ error: `오늘 발행 한도 초과. 너무 빠른 발행은 IP 차단될 수 있어요.` });
   }
   if (videoUrl) { const vc = validateMediaUrl(videoUrl); if (!vc.ok) return res.status(400).json({ error: '영상 URL 오류: ' + vc.reason }); }
   if (Array.isArray(imageUrls)) {
@@ -1419,7 +1420,7 @@ cron.schedule('* * * * *', async () => {
       if (user.plan !== 'pro' && user.plan !== 'free') continue;
     }
     const autoSchedules = getAutoSchedules(userId);
-    const maxAuto = user.role === 'admin' ? 999 : 5;
+    const maxAuto = user.role === 'admin' ? 999 : (user.plan === 'free' ? 2 : 5); // 이벤트:2회, 프로:5회
     const toRun = autoSchedules.filter(s => s.enabled && s.publishTime === currentTime).slice(0, maxAuto);
     if (!toRun.length) continue;
     const autoCountToday = {};
