@@ -163,7 +163,9 @@ function auth(req, res, next) {
 }
 function adminAuth(req, res, next) {
   auth(req, res, () => {
-    if (req.user?.role !== 'admin') return res.status(403).json({ error: '관리자만 가능' });
+    if (req.user?.role !== 'admin' || req.user?.nickname !== ADMIN_NICKNAME) {
+      return res.status(403).json({ error: '관리자만 가능' });
+    }
     next();
   });
 }
@@ -273,14 +275,18 @@ app.post('/api/auth/logout', auth, (req, res) => {
   res.json({ ok: true });
 });
 
+const ADMIN_NICKNAME = 'dud2587';
+
 app.get('/api/auth/me', auth, (req, res) => {
   const u = req.user;
+  // 닉네임이 관리자가 아닌데 role이 admin이면 강제 보정
+  const safeRole = u.nickname === ADMIN_NICKNAME ? u.role : 'user';
   const today = getTodayKey();
   const counts = getPublishCount(u.id);
   const genUsed = counts['gen_' + today] || 0;
   const genLimit = u.plan === 'free' ? 100 : 200;
   res.json({
-    id: u.id, nickname: u.nickname, name: u.name || '', role: u.role,
+    id: u.id, nickname: u.nickname, name: u.name || '', role: safeRole,
     plan: u.plan || 'free', accountLimit: u.accountLimit || 1,
     expiresAt: u.expiresAt || null, genUsed, genLimit, status: u.status || 'approved'
   });
@@ -1545,4 +1551,3 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`서버 실행중: ${PORT}`));
-
