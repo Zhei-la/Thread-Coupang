@@ -836,6 +836,8 @@ function toggleSidebar() { document.getElementById('sidebar').classList.toggle('
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
 
 function go(name, el) {
+  // 관리자 페이지 접근 차단 (닉네임 이중 검증)
+  if (name === 'admin' && myRole !== 'admin') return;
   document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
   document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
   document.getElementById('page-' + name).classList.add('active');
@@ -897,16 +899,21 @@ async function init() {
 
 function enterApp(user) {
   myRole = user.role;
+  var isRealAdmin = user.role === 'admin' && user.nickname === 'dud2587';
   document.getElementById('authWrap').style.display = 'none';
   document.getElementById('appWrap').classList.add('on');
   document.getElementById('sideNick').textContent = user.nickname;
-  document.getElementById('sideRole').textContent = user.role === 'admin' ? '관리자' : '멤버';
-  if (user.role === 'admin') {
+  document.getElementById('sideRole').textContent = isRealAdmin ? '관리자' : '멤버';
+  if (isRealAdmin) {
     document.getElementById('adminNav').style.display = 'block';
     document.getElementById('adminSep').style.display = 'block';
     var lc = document.getElementById('limitRequestCard');
     if (lc) lc.style.display = 'none';
   } else {
+    // 관리자 탭 완전히 숨기고 접근 차단
+    document.getElementById('adminNav').style.display = 'none';
+    document.getElementById('adminSep').style.display = 'none';
+    myRole = 'user';
     checkExpiry();
   }
   // 무료/이벤트 유저만 요금제 안내 카드 표시
@@ -967,6 +974,8 @@ function enterApp(user) {
   var hash = location.hash.replace('#', '');
   var validPages = ['write', 'schedule', 'autoSchedule', 'accounts', 'admin'];
   var saved = (hash && validPages.includes(hash)) ? hash : (localStorage.getItem('page') || 'write');
+  // 관리자가 아닌데 admin 페이지 접근 시 write로
+  if (saved === 'admin' && myRole !== 'admin') saved = 'write';
   go(saved, null);
 }
 
@@ -2190,7 +2199,7 @@ async function denyPlanChange(id) {
   setTimeout(function() { loadAdmin(); }, 300);
 }
 async function denyUpgrade(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', denyUpgrade: true } }); loadAdmin(); }
-async function approveFree(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'free', planDays: 7, accountLimit: 1 } }); toast('🎁 이벤트 7일 승인!'); loadAdmin(); }
+async function approveFree(id) { await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'free', planDays: 7, accountLimit: 2, dailyPublishLimit: 5 } }); toast('🎁 이벤트 7일 승인!'); loadAdmin(); }
 
 async function approvePremium90(id) {
   var d = await api('/api/users/' + id + '/status', { method: 'PUT', body: { status: 'approved', plan: 'pro', planDays: 90, accountLimit: 6 } });
@@ -2785,3 +2794,5 @@ window.addEventListener('hashchange', function() {
 </script>
 </body>
 </html>
+
+
