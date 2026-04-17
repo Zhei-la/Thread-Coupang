@@ -284,6 +284,33 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         </div>
       </div>
 
+      <div class="card" id="coupangLinkCard" style="display:none">
+        <h2>🛒 쿠팡/홍보 설정</h2>
+        <div style="font-size:12px;color:var(--blue);margin-bottom:10px;padding:8px 12px;background:rgba(59,130,246,.08);border-radius:8px">순서: 링크 입력 → 설정 저장 → 댓글에 적용 → 발행</div>
+        <label class="label">쿠팡 파트너스 안내 문구</label>
+        <textarea id="coupangNoticeText" style="min-height:50px;font-size:12px;margin-bottom:8px">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</textarea>
+        <label class="label">문구 위치</label>
+        <div class="chips" id="coupangPosChips" style="margin-bottom:10px">
+          <div class="chip active" onclick="pickCoupangPos(this)">1번</div>
+          <div class="chip" onclick="pickCoupangPos(this)">2번</div>
+          <div class="chip" onclick="pickCoupangPos(this)">3번</div>
+        </div>
+        <label class="label">링크 개수 <span style="color:var(--txt2);font-size:11px">(최대 5개)</span></label>
+        <div class="chips" id="coupangCountChips" style="margin-bottom:10px">
+          <div class="chip active" onclick="pickCoupangCount(this)">1개</div>
+          <div class="chip" onclick="pickCoupangCount(this)">2개</div>
+          <div class="chip" onclick="pickCoupangCount(this)">3개</div>
+          <div class="chip" onclick="pickCoupangCount(this)">4개</div>
+          <div class="chip" onclick="pickCoupangCount(this)">5개</div>
+        </div>
+        <label class="label">링크 입력</label>
+        <input id="coupangLinks" placeholder="https://coupang.com/..." style="margin-bottom:10px" />
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm" onclick="saveCoupangSettings()" style="flex:1">💾 설정 저장</button>
+          <button class="btn btn-p btn-sm" onclick="applyCoupangComment()" style="flex:1">✅ 댓글에 적용</button>
+        </div>
+      </div>
+
       <!-- 요금제 안내 카드 (무료 유저만 표시) -->
       <div class="card" id="freePlanBannerCard" style="display:none;border-color:rgba(245,158,11,.4)">
         <h2 style="color:var(--yellow)">💎 요금제 상세 안내</h2>
@@ -344,37 +371,6 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
             </button>
           </div>
           <div id="bannerPlanChangeStatus" style="margin-top:8px;font-size:12px;color:var(--green)"></div>
-        </div>
-      </div>
-      <div class="card" id="coupangLinkCard" style="display:none">
-        <h2>🛒 쿠팡/홍보 설정</h2>
-        <div style="font-size:12px;color:var(--blue);margin-bottom:10px;padding:8px 12px;background:rgba(59,130,246,.08);border-radius:8px">순서: 링크 입력 → 설정 저장 → 댓글 적용 → 발행</div>
-        
-        <label class="label">쿠팡 파트너스 안내 문구</label>
-        <textarea id="coupangNoticeText" style="min-height:50px;font-size:12px;margin-bottom:8px">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</textarea>
-        
-        <label class="label">문구 위치</label>
-        <div class="chips" id="coupangPosChips" style="margin-bottom:10px">
-          <div class="chip active" onclick="pickCoupangPos(this)">1번</div>
-          <div class="chip" onclick="pickCoupangPos(this)">2번</div>
-          <div class="chip" onclick="pickCoupangPos(this)">3번</div>
-        </div>
-        
-        <label class="label">링크 개수 <span style="color:var(--txt2);font-size:11px">(최대 5개)</span></label>
-        <div class="chips" id="coupangCountChips" style="margin-bottom:10px">
-          <div class="chip active" onclick="pickCoupangCount(this)">1개</div>
-          <div class="chip" onclick="pickCoupangCount(this)">2개</div>
-          <div class="chip" onclick="pickCoupangCount(this)">3개</div>
-          <div class="chip" onclick="pickCoupangCount(this)">4개</div>
-          <div class="chip" onclick="pickCoupangCount(this)">5개</div>
-        </div>
-        
-        <label class="label">링크 입력</label>
-        <input id="coupangLinks" placeholder="https://coupang.com/..." style="margin-bottom:10px" />
-        
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-sm" onclick="saveCoupangSettings()" style="flex:1">💾 설정 저장</button>
-          <button class="btn btn-p btn-sm" onclick="applyCoupangComment()" style="flex:1">✅ 댓글에 적용</button>
         </div>
       </div>
       <div class="card" style="display:none">
@@ -1275,7 +1271,7 @@ function buildCommentPrompt() {
   var isShahriTopic = topic.includes('스하리');
 
   if (isShahriTopic) {
-    return `스레드 스하리 활동에 관한 내 솔직한 감정이나 다짐을 담은 댓글 5개를 써줘. 각각 분위기 다르게.
+    return `스레드 스하리 활동에 관한 내 솔직한 감정이나 다짐을 담은 댓글 1개를 써줘.
 
 [아래 방향에서 골고루 선택]
 - 뒷삭 없이 반하리 꼭 간다는 다짐
@@ -1292,18 +1288,11 @@ function buildCommentPrompt() {
 
 반말. 마침표 없음. 이모지·해시태그 없음.${commentPrompt ? '\n추가 지침: ' + commentPrompt : ''}
 
-출력 형식:
-1. 댓글 내용
-2. 댓글 내용
-3. 댓글 내용
-4. 댓글 내용
-5. 댓글 내용
-
-번호와 댓글만 출력. 설명 없이.`;
+댓글 텍스트만 출력. 번호 없이. 설명 없이.`;
   }
 
   return `아래는 내가 스레드에 올린 글이야.
-이 글에 내가 직접 다는 댓글 5개를 써줘. 각각 분위기가 다르게.
+이 글에 내가 직접 다는 댓글 1개를 써줘.
 
 내 글:
 ${postContent || ('주제: ' + topic)}
@@ -1315,7 +1304,7 @@ ${postContent || ('주제: ' + topic)}
 - 글 내용에서 자연스럽게 이어지는 말
 - 글에서 못 다한 감정, 뒷얘기, 추가 하고 싶은 말
 - 또는 읽는 사람이 반응하고 싶게 여지 남기기
-- 댓글마다 분위기 다르게 (담담, 투정, 여유, 솔직, 궁금증 유발 등)
+
 
 ━━━ 절대 금지 ━━━
 - "매력적이야", "작품이야" 같은 칭찬 투 절대 금지
@@ -1324,30 +1313,33 @@ ${postContent || ('주제: ' + topic)}
 - 마침표(.) 금지 / 이모지 금지 / 존댓말 금지
 - 포장하거나 예쁘게 마무리하려는 시도 금지
 
-출력 형식 (반드시):
-1. 댓글 내용
-2. 댓글 내용
-3. 댓글 내용
-4. 댓글 내용
-5. 댓글 내용
-
-번호와 댓글만 출력. 설명 없이.`;
+댓글 텍스트만 출력. 번호 없이. 설명 없이.`;
 }
 
 function renderCommentList(comments) {
   var list = document.getElementById('commentList');
   var regenBtn = document.getElementById('commentRegenBtn');
   if (!list) return;
-  list.innerHTML = comments.map(function(c) {
-    var escaped = c.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
-    return '<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px">' +
-      '<div style="flex:1;font-size:13px;line-height:1.7;color:var(--txt);white-space:pre-wrap">' + c + '</div>' +
-      '<button class="btn btn-sm" style="flex-shrink:0;font-size:12px" onclick="copyComment(\'' + escaped + '\')">📋</button>' +
-      '</div>';
-  }).join('');
+  // 첫 번째 댓글만 표시
+  var c = comments[0] || '';
+  var escaped = c.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n');
+  list.innerHTML = '<div style="padding:10px 12px;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px">' +
+    '<div style="font-size:13px;line-height:1.7;color:var(--txt);white-space:pre-wrap;margin-bottom:8px">' + c + '</div>' +
+    '<div style="display:flex;gap:6px">' +
+    '<button class="btn btn-sm" style="flex:1;font-size:12px" onclick="copyComment(\'' + escaped + '\')">📋 복사</button>' +
+    '<button class="btn btn-sm btn-p" style="flex:1;font-size:12px" onclick="applyCommentText(\'' + escaped + '\')">✅ 댓글 적용</button>' +
+    '</div></div>';
   if (regenBtn) regenBtn.style.display = '';
   var ct = document.getElementById('commentText');
-  if (ct && comments[0]) ct.value = comments[0];
+  if (ct) ct.value = c;
+}
+
+function applyCommentText(text) {
+  var ct = document.getElementById('commentText');
+  if (ct) ct.value = text;
+  // 쿠팡 설정도 같이 적용
+  applyCoupangComment();
+  toast('댓글 적용됐어!');
 }
 
 function copyComment(text) {
@@ -1378,7 +1370,7 @@ async function genComment() {
     if (!comments.length) comments = [raw];
     renderCommentList(comments);
     incGenCount();
-    toast('댓글 5개 생성 완료!');
+    toast('댓글 생성 완료!');
   } catch(e) { toast(e.message || '생성 실패', 'err'); }
   if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🪄 댓글 생성'; }
   if (regenBtn) regenBtn.disabled = false;
@@ -1442,28 +1434,32 @@ function applyCoupangComment() {
   var commentEl = document.getElementById('commentText');
   var raw = commentEl.value;
 
-  // 이전에 삽입된 문구+링크 제거 (댓글 원문만 남김)
+  // 이전에 삽입된 문구+링크 제거
   if (_lastCoupangNotice) raw = raw.split(_lastCoupangNotice).join('');
   if (_lastCoupangLinks) raw = raw.split(_lastCoupangLinks).join('');
   raw = raw.replace(/\n{3,}/g, '\n\n').trim();
 
-  // 위치별 조합
-  // 1번: 파트너스문구 → 댓글 → 링크
-  // 2번: 파트너스문구 → 링크 → 댓글
-  // 3번: 댓글 → 파트너스문구 → 링크
+  var result = '';
   if (pos === '1번') {
-    commentEl.value = notice + (raw ? '\n\n' + raw : '') + '\n\n' + links;
+    result = notice + (raw ? '\n\n' + raw : '') + '\n\n' + links;
   } else if (pos === '2번') {
-    commentEl.value = notice + '\n\n' + links + (raw ? '\n\n' + raw : '');
+    result = notice + '\n\n' + links + (raw ? '\n\n' + raw : '');
   } else {
-    commentEl.value = (raw ? raw + '\n\n' : '') + notice + '\n\n' + links;
+    result = (raw ? raw + '\n\n' : '') + notice + '\n\n' + links;
   }
 
+  commentEl.value = result;
   _lastCoupangNotice = notice;
   _lastCoupangLinks = links;
-  toast('쿠팡 링크 적용됐어!');
-  showCommentReserve();
-  toast('댓글란에 적용됐어!');
+
+  // 보이는 댓글 영역도 업데이트
+  var list = document.getElementById('commentList');
+  if (list && list.innerHTML) {
+    var displayEl = list.querySelector('div > div:first-child');
+    if (displayEl) displayEl.textContent = result;
+  }
+
+  toast('쿠팡 링크 댓글에 적용됐어!');
 }
 
 function switchMedia(tab) {
@@ -2789,4 +2785,3 @@ window.addEventListener('hashchange', function() {
 </script>
 </body>
 </html>
-
