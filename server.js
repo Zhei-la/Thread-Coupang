@@ -346,6 +346,35 @@ app.get('/api/users', adminAuth, (req, res) => {
   res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', plan: u.plan||'free', accountLimit: u.accountLimit||2, dailyPublishLimit: u.dailyPublishLimit||null, limitRequest: u.limitRequest||null, extendRequest: u.extendRequest||null, upgradeRequest: u.upgradeRequest||null, planChangeRequest: u.planChangeRequest||null, joinedVia: u.joinedVia||'normal', approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt, isExpired: u.expiresAt ? new Date(u.expiresAt) < new Date() : false })));
 });
 
+app.get('/api/admin/stats', adminAuth, (req, res) => {
+  const today = getTodayKey();
+  const result = users
+    .filter(u => u.role !== 'admin')
+    .map(u => {
+      const counts = getPublishCount(u.id);
+      // 오늘 글생성
+      const genToday = counts['gen_' + today] || 0;
+      // 오늘 발행
+      const pubToday = counts[today] || 0;
+      // 전체 발행 합산
+      const totalPub = Object.keys(counts)
+        .filter(k => !k.startsWith('gen_'))
+        .reduce((s, k) => s + (counts[k] || 0), 0);
+      // 전체 글생성 합산
+      const totalGen = Object.keys(counts)
+        .filter(k => k.startsWith('gen_'))
+        .reduce((s, k) => s + (counts[k] || 0), 0);
+      return {
+        nickname: u.nickname, name: u.name || '-',
+        plan: u.plan || 'free',
+        genToday, pubToday, totalGen, totalPub,
+        lastActive: Object.keys(counts).filter(k => !k.startsWith('gen_')).sort().reverse()[0] || '-'
+      };
+    })
+    .sort((a, b) => b.totalGen - a.totalGen);
+  res.json(result);
+});
+
 app.delete('/api/users/:id', adminAuth, (req, res) => {
   if (req.params.id === req.userId) return res.status(400).json({ error: '본인 삭제 불가' });
   users = users.filter(u => u.id !== req.params.id);
@@ -445,6 +474,7 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
   if (req.body.approvePlanChange) {
     const reqPlan = user.planChangeRequest ? user.planChangeRequest.plan : null;
     if (reqPlan) {
+      user.status = 'approved'; // 어떤 플랜이든 승인 시 status 보장
       if (reqPlan === 'basic') { user.plan = 'basic'; user.accountLimit = 0; user.dailyPublishLimit = 0; user.expiresAt = null; }
       else if (reqPlan === 'pro') { user.plan = 'pro'; user.accountLimit = 6; user.dailyPublishLimit = 5; user.expiresAt = new Date(Date.now() + 30 * 86400000).toISOString(); }
       else if (reqPlan === 'pro90') { user.plan = 'pro'; user.accountLimit = 6; user.dailyPublishLimit = 5; user.expiresAt = new Date(Date.now() + 90 * 86400000).toISOString(); }
