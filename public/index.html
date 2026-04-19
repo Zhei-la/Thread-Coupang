@@ -1958,79 +1958,98 @@ async function requestExtend() {
 
 async function loadStats() {
   var statsList = document.getElementById('statsList');
-  if (statsList) statsList.innerHTML = '<div style="color:var(--txt2);font-size:13px">로딩 중...</div>';
+  var statsOverview = document.getElementById('statsOverview');
+  if (statsList) statsList.innerHTML = '<div style="font-size:13px;color:var(--txt2);padding:12px 0">로딩 중...</div>';
+
   var res = await api('/api/admin/stats');
-  var data = (res && res.result) ? res.result : (Array.isArray(res) ? res : []);
+  var data = (res && res.result) ? res.result : [];
   var last7 = (res && res.last7) ? res.last7 : [];
+  var sm = (res && res.summary) ? res.summary : {};
+
+  // 요약 카드 6개
+  var cards = [
+    { label: '전체 유저', val: (sm.totalUsers||0) + '명', color: 'var(--acc)' },
+    { label: '오늘 방문', val: (sm.visitToday||0) + '명', color: 'var(--green)' },
+    { label: '오늘 발행', val: (sm.pubToday||0) + '회', color: 'var(--blue)' },
+    { label: '오늘 가입', val: (sm.joinedToday||0) + '명', color: 'var(--txt)' },
+    { label: '오늘 글생성', val: (sm.genToday||0) + '회', color: 'var(--yellow)' },
+    { label: '누적 생성/발행', val: (sm.totalGenAll||0) + '/' + (sm.totalPubAll||0), color: 'var(--txt2)' },
+  ];
+  if (statsOverview) {
+    statsOverview.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px';
+    statsOverview.innerHTML = cards.map(function(c) {
+      return '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px 8px;text-align:center">' +
+        '<div style="font-size:10px;color:var(--txt2);margin-bottom:4px">' + c.label + '</div>' +
+        '<div style="font-size:16px;font-weight:700;color:' + c.color + '">' + c.val + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
   if (!data.length) {
-    if (statsList) statsList.innerHTML = '<div style="color:var(--txt2);font-size:13px">아직 사용 기록 없음</div>';
-    var ov = document.getElementById('statsOverview');
-    if (ov) ov.innerHTML = '';
+    if (statsList) statsList.innerHTML = '<div style="font-size:13px;color:var(--txt2);padding:12px 0">아직 사용 기록 없음</div>';
     return;
   }
-  var totalGenToday = data.reduce(function(s,u){return s+u.genToday;},0);
-  var activeTodayCount = data.filter(function(u){return u.genToday>0||u.pubToday>0;}).length;
-  var overview = document.getElementById('statsOverview');
-  if (overview) {
-    overview.innerHTML =
-      '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px;text-align:center">' +
-        '<div style="font-size:11px;color:var(--txt2);margin-bottom:4px">활성 유저</div>' +
-        '<div style="font-size:22px;font-weight:700;color:var(--acc)">'+data.length+'명</div>' +
-      '</div>' +
-      '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px;text-align:center">' +
-        '<div style="font-size:11px;color:var(--txt2);margin-bottom:4px">오늘 활동</div>' +
-        '<div style="font-size:22px;font-weight:700;color:var(--green)">'+activeTodayCount+'명</div>' +
-      '</div>' +
-      '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px;text-align:center">' +
-        '<div style="font-size:11px;color:var(--txt2);margin-bottom:4px">오늘 글생성</div>' +
-        '<div style="font-size:22px;font-weight:700;color:var(--yellow)">'+totalGenToday+'회</div>' +
-      '</div>';
-  }
-  var planColor = {pro:'var(--yellow)',free:'var(--green)',basic:'#888'};
-  var planLabel = {pro:'프로',free:'이벤트',basic:'베이직'};
+
+  var planColor = { pro: 'var(--yellow)', free: 'var(--green)', basic: '#888' };
+  var planLabel = { pro: '프로', free: '이벤트', basic: '베이직' };
   var todayDate = last7.length ? last7[last7.length-1] : '';
-  if (statsList) {
-    statsList.innerHTML = data.map(function(u,idx) {
-      var pc = planColor[u.plan]||'var(--txt2)';
-      var pl = planLabel[u.plan]||u.plan;
-      var uid = 'stat_'+idx;
-      var dailyRows = (u.daily||[]).map(function(d) {
-        var isToday = d.date === todayDate;
-        var hasData = d.gen>0||d.pub>0;
-        var mm = d.date.slice(5);
-        return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;'+(isToday?'background:rgba(245,158,11,.08);':'')+(hasData?'':'opacity:0.4')+'">' +
-          '<span style="font-size:11px;color:var(--txt2);width:36px;flex-shrink:0">'+mm+'</span>' +
-          '<span style="font-size:11px;color:var(--txt2)">생성</span>' +
-          '<span style="font-size:12px;font-weight:700;color:var(--yellow);width:28px">'+d.gen+'</span>' +
-          '<span style="font-size:11px;color:var(--txt2)">발행</span>' +
-          '<span style="font-size:12px;font-weight:700;color:var(--green);width:20px">'+d.pub+'</span>' +
-          (isToday?'<span style="font-size:10px;color:var(--yellow)">오늘</span>':'') +
-          '</div>';
-      }).join('');
-      return '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;overflow:hidden;margin-bottom:4px">' +
-        '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer" onclick="toggleStatDetail(this)" data-uid="'+uid+'">' +
-          '<div style="flex:1;min-width:0">' +
-            '<span style="font-weight:700;font-size:13px">'+(u.name||'-')+'</span> ' +
-            '<span style="color:var(--txt2);font-size:12px">@'+u.nickname+'</span> ' +
-            '<span style="color:'+pc+';font-size:11px;background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:4px">'+pl+'</span>' +
-          '</div>' +
-          '<div style="text-align:right;font-size:12px;white-space:nowrap">' +
-            '<span style="color:var(--yellow)">오늘 '+u.genToday+'회</span>' +
-            '<span style="color:var(--txt3);margin:0 3px">·</span>' +
-            '<span style="color:var(--txt2)">누적 '+u.totalGen+'</span>' +
-          '</div>' +
-          '<span id="'+uid+'_arrow" style="color:var(--txt3);font-size:11px;margin-left:4px">▼</span>' +
+  var SHOW_INIT = 3;
+
+  function renderUserCard(u, idx) {
+    var pc = planColor[u.plan]||'var(--txt2)';
+    var pl = planLabel[u.plan]||u.plan;
+    var uid = 'stat_' + idx;
+    var maxGen = Math.max.apply(null, (u.daily||[]).map(function(d){return d.gen;})) || 1;
+    var dailyRows = (u.daily||[]).map(function(d) {
+      var isToday = d.date === todayDate;
+      var barW = Math.round(d.gen / maxGen * 100);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;' + (isToday?'background:rgba(245,158,11,.06);border-radius:4px;padding:4px 4px;':'') + '">' +
+        '<span style="font-size:11px;color:var(--txt2);width:32px;flex-shrink:0">' + d.date.slice(5) + '</span>' +
+        '<div style="flex:1;height:12px;background:var(--sur2);border-radius:3px;overflow:hidden">' +
+          '<div style="height:100%;background:' + (isToday?'var(--yellow)':'rgba(245,158,11,0.4)') + ';width:' + barW + '%;min-width:' + (d.gen>0?'3px':'0') + ';border-radius:3px;transition:width .3s"></div>' +
         '</div>' +
-        '<div id="'+uid+'" style="display:none;border-top:1px solid var(--bdr);padding:8px 12px">' +
-          '<div style="font-size:11px;color:var(--txt2);margin-bottom:6px;font-weight:600">최근 7일 사용 현황</div>' +
-          dailyRows +
-          '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr);font-size:11px;color:var(--txt2);display:flex;gap:12px">' +
-            '<span>누적 생성 <b style="color:var(--txt)">'+u.totalGen+'</b>회</span>' +
-            '<span>누적 발행 <b style="color:var(--txt)">'+u.totalPub+'</b>회</span>' +
-          '</div>' +
-        '</div>' +
+        '<span style="font-size:11px;font-weight:700;color:var(--txt);width:22px;text-align:right">' + d.gen + '</span>' +
+        '<span style="font-size:10px;color:var(--txt2);width:28px">발행' + d.pub + '</span>' +
+        (isToday?'<span style="font-size:10px;color:var(--yellow);font-weight:700">오늘</span>':'') +
       '</div>';
     }).join('');
+
+    return '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;overflow:hidden">' +
+      '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer" data-uid="' + uid + '" onclick="toggleStatDetail(this)">' +
+        '<div style="flex:1;min-width:0">' +
+          '<span style="font-weight:700;font-size:13px">' + (u.name||'-') + '</span> ' +
+          '<span style="color:var(--txt2);font-size:12px">@' + u.nickname + '</span> ' +
+          '<span style="color:' + pc + ';font-size:11px;background:rgba(128,128,128,0.1);padding:1px 6px;border-radius:4px;margin-left:4px">' + pl + '</span>' +
+        '</div>' +
+        '<div style="text-align:right;font-size:12px;white-space:nowrap;line-height:1.5">' +
+          '<div style="color:var(--yellow)">오늘 ' + u.genToday + '회</div>' +
+          '<div style="color:var(--txt2);font-size:11px">누적 ' + u.totalGen + '회</div>' +
+        '</div>' +
+        '<span id="' + uid + '_arrow" style="color:var(--txt3);font-size:11px;margin-left:6px">▼</span>' +
+      '</div>' +
+      '<div id="' + uid + '" style="display:none;border-top:1px solid var(--bdr);padding:8px 12px">' +
+        dailyRows +
+        '<div style="display:flex;gap:16px;margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr);font-size:11px;color:var(--txt2)">' +
+          '<span>누적 생성 <b style="color:var(--txt)">' + u.totalGen + '</b>회</span>' +
+          '<span>누적 발행 <b style="color:var(--txt)">' + u.totalPub + '</b>회</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  if (statsList) {
+    var initial = data.slice(0, SHOW_INIT).map(renderUserCard).join('');
+    var rest = data.slice(SHOW_INIT);
+    var moreHtml = rest.length
+      ? '<div id="statsMore" style="display:none;display:flex;flex-direction:column;gap:6px;margin-top:6px">' +
+          rest.map(function(u,i){return renderUserCard(u, i+SHOW_INIT);}).join('') +
+        '</div>' +
+        '<button onclick="toggleMoreStats()" id="moreStatsBtn" style="width:100%;margin-top:8px;font-size:12px;color:var(--txt2);padding:8px;text-align:center;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;cursor:pointer">+ ' + rest.length + '명 더보기</button>'
+      : '';
+    statsList.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px">' + initial + '</div>' + moreHtml;
+    // statsMore 초기 숨김
+    var moreEl = document.getElementById('statsMore');
+    if (moreEl) moreEl.style.display = 'none';
   }
 }
 
@@ -2042,6 +2061,16 @@ function toggleStatDetail(el) {
   var isOpen = detail.style.display !== 'none';
   detail.style.display = isOpen ? 'none' : 'block';
   if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+}
+
+function toggleMoreStats() {
+  var el = document.getElementById('statsMore');
+  var btn = document.getElementById('moreStatsBtn');
+  if (!el) return;
+  var isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'flex';
+  if (el.style.display === 'flex') el.style.flexDirection = 'column';
+  if (btn) btn.textContent = isOpen ? '+ ' + el.children.length + '명 더보기' : '▲ 접기';
 }
 
 async function loadAdmin() {
