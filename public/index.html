@@ -932,8 +932,6 @@ function enterApp(user) {
   if (isRealAdmin) {
     document.getElementById('adminNav').style.display = 'block';
     document.getElementById('adminSep').style.display = 'block';
-    var lc = document.getElementById('limitRequestCard');
-    if (lc) lc.style.display = 'none';
   } else {
     // 관리자 탭 완전히 숨기고 접근 차단
     document.getElementById('adminNav').style.display = 'none';
@@ -2262,8 +2260,8 @@ function renderUser(u) {
   var sb = isExpired
     ? '<span class="badge br">기간만료</span>'
     : (u.status === 'approved' ? '<span class="badge bg">사용중</span>' : '<span class="badge br">정지</span>');
-  var planLabel = u.plan === 'basic' ? '무료' : u.plan === 'pro' ? '베이직' : u.plan === 'pro' ? '프로' : '이벤트';
-  var planColor = u.plan === 'pro' ? 'by' : u.plan === 'pro' ? 'bg' : u.plan === 'basic' ? 'bb' : 'br';
+  var planLabel = u.plan === 'basic' ? '베이직' : u.plan === 'pro' ? '프로' : u.plan === 'free' ? '이벤트' : (u.plan || '?');
+  var planColor = u.plan === 'pro' ? 'by' : u.plan === 'free' ? 'bg' : u.plan === 'basic' ? 'bb' : 'br';
   var pb = '<span class="badge ' + planColor + '">' + planLabel + '</span>';
   var expInfo = '';
   if (u.expiresAt) {
@@ -2693,6 +2691,19 @@ function togglePlanBannerReq() {
 
 async function requestPlanChange(plan) {
   var planNames = { free: '이벤트', basic: '베이직', pro: '프로 1개월', pro90: '프로 3개월' };
+  // 관리자면 직접 즉시 변경
+  if (myRole === 'admin') {
+    var me = await api('/api/auth/me');
+    var body = { status: 'approved', setPlan: plan === 'pro90' ? 'pro' : plan };
+    if (plan === 'pro90') body.planDays = 90;
+    if (plan === 'basic') body.clearExpiry = true;
+    if (plan === 'free') { body.plan = 'free'; body.planDays = 7; body.accountLimit = 2; body.dailyPublishLimit = 5; }
+    var d = await api('/api/users/' + me.id + '/status', { method: 'PUT', body: body });
+    if (d.error) return toast(d.error, 'err');
+    toast(planNames[plan] + ' 즉시 변경됐어!');
+    setTimeout(function() { location.reload(); }, 800);
+    return;
+  }
   var d = await api('/api/users/limit-request', { method: 'POST', body: { requestPlan: plan } });
   if (d.error) return toast(d.error, 'err');
   var msg = planNames[plan] + ' 변경 요청 완료 — 카카오로 문의해주세요!';
