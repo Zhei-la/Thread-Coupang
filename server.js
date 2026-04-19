@@ -348,31 +348,36 @@ app.get('/api/users', adminAuth, (req, res) => {
 
 app.get('/api/admin/stats', adminAuth, (req, res) => {
   const today = getTodayKey();
+  // 최근 7일 날짜 배열
+  const last7 = Array.from({length: 7}, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    return d.toISOString().slice(0, 10);
+  }).reverse();
+
   const result = users
     .filter(u => u.role !== 'admin')
     .map(u => {
       const counts = getPublishCount(u.id);
-      // 오늘 글생성
       const genToday = counts['gen_' + today] || 0;
-      // 오늘 발행
       const pubToday = counts[today] || 0;
-      // 전체 발행 합산
-      const totalPub = Object.keys(counts)
-        .filter(k => !k.startsWith('gen_'))
-        .reduce((s, k) => s + (counts[k] || 0), 0);
-      // 전체 글생성 합산
-      const totalGen = Object.keys(counts)
-        .filter(k => k.startsWith('gen_'))
-        .reduce((s, k) => s + (counts[k] || 0), 0);
+      const totalPub = Object.keys(counts).filter(k => !k.startsWith('gen_')).reduce((s, k) => s + (counts[k] || 0), 0);
+      const totalGen = Object.keys(counts).filter(k => k.startsWith('gen_')).reduce((s, k) => s + (counts[k] || 0), 0);
+      // 7일치 날짜별 통계
+      const daily = last7.map(date => ({
+        date,
+        gen: counts['gen_' + date] || 0,
+        pub: counts[date] || 0
+      }));
       return {
         nickname: u.nickname, name: u.name || '-',
         plan: u.plan || 'free',
-        genToday, pubToday, totalGen, totalPub,
-        lastActive: Object.keys(counts).filter(k => !k.startsWith('gen_')).sort().reverse()[0] || '-'
+        genToday, pubToday, totalGen, totalPub, daily
       };
     })
+    .filter(u => u.totalGen > 0 || u.totalPub > 0) // 사용한 사람만
     .sort((a, b) => b.totalGen - a.totalGen);
-  res.json(result);
+  res.json({ result, last7 });
 });
 
 app.delete('/api/users/:id', adminAuth, (req, res) => {
