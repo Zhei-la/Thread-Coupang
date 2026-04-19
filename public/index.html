@@ -1957,50 +1957,90 @@ async function requestExtend() {
 }
 
 async function loadStats() {
-  var data = await api('/api/admin/stats');
-  if (!Array.isArray(data)) return;
-
-  // 요약
-  var totalUsers = data.length;
-  var activeToday = data.filter(function(u) { return u.genToday > 0 || u.pubToday > 0; }).length;
-  var totalGenToday = data.reduce(function(s, u) { return s + u.genToday; }, 0);
+  var statsList = document.getElementById('statsList');
+  if (statsList) statsList.innerHTML = '<div style="color:var(--txt2);font-size:13px">로딩 중...</div>';
+  var res = await api('/api/admin/stats');
+  var data = (res && res.result) ? res.result : (Array.isArray(res) ? res : []);
+  var last7 = (res && res.last7) ? res.last7 : [];
+  if (!data.length) {
+    if (statsList) statsList.innerHTML = '<div style="color:var(--txt2);font-size:13px">아직 사용 기록 없음</div>';
+    var ov = document.getElementById('statsOverview');
+    if (ov) ov.innerHTML = '';
+    return;
+  }
+  var totalGenToday = data.reduce(function(s,u){return s+u.genToday;},0);
+  var activeTodayCount = data.filter(function(u){return u.genToday>0||u.pubToday>0;}).length;
   var overview = document.getElementById('statsOverview');
   if (overview) {
     overview.innerHTML =
       '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px;text-align:center">' +
-        '<div style="font-size:11px;color:var(--txt2);margin-bottom:4px">전체 유저</div>' +
-        '<div style="font-size:20px;font-weight:700;color:var(--acc)">' + totalUsers + '명</div>' +
+        '<div style="font-size:11px;color:var(--txt2);margin-bottom:4px">활성 유저</div>' +
+        '<div style="font-size:22px;font-weight:700;color:var(--acc)">'+data.length+'명</div>' +
       '</div>' +
       '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px;text-align:center">' +
         '<div style="font-size:11px;color:var(--txt2);margin-bottom:4px">오늘 활동</div>' +
-        '<div style="font-size:20px;font-weight:700;color:var(--green)">' + activeToday + '명</div>' +
+        '<div style="font-size:22px;font-weight:700;color:var(--green)">'+activeTodayCount+'명</div>' +
       '</div>' +
       '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px;text-align:center">' +
         '<div style="font-size:11px;color:var(--txt2);margin-bottom:4px">오늘 글생성</div>' +
-        '<div style="font-size:20px;font-weight:700;color:var(--yellow)">' + totalGenToday + '회</div>' +
+        '<div style="font-size:22px;font-weight:700;color:var(--yellow)">'+totalGenToday+'회</div>' +
       '</div>';
   }
+  var planColor = {pro:'var(--yellow)',free:'var(--green)',basic:'#888'};
+  var planLabel = {pro:'프로',free:'이벤트',basic:'베이직'};
+  var todayDate = last7.length ? last7[last7.length-1] : '';
+  if (statsList) {
+    statsList.innerHTML = data.map(function(u,idx) {
+      var pc = planColor[u.plan]||'var(--txt2)';
+      var pl = planLabel[u.plan]||u.plan;
+      var uid = 'stat_'+idx;
+      var dailyRows = (u.daily||[]).map(function(d) {
+        var isToday = d.date === todayDate;
+        var hasData = d.gen>0||d.pub>0;
+        var mm = d.date.slice(5);
+        return '<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;'+(isToday?'background:rgba(245,158,11,.08);':'')+(hasData?'':'opacity:0.4')+'">' +
+          '<span style="font-size:11px;color:var(--txt2);width:36px;flex-shrink:0">'+mm+'</span>' +
+          '<span style="font-size:11px;color:var(--txt2)">생성</span>' +
+          '<span style="font-size:12px;font-weight:700;color:var(--yellow);width:28px">'+d.gen+'</span>' +
+          '<span style="font-size:11px;color:var(--txt2)">발행</span>' +
+          '<span style="font-size:12px;font-weight:700;color:var(--green);width:20px">'+d.pub+'</span>' +
+          (isToday?'<span style="font-size:10px;color:var(--yellow)">오늘</span>':'') +
+          '</div>';
+      }).join('');
+      return '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;overflow:hidden;margin-bottom:4px">' +
+        '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer" onclick="toggleStatDetail(''+uid+'')">' +
+          '<div style="flex:1;min-width:0">' +
+            '<span style="font-weight:700;font-size:13px">'+(u.name||'-')+'</span> ' +
+            '<span style="color:var(--txt2);font-size:12px">@'+u.nickname+'</span> ' +
+            '<span style="color:'+pc+';font-size:11px;background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:4px">'+pl+'</span>' +
+          '</div>' +
+          '<div style="text-align:right;font-size:12px;white-space:nowrap">' +
+            '<span style="color:var(--yellow)">오늘 '+u.genToday+'회</span>' +
+            '<span style="color:var(--txt3);margin:0 3px">·</span>' +
+            '<span style="color:var(--txt2)">누적 '+u.totalGen+'</span>' +
+          '</div>' +
+          '<span id="'+uid+'_arrow" style="color:var(--txt3);font-size:11px;margin-left:4px">▼</span>' +
+        '</div>' +
+        '<div id="'+uid+'" style="display:none;border-top:1px solid var(--bdr);padding:8px 12px">' +
+          '<div style="font-size:11px;color:var(--txt2);margin-bottom:6px;font-weight:600">최근 7일 사용 현황</div>' +
+          dailyRows +
+          '<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr);font-size:11px;color:var(--txt2);display:flex;gap:12px">' +
+            '<span>누적 생성 <b style="color:var(--txt)">'+u.totalGen+'</b>회</span>' +
+            '<span>누적 발행 <b style="color:var(--txt)">'+u.totalPub+'</b>회</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+}
 
-  var planColor = { pro: 'var(--yellow)', free: 'var(--green)', basic: '#888' };
-  var planLabel = { pro: '프로', free: '이벤트', basic: '베이직' };
-  var list = document.getElementById('statsList');
-  if (list) {
-    list.innerHTML = data.map(function(u) {
-      var pc = planColor[u.plan] || 'var(--txt2)';
-      var pl = planLabel[u.plan] || u.plan;
-      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;font-size:12px">' +
-        '<div style="flex:1;min-width:0">' +
-          '<span style="font-weight:600">' + (u.name || '-') + '</span> ' +
-          '<span style="color:var(--txt2)">(' + u.nickname + ')</span> ' +
-          '<span style="color:' + pc + ';font-size:11px">' + pl + '</span>' +
-        '</div>' +
-        '<div style="text-align:right;color:var(--txt2);white-space:nowrap">' +
-          '<div>오늘 생성 <b style="color:var(--txt)">' + u.genToday + '</b>회 · 발행 <b style="color:var(--txt)">' + u.pubToday + '</b>회</div>' +
-          '<div style="font-size:11px">누적 생성 ' + u.totalGen + '회 · 발행 ' + u.totalPub + '회</div>' +
-        '</div>' +
-      '</div>';
-    }).join('') || '<div style="color:var(--txt2);font-size:13px">데이터 없음</div>';
-  }
+function toggleStatDetail(uid) {
+  var el = document.getElementById(uid);
+  var arrow = document.getElementById(uid+'_arrow');
+  if (!el) return;
+  var isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
 }
 
 async function loadAdmin() {
