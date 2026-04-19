@@ -2008,7 +2008,7 @@ async function loadStats() {
           '</div>';
       }).join('');
       return '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;overflow:hidden;margin-bottom:4px">' +
-        '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer" onclick="toggleStatDetail(''+uid+'')">' +
+        '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer" onclick="toggleStatDetail(this)" data-uid="'+uid+'">' +
           '<div style="flex:1;min-width:0">' +
             '<span style="font-weight:700;font-size:13px">'+(u.name||'-')+'</span> ' +
             '<span style="color:var(--txt2);font-size:12px">@'+u.nickname+'</span> ' +
@@ -2034,12 +2034,13 @@ async function loadStats() {
   }
 }
 
-function toggleStatDetail(uid) {
-  var el = document.getElementById(uid);
+function toggleStatDetail(el) {
+  var uid = el.getAttribute('data-uid');
+  var detail = document.getElementById(uid);
   var arrow = document.getElementById(uid+'_arrow');
-  if (!el) return;
-  var isOpen = el.style.display !== 'none';
-  el.style.display = isOpen ? 'none' : 'block';
+  if (!detail) return;
+  var isOpen = detail.style.display !== 'none';
+  detail.style.display = isOpen ? 'none' : 'block';
   if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
 }
 
