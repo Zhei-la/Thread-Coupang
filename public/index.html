@@ -615,6 +615,19 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         <div id="openaiAlertMsg" style="font-size:13px;color:var(--txt2);margin-bottom:10px">OpenAI 크레딧이 부족해서 Groq으로 자동 전환됐어요.<br>platform.openai.com → Billing에서 크레딧을 충전해주세요.</div>
         <button class="btn btn-sm btn-r" onclick="clearOpenaiAlert()">확인 (알림 닫기)</button>
       </div>
+
+      <!-- 사용 통계 -->
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h2>📊 사용 통계</h2>
+          <button class="btn btn-sm" onclick="loadStats()">🔄 새로고침</button>
+        </div>
+        <div id="statsOverview" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px"></div>
+        <div id="statsList" style="display:flex;flex-direction:column;gap:6px">
+          <div style="color:var(--txt2);font-size:13px">로딩 중...</div>
+        </div>
+      </div>
+
       <div class="card">
         <h2>초대코드</h2>
         <button class="btn btn-p" onclick="makeInvite()" style="margin-bottom:16px">🔑 초대코드 생성</button>
@@ -1943,7 +1956,55 @@ async function requestExtend() {
   document.getElementById('extendRequestStatus').textContent = '연장 신청 완료 - 관리자 승인 대기중';
 }
 
+async function loadStats() {
+  var data = await api('/api/admin/stats');
+  if (!Array.isArray(data)) return;
+
+  // 요약
+  var totalUsers = data.length;
+  var activeToday = data.filter(function(u) { return u.genToday > 0 || u.pubToday > 0; }).length;
+  var totalGenToday = data.reduce(function(s, u) { return s + u.genToday; }, 0);
+  var overview = document.getElementById('statsOverview');
+  if (overview) {
+    overview.innerHTML =
+      '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:11px;color:var(--txt2);margin-bottom:4px">전체 유저</div>' +
+        '<div style="font-size:20px;font-weight:700;color:var(--acc)">' + totalUsers + '명</div>' +
+      '</div>' +
+      '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:11px;color:var(--txt2);margin-bottom:4px">오늘 활동</div>' +
+        '<div style="font-size:20px;font-weight:700;color:var(--green)">' + activeToday + '명</div>' +
+      '</div>' +
+      '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:11px;color:var(--txt2);margin-bottom:4px">오늘 글생성</div>' +
+        '<div style="font-size:20px;font-weight:700;color:var(--yellow)">' + totalGenToday + '회</div>' +
+      '</div>';
+  }
+
+  var planColor = { pro: 'var(--yellow)', free: 'var(--green)', basic: '#888' };
+  var planLabel = { pro: '프로', free: '이벤트', basic: '베이직' };
+  var list = document.getElementById('statsList');
+  if (list) {
+    list.innerHTML = data.map(function(u) {
+      var pc = planColor[u.plan] || 'var(--txt2)';
+      var pl = planLabel[u.plan] || u.plan;
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;font-size:12px">' +
+        '<div style="flex:1;min-width:0">' +
+          '<span style="font-weight:600">' + (u.name || '-') + '</span> ' +
+          '<span style="color:var(--txt2)">(' + u.nickname + ')</span> ' +
+          '<span style="color:' + pc + ';font-size:11px">' + pl + '</span>' +
+        '</div>' +
+        '<div style="text-align:right;color:var(--txt2);white-space:nowrap">' +
+          '<div>오늘 생성 <b style="color:var(--txt)">' + u.genToday + '</b>회 · 발행 <b style="color:var(--txt)">' + u.pubToday + '</b>회</div>' +
+          '<div style="font-size:11px">누적 생성 ' + u.totalGen + '회 · 발행 ' + u.totalPub + '회</div>' +
+        '</div>' +
+      '</div>';
+    }).join('') || '<div style="color:var(--txt2);font-size:13px">데이터 없음</div>';
+  }
+}
+
 async function loadAdmin() {
+  loadStats();
   var invites = await api('/api/invites');
   var iEl = document.getElementById('inviteList');
   var allInv = Array.isArray(invites) ? invites : [];
@@ -2794,5 +2855,3 @@ window.addEventListener('hashchange', function() {
 </script>
 </body>
 </html>
-
-
