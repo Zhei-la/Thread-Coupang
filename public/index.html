@@ -311,43 +311,49 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
         </div>
       </div>
 
-      <!-- 요금제 안내 카드 (무료 유저만 표시) -->
+      <!-- 요금제 안내 카드 (무료/이벤트 유저만 표시) -->
       <div class="card" id="freePlanBannerCard" style="display:none;border-color:rgba(245,158,11,.4)">
-        <h2 style="color:var(--yellow)">💎 요금제 상세 안내</h2>
-        <div style="font-size:13px;color:var(--txt2);margin-bottom:14px;line-height:1.7">더 많은 기능을 사용하고 싶다면 요금제를 확인해봐요!</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div style="padding:10px;background:rgba(99,153,34,.08);border:1px solid rgba(99,153,34,.4);border-radius:8px;text-align:center">
-            <div style="font-size:10px;color:var(--green);margin-bottom:3px">🎁 이벤트</div>
-            <div style="font-size:14px;font-weight:700;margin-bottom:2px">7일</div>
-            <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">· 무료</div>
-            <div style="font-size:10px;color:var(--txt2);line-height:1.7">계정 2개 · 반자동 5회 · 자동 2회<br>글 생성 하루 100번<br><span style="color:var(--green)">관리자 승인자만 이용 가능</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h2 style="color:var(--yellow)">💎 요금제 안내</h2>
+          <button class="btn btn-sm" onclick="togglePlanBannerDetail()" id="planBannerToggleBtn" style="font-size:12px;color:var(--yellow);border-color:rgba(245,158,11,.4)">상세 보기 ▼</button>
+        </div>
+
+        <!-- 요금제 상세 (기본 숨김) -->
+        <div id="planBannerDetail" style="display:none;margin-top:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div style="padding:10px;background:rgba(99,153,34,.08);border:1px solid rgba(99,153,34,.4);border-radius:8px;text-align:center">
+              <div style="font-size:10px;color:var(--green);margin-bottom:3px">🎁 이벤트</div>
+              <div style="font-size:14px;font-weight:700;margin-bottom:2px">7일</div>
+              <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">· 무료</div>
+              <div style="font-size:10px;color:var(--txt2);line-height:1.7">계정 2개 · 반자동 5회 · 자동 2회<br>글 생성 하루 100번<br><span style="color:var(--green)">관리자 승인자만 이용 가능</span></div>
+            </div>
+            <div style="padding:10px;background:rgba(136,136,136,.08);border:1px solid rgba(136,136,136,.3);border-radius:8px;text-align:center">
+              <div style="font-size:10px;color:#aaa;margin-bottom:3px">베이직</div>
+              <div style="font-size:14px;font-weight:700;margin-bottom:2px">0원</div>
+              <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">· 영구</div>
+              <div style="font-size:10px;color:var(--txt2);line-height:1.7">글 생성+복사<br>평생 무료사용<br>자동발행X<br><span style="color:#888">🔒 쿠팡 키워드 사용 불가</span></div>
+            </div>
           </div>
-          <div style="padding:10px;background:rgba(136,136,136,.08);border:1px solid rgba(136,136,136,.3);border-radius:8px;text-align:center">
-            <div style="font-size:10px;color:#aaa;margin-bottom:3px">베이직</div>
-            <div style="font-size:14px;font-weight:700;margin-bottom:2px">0원</div>
-            <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">· 30일</div>
-            <div style="font-size:10px;color:var(--txt2);line-height:1.7">글 생성+복사<br>평생 무료사용<br>자동발행X<br><span style="color:#888">🔒 쿠팡 키워드 사용 불가</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+            <div style="padding:10px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:8px;text-align:center;position:relative">
+              <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--yellow);color:#000;font-size:8px;font-weight:700;padding:1px 8px;border-radius:100px">추천</div>
+              <div style="font-size:10px;color:var(--yellow);margin-bottom:3px">프로 · 1개월</div>
+              <div style="font-size:14px;font-weight:700;margin-bottom:2px">7,900원</div>
+              <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">/월 · 30일</div>
+              <div style="font-size:10px;color:var(--txt2);line-height:1.7">계정 6개 · 반자동 무제한 · 자동 5회<br>예약 발행 · 자동 스케줄러<br><span style="color:var(--green)">✓ 쿠팡 키워드 사용 가능</span></div>
+            </div>
+            <div style="padding:10px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:8px;text-align:center;position:relative">
+              <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-size:8px;font-weight:700;padding:1px 8px;border-radius:100px">할인</div>
+              <div style="font-size:10px;color:var(--yellow);margin-bottom:3px">프로 · 3개월</div>
+              <div style="font-size:14px;font-weight:700;margin-bottom:2px">18,900원</div>
+              <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">/3개월 · 90일</div>
+              <div style="font-size:10px;color:var(--txt2);line-height:1.7">계정 6개 · 반자동 무제한 · 자동 5회<br>예약 발행 · 자동 스케줄러<br><span style="color:var(--green)">✓ 월 6,300원 (20% 할인)</span></div>
+            </div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-          <div style="padding:10px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:8px;text-align:center;position:relative">
-            <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--yellow);color:#000;font-size:8px;font-weight:700;padding:1px 8px;border-radius:100px">추천</div>
-            <div style="font-size:10px;color:var(--yellow);margin-bottom:3px">프로 · 1개월</div>
-            <div style="font-size:14px;font-weight:700;margin-bottom:2px">7,900원</div>
-            <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">/월 · 30일</div>
-            <div style="font-size:10px;color:var(--txt2);line-height:1.7">계정 6개 · 반자동 무제한 · 자동 5회<br>예약 발행 · 자동 스케줄러<br><span style="color:var(--green)">✓ 쿠팡 키워드 사용 가능</span></div>
-          </div>
-          <div style="padding:10px;background:rgba(245,158,11,.08);border:2px solid rgba(245,158,11,.4);border-radius:8px;text-align:center;position:relative">
-            <div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-size:8px;font-weight:700;padding:1px 8px;border-radius:100px">할인</div>
-            <div style="font-size:10px;color:var(--yellow);margin-bottom:3px">프로 · 3개월</div>
-            <div style="font-size:14px;font-weight:700;margin-bottom:2px">18,900원</div>
-            <div style="font-size:9px;color:var(--txt2);margin-bottom:5px">/3개월 · 90일</div>
-            <div style="font-size:10px;color:var(--txt2);line-height:1.7">계정 6개 · 반자동 무제한 · 자동 5회<br>예약 발행 · 자동 스케줄러<br><span style="color:var(--green)">✓ 월 6,300원 (20% 할인)</span></div>
-          </div>
-        </div>
-        <button class="btn" style="width:100%;justify-content:center;border-color:var(--yellow);color:var(--yellow)" onclick="openPlanModal()">요금제 자세히 보기</button>
-        <div style="margin-top:14px;border-top:1px solid var(--bdr);padding-top:14px">
-          <div style="font-size:11px;font-weight:700;color:var(--txt);margin-bottom:8px">요금제 변경 요청</div>
+
+        <!-- 변경 요청 (기본 숨김) -->
+        <div id="planBannerReq" style="display:none;margin-top:12px;border-top:1px solid var(--bdr);padding-top:12px">
           <div style="font-size:11px;color:var(--txt2);line-height:1.8;margin-bottom:10px;padding:8px 10px;background:rgba(245,158,11,0.07);border-radius:6px;border:1px solid rgba(245,158,11,0.2)">
             💬 버튼 누른 뒤 카카오로 문의해주세요<br>
             <span style="color:var(--yellow)">관리자가 확인 후 직접 변경해드려요</span>
@@ -371,6 +377,12 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
             </button>
           </div>
           <div id="bannerPlanChangeStatus" style="margin-top:8px;font-size:12px;color:var(--green)"></div>
+        </div>
+
+        <!-- 하단 버튼 2개 -->
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-sm" style="flex:1;justify-content:center;border-color:var(--yellow);color:var(--yellow)" onclick="togglePlanBannerReq()" id="planBannerReqBtn">📋 변경 요청</button>
+          <button class="btn btn-sm" style="flex:1;justify-content:center" onclick="openPlanModal()">자세히 보기</button>
         </div>
       </div>
       <div class="card" style="display:none">
@@ -2659,6 +2671,24 @@ async function saveBasicTags() {
   // 베이직은 계정 없이 태그만 서버에 저장 (설정으로)
   var d = await api('/api/settings/basic-tags', { method: 'PUT', body: { topics: basicTags } });
   toast(d.error ? d.error : '태그 저장됐어!', d.error ? 'err' : 'ok');
+}
+
+function togglePlanBannerDetail() {
+  var el = document.getElementById('planBannerDetail');
+  var btn = document.getElementById('planBannerToggleBtn');
+  if (!el) return;
+  var isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.textContent = isOpen ? '상세 보기 ▼' : '상세 닫기 ▲';
+}
+
+function togglePlanBannerReq() {
+  var el = document.getElementById('planBannerReq');
+  var btn = document.getElementById('planBannerReqBtn');
+  if (!el) return;
+  var isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.textContent = isOpen ? '📋 변경 요청 닫기' : '📋 변경 요청';
 }
 
 async function requestPlanChange(plan) {
