@@ -348,36 +348,41 @@ app.get('/api/users', adminAuth, (req, res) => {
 
 app.get('/api/admin/stats', adminAuth, (req, res) => {
   const today = getTodayKey();
-  // 최근 7일 날짜 배열
   const last7 = Array.from({length: 7}, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
+    const d = new Date(); d.setDate(d.getDate() - i);
     return d.toISOString().slice(0, 10);
   }).reverse();
 
-  const result = users
-    .filter(u => u.role !== 'admin')
-    .map(u => {
-      const counts = getPublishCount(u.id);
-      const genToday = counts['gen_' + today] || 0;
-      const pubToday = counts[today] || 0;
-      const totalPub = Object.keys(counts).filter(k => !k.startsWith('gen_')).reduce((s, k) => s + (counts[k] || 0), 0);
-      const totalGen = Object.keys(counts).filter(k => k.startsWith('gen_')).reduce((s, k) => s + (counts[k] || 0), 0);
-      // 7일치 날짜별 통계
-      const daily = last7.map(date => ({
-        date,
-        gen: counts['gen_' + date] || 0,
-        pub: counts[date] || 0
-      }));
-      return {
-        nickname: u.nickname, name: u.name || '-',
-        plan: u.plan || 'free',
-        genToday, pubToday, totalGen, totalPub, daily
-      };
-    })
-    .filter(u => u.totalGen > 0 || u.totalPub > 0) // 사용한 사람만
-    .sort((a, b) => b.totalGen - a.totalGen);
-  res.json({ result, last7 });
+  const nonAdmins = users.filter(u => u.role !== 'admin');
+
+  const result = nonAdmins.map(u => {
+    const counts = getPublishCount(u.id);
+    const genToday = counts['gen_' + today] || 0;
+    const pubToday = counts[today] || 0;
+    const totalPub = Object.keys(counts).filter(k => !k.startsWith('gen_')).reduce((s, k) => s + (counts[k] || 0), 0);
+    const totalGen = Object.keys(counts).filter(k => k.startsWith('gen_')).reduce((s, k) => s + (counts[k] || 0), 0);
+    const daily = last7.map(date => ({ date, gen: counts['gen_' + date] || 0, pub: counts[date] || 0 }));
+    return { nickname: u.nickname, name: u.name || '-', plan: u.plan || 'free', genToday, pubToday, totalGen, totalPub, daily };
+  })
+  .filter(u => u.totalGen > 0 || u.totalPub > 0)
+  .sort((a, b) => b.totalGen - a.totalGen);
+
+  // 요약 통계
+  const joinedToday = nonAdmins.filter(u => u.createdAt && u.createdAt.slice(0, 10) === today).length;
+  const visitToday = result.filter(u => u.genToday > 0 || u.pubToday > 0).length;
+  const genToday = result.reduce((s, u) => s + u.genToday, 0);
+  const pubToday = result.reduce((s, u) => s + u.pubToday, 0);
+  const totalGenAll = result.reduce((s, u) => s + u.totalGen, 0);
+  const totalPubAll = result.reduce((s, u) => s + u.totalPub, 0);
+
+  res.json({
+    result, last7,
+    summary: {
+      totalUsers: nonAdmins.length,
+      visitToday, pubToday, joinedToday,
+      genToday, totalGenAll, totalPubAll
+    }
+  });
 });
 
 app.delete('/api/users/:id', adminAuth, (req, res) => {
