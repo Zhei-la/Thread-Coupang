@@ -1496,14 +1496,14 @@ function applyCoupangComment() {
   _lastCoupangNotice = notice;
   _lastCoupangLinks = links;
 
-  // 보이는 댓글 영역도 업데이트
+  // 보이는 댓글 카드 텍스트도 업데이트
   var list = document.getElementById('commentList');
-  if (list && list.innerHTML) {
-    var displayEl = list.querySelector('div > div:first-child');
-    if (displayEl) displayEl.textContent = result;
+  if (list) {
+    var textDiv = list.querySelector('[style*="white-space:pre-wrap"], [style*="white-space: pre-wrap"]');
+    if (textDiv) textDiv.textContent = result;
   }
 
-  toast('쿠팡 링크 댓글에 적용됐어!');
+  toast('✅ 쿠팡 링크+문구 적용됐어! 이제 즉시발행 or 예약 누르면 돼.');
 }
 
 function switchMedia(tab) {
@@ -3009,3 +3009,5 @@ window.addEventListener('hashchange', function() {
 </script>
 </body>
 </html>
+
+
