@@ -186,17 +186,28 @@ textarea{resize:vertical;min-height:120px;line-height:1.6;}
   <main class="main">
     <div class="page active" id="page-write">
       <h1>✏️ 글 작성</h1>
-      <div class="card" style="display:none">
+
+      <!-- 미디어 업로드 카드 -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <h2 style="margin:0">📎 미디어 첨부</h2>
+          <div style="display:flex;gap:6px">
+            <button id="tabPhoto" class="btn btn-sm active" onclick="switchMedia('photo')" style="font-size:12px">🖼️ 사진</button>
+            <button id="tabVideo" class="btn btn-sm" onclick="switchMedia('video')" style="font-size:12px">🎬 영상</button>
+          </div>
+        </div>
         <div id="mediaPhoto">
           <input type="file" id="imgInput" multiple accept="image/*" style="display:none" onchange="handleImg(this)">
-          <div class="preview-list" id="previewList"></div>
+          <div id="previewList" class="preview-list"></div>
+          <button class="btn btn-sm" style="width:100%;margin-top:6px;font-size:13px" onclick="document.getElementById('imgInput').click()">+ 사진 추가 (여러 장 가능)</button>
         </div>
         <div id="mediaVideo" style="display:none">
-          <input type="file" id="vidInput" accept="video/mp4" style="display:none" onchange="handleVid(this)">
-          <div id="vidPreview" style="position:relative;margin-top:8px"></div>
-          <div id="vidUploadArea" style="display:none"></div>
+          <input type="file" id="vidInput" accept="video/mp4,video/*" multiple style="display:none" onchange="handleVid(this)">
+          <div id="vidPreview" style="margin-top:4px"></div>
+          <button class="btn btn-sm" style="width:100%;margin-top:6px;font-size:13px" onclick="document.getElementById('vidInput').click()">+ 영상 추가 (여러 개 가능)</button>
+          <div style="font-size:11px;color:var(--txt2);margin-top:6px">최대 1분 · 1GB 이하 · 사진과 혼합 캐러셀 가능</div>
         </div>
-        <div id="imgAnalysisResult" style="display:none"></div>
+        <div id="imgAnalysisResult" style="display:none;margin-top:8px;font-size:12px;color:var(--txt2)"></div>
       </div>
       <div class="card">
         <h2>주제 & 설정</h2>
@@ -824,7 +835,7 @@ var fixedTones = [];
 var myRole = '';
 var mediaMode = 'photo';
 var postLength = 'short';
-var imgUrls = [], imgFiles = [], vidUrl = '', editImgUrls = [], newTags = [], editTags = [];
+var imgUrls = [], imgFiles = [], vidUrls = [], editImgUrls = [], newTags = [], editTags = [];
 
 // 글 생성 어뷰징 방지
 var genClickTimes = [];
@@ -1541,56 +1552,72 @@ function removeImg(idx) {
 }
 
 async function handleVid(input) {
-  var f = input.files[0];
-  if (!f) return;
+  var files = Array.from(input.files);
+  if (!files.length) return;
 
-  // 영상 길이 체크 (1분 = 60초)
-  var objUrl = URL.createObjectURL(f);
-  var tempVid = document.createElement('video');
-  tempVid.preload = 'metadata';
-  tempVid.src = objUrl;
-  await new Promise(function(resolve) { tempVid.onloadedmetadata = resolve; setTimeout(resolve, 3000); });
-  if (tempVid.duration > 62) {
-    URL.revokeObjectURL(objUrl);
-    input.value = '';
-    return toast('영상은 최대 1분(60초)까지만 업로드 가능해. 영상 한도를 초과했어!', 'err');
-  }
-
-  // 용량 체크 (1GB)
-  if (f.size > 1024 * 1024 * 1024) {
-    URL.revokeObjectURL(objUrl);
-    input.value = '';
-    return toast('영상 용량이 너무 커. 1GB 이하로 올려줘!', 'err');
-  }
-
-  var preview = document.getElementById('vidPreview');
-  preview.innerHTML = '<div style="position:relative;display:inline-block;width:100%">' +
-    '<video src="' + objUrl + '" controls style="max-width:100%;border-radius:8px;display:block"></video>' +
-    '<button onclick="removeVid()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1">✕</button>' +
-    '<div id="vidUploadStatus" style="font-size:12px;color:var(--txt2);margin-top:6px"><span class="spin" style="width:12px;height:12px;border-width:2px;vertical-align:middle"></span> 업로드 중...</div>' +
-    '</div>';
-  document.getElementById('vidUploadArea').style.display = 'none';
-  var fd = new FormData();
-  fd.append('video', f);
-  try {
-    var d = await fetch('/api/upload-video', { method: 'POST', headers: { 'x-session': session }, body: fd }).then(function(r) { return r.json(); });
-    if (d.url) {
-      vidUrl = d.url;
-      var st = document.getElementById('vidUploadStatus');
-      if (st) st.textContent = '✅ 업로드 완료! 발행 버튼을 눌러줘.';
-      toast('영상 업로드 완료!');
-    } else {
-      toast(d.error || '업로드 실패', 'err');
-      removeVid();
+  for (var i = 0; i < files.length; i++) {
+    var f = files[i];
+    // 영상 길이 체크
+    var objUrl = URL.createObjectURL(f);
+    var tempVid = document.createElement('video');
+    tempVid.preload = 'metadata'; tempVid.src = objUrl;
+    await new Promise(function(resolve) { tempVid.onloadedmetadata = resolve; setTimeout(resolve, 3000); });
+    if (tempVid.duration > 62) {
+      URL.revokeObjectURL(objUrl); input.value = '';
+      return toast(f.name + ' — 영상은 최대 1분(60초)까지만 가능해!', 'err');
     }
-  } catch(e) { toast('영상 업로드 실패. 다시 시도해줘.', 'err'); removeVid(); }
+    if (f.size > 1024 * 1024 * 1024) {
+      URL.revokeObjectURL(objUrl); input.value = '';
+      return toast(f.name + ' — 영상 용량이 너무 커. 1GB 이하로!', 'err');
+    }
+
+    // 미리보기 추가
+    var idx = vidUrls.length;
+    vidUrls.push(''); // 자리 확보
+    var preview = document.getElementById('vidPreview');
+    var itemId = 'vidItem_' + idx;
+    var statusId = 'vidStatus_' + idx;
+    var itemDiv = document.createElement('div');
+    itemDiv.id = itemId;
+    itemDiv.style.cssText = 'position:relative;display:inline-block;width:100%;margin-bottom:8px';
+    itemDiv.innerHTML = '<video src="' + objUrl + '" controls style="max-width:100%;border-radius:8px;display:block"></video>' +
+      '<button onclick="removeVid(' + idx + ')" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1">✕</button>' +
+      '<div id="' + statusId + '" style="font-size:12px;color:var(--txt2);margin-top:4px"><span class="spin" style="width:12px;height:12px;border-width:2px;vertical-align:middle"></span> 업로드 중...</div>';
+    preview.appendChild(itemDiv);
+
+    // 업로드
+    var fd = new FormData();
+    fd.append('video', f);
+    try {
+      var d = await fetch('/api/upload-video', { method: 'POST', headers: { 'x-session': session }, body: fd }).then(function(r) { return r.json(); });
+      if (d.url) {
+        vidUrls[idx] = d.url;
+        var st = document.getElementById(statusId);
+        if (st) st.textContent = '✅ 업로드 완료!';
+        toast('영상 ' + (idx+1) + '번 업로드 완료!');
+      } else {
+        toast(d.error || '업로드 실패', 'err');
+        removeVid(idx);
+      }
+    } catch(e) { toast('영상 업로드 실패', 'err'); removeVid(idx); }
+  }
+  input.value = '';
 }
 
-function removeVid() {
-  vidUrl = '';
-  document.getElementById('vidPreview').innerHTML = '';
-  document.getElementById('vidUploadArea').style.display = '';
-  document.getElementById('vidInput').value = '';
+function removeVid(idx) {
+  if (idx === undefined) {
+    // 전체 초기화 (구버전 호환)
+    vidUrls = [];
+    document.getElementById('vidPreview').innerHTML = '';
+    document.getElementById('vidInput').value = '';
+    return;
+  }
+  vidUrls[idx] = null;
+  var itemEl = document.getElementById('vidItem_' + idx);
+  if (itemEl) itemEl.remove();
+  // null 정리
+  vidUrls = vidUrls.filter(function(u) { return u !== null && u !== undefined; });
+  // ID 재정렬은 생략 (발행 시 filter로 처리)
 }
 
 var _pubCancelRequested = false;
@@ -1634,7 +1661,7 @@ async function pubNow() {
   if (cancelBtn) cancelBtn.style.display = 'none';
 
   // 발행 버튼 로딩 표시
-  var hasMedia = (mediaMode === 'photo' && imgUrls.length) || (mediaMode === 'video' && vidUrl);
+  var hasMedia = (mediaMode === 'photo' && imgUrls.length) || (mediaMode === 'video' && vidUrls.filter(Boolean).length);
   if (pubBtn) {
     pubBtn.disabled = true;
     pubBtn.innerHTML = '<span class="spin"></span> ' + (hasMedia ? '미디어 처리 중... (30초 소요)' : '발행 중...');
@@ -1650,7 +1677,7 @@ async function pubNow() {
   var commentReserveTime = document.getElementById('commentReserveTime').value;
   var body = { accountId: accId, text: text };
   if (mediaMode === 'photo' && imgUrls.length) body.imageUrls = imgUrls;
-  if (mediaMode === 'video' && vidUrl) body.videoUrl = vidUrl;
+  if (mediaMode === 'video') body.videoUrls = vidUrls.filter(Boolean);
   var useReserve = commentText && commentReserveTime && (new Date(commentReserveTime) > new Date());
   if (!useReserve && commentText) body.commentText = commentText;
   try {
@@ -1670,7 +1697,7 @@ async function pubNow() {
     document.getElementById('previewList').innerHTML = '';
     document.getElementById('commentReserveWrap').style.display = 'none';
     // 영상 모드가 아닌 경우에만 vidUrl 초기화
-    if (mediaMode !== 'video') { vidUrl = ''; }
+    if (mediaMode !== 'video') { vidUrls = []; }
   } catch(e) {
     loadingToast.remove();
     toast(e.message, 'err');
@@ -1722,7 +1749,7 @@ async function doSched() {
     toast('댓글 예약 완료!');
   } else {
     var text2 = document.getElementById('postText').value.trim();
-    var d2 = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: text2, type: 'post', imageUrls: imgUrls, videoUrl: vidUrl || '', scheduledAt: new Date(scheduledAt).toISOString() } });
+    var d2 = await api('/api/schedule', { method: 'POST', body: { accountId: accId, text: text2, type: 'post', imageUrls: imgUrls, videoUrls: vidUrls.filter(Boolean), scheduledAt: new Date(scheduledAt).toISOString() } });
     if (d2.error) return toast(d2.error, 'err');
     toast('글 예약 완료!');
     var ct = document.getElementById('commentText').value.trim();
