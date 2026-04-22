@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -1065,7 +1064,8 @@ async function replyToThread(accessToken, postId, commentText) {
 }
 
 app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
-  const { accountId, imageUrls, videoUrl } = req.body;
+  const { accountId, imageUrls } = req.body;
+  const videoUrls = Array.isArray(req.body.videoUrls) ? req.body.videoUrls : (req.body.videoUrl ? [req.body.videoUrl] : []);
   const text = sanitize(req.body.text || '').slice(0, 500);
   const commentText = sanitize(req.body.commentText || '').slice(0, 500);
   if (!text) return res.status(400).json({ error: '글 내용 필요' });
@@ -1090,7 +1090,7 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
     for (const u of imageUrls) { const ic = validateMediaUrl(u); if (!ic.ok) return res.status(400).json({ error: '이미지 URL 오류: ' + ic.reason }); }
   }
   try {
-    const postId = await publishToThreads(account.accessToken, text, imageUrls || [], videoUrl ? [videoUrl] : []);
+    const postId = await publishToThreads(account.accessToken, text, imageUrls || [], videoUrls);
     let commentId = null;
     if (commentText && commentText.trim()) {
       await new Promise(r => setTimeout(r, 3000));
@@ -1110,12 +1110,13 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
 app.post('/api/schedule', auth, (req, res) => {
   const user = users.find(u => u.id === req.userId);
   if (user?.plan === 'basic') return res.status(403).json({ error: '베이직 플랜은 예약 발행 불가.' });
-  const { accountId, text, imageUrls, videoUrl, scheduledAt, commentText } = req.body;
+  const { accountId, text, imageUrls, scheduledAt, commentText } = req.body;
+  const videoUrls2 = Array.isArray(req.body.videoUrls) ? req.body.videoUrls : (req.body.videoUrl ? [req.body.videoUrl] : []);
   const accs = getAccounts(req.userId);
   const account = accs.find(a => a.id === accountId);
   if (!account) return res.status(404).json({ error: '계정 없음' });
   const posts = getScheduled(req.userId);
-  const post = { id: Date.now().toString(), accountId, accountName: account.name, text, type: req.body.type || 'post', imageUrls: imageUrls || [], videoUrl: videoUrl || '', commentText: commentText || '', replyToId: req.body.replyToId || null, scheduledAt, status: 'pending', createdAt: new Date().toISOString() };
+  const post = { id: Date.now().toString(), accountId, accountName: account.name, text, type: req.body.type || 'post', imageUrls: imageUrls || [], videoUrls: videoUrls2, videoUrl: videoUrls2[0] || '', commentText: commentText || '', replyToId: req.body.replyToId || null, scheduledAt, status: 'pending', createdAt: new Date().toISOString() };
   posts.push(post);
   saveScheduled(req.userId, posts);
   res.json(post);
@@ -1168,7 +1169,7 @@ app.post('/api/schedule/:id/publish-now', auth, async (req, res) => {
       return res.json({ ok: true });
     }
     let postId;
-    try { postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrl ? [post.videoUrl] : []); }
+    try { postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrls || (post.videoUrl ? [post.videoUrl] : [])); }
     catch(imgErr) { postId = await publishToThreads(account.accessToken, post.text, [], []); }
     if (post.commentText && post.commentText.trim()) {
       await new Promise(r => setTimeout(r, 3000));
@@ -1216,7 +1217,7 @@ cron.schedule('* * * * *', async () => {
           }
         } else {
           let postId;
-          try { postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrl ? [post.videoUrl] : []); }
+          try { postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrls || (post.videoUrl ? [post.videoUrl] : [])); }
           catch(imgErr) { postId = await publishToThreads(account.accessToken, post.text, [], []); }
           if (post.commentText && post.commentText.trim()) {
             await new Promise(r => setTimeout(r, 3000));
@@ -1606,3 +1607,4 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`서버 실행중: ${PORT}`));
+
