@@ -1,3 +1,4 @@
+
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -429,7 +430,8 @@ app.post('/api/users/limit-request', auth, (req, res) => {
 app.put('/api/users/:id/status', adminAuth, (req, res) => {
   const user = users.find(u => u.id === req.params.id);
   if (!user) return res.status(404).json({ error: '없음' });
-  if (user.role === 'admin') return res.status(400).json({ error: '관리자 상태 변경 불가' });
+  // 관리자 본인 플랜 변경은 허용 (다른 관리자 변경은 불가)
+  if (user.role === 'admin' && user.id !== req.userId) return res.status(400).json({ error: '관리자 상태 변경 불가' });
   user.status = req.body.status;
   if (req.body.status === 'approved' && !user.approvedAt) {
     user.approvedAt = new Date().toISOString();
@@ -989,34 +991,46 @@ app.post('/api/analyze-image', auth, async (req, res) => {
 //  Threads 발행
 // ══════════════════════════════════
 
-async function publishToThreads(accessToken, text, imageUrls = [], videoUrl = '') {
+async function publishToThreads(accessToken, text, imageUrls = [], videoUrls = []) {
+  // videoUrls가 배열이 아니면 (구버전 호환) 변환
+  if (typeof videoUrls === 'string') videoUrls = videoUrls ? [videoUrls] : [];
+  const hasImages = imageUrls && imageUrls.length > 0;
+  const hasVideos = videoUrls && videoUrls.length > 0;
+  const totalMedia = (imageUrls||[]).length + (videoUrls||[]).length;
+
+  // URL 보안 검증
+  for (const u of (imageUrls||[])) { const c = validateMediaUrl(u); if (!c.ok) throw new Error('이미지 URL 오류: ' + c.reason); }
+  for (const u of (videoUrls||[])) { const c = validateMediaUrl(u); if (!c.ok) throw new Error('영상 URL 오류: ' + c.reason); }
+
   let containerId;
-  if (videoUrl) {
-    const vc = validateMediaUrl(videoUrl);
-    if (!vc.ok) throw new Error('영상 URL 보안 오류: ' + vc.reason);
-  }
-  for (const imgUrl of (imageUrls || [])) {
-    const ic = validateMediaUrl(imgUrl);
-    if (!ic.ok) throw new Error('이미지 URL 보안 오류: ' + ic.reason);
-  }
-  if (videoUrl) {
-    const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'VIDEO', video_url: videoUrl, text, access_token: accessToken }) });
-    const d = await r.json(); if (d.error) throw new Error(d.error.message);
-    containerId = d.id;
-    await new Promise(r => setTimeout(r, 30000));
-  } else if (imageUrls.length === 0) {
+
+  if (!hasImages && !hasVideos) {
+    // 텍스트만
     const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'TEXT', text, access_token: accessToken }) });
     const d = await r.json(); if (d.error) throw new Error(d.error.message);
     containerId = d.id;
-  } else if (imageUrls.length === 1) {
+  } else if (totalMedia === 1 && hasImages) {
+    // 사진 1장
     const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'IMAGE', image_url: imageUrls[0], text, access_token: accessToken }) });
     const d = await r.json(); if (d.error) throw new Error(d.error.message);
     containerId = d.id;
     await new Promise(r => setTimeout(r, 30000));
+  } else if (totalMedia === 1 && hasVideos) {
+    // 영상 1개
+    const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'VIDEO', video_url: videoUrls[0], text, access_token: accessToken }) });
+    const d = await r.json(); if (d.error) throw new Error(d.error.message);
+    containerId = d.id;
+    await new Promise(r => setTimeout(r, 30000));
   } else {
+    // 사진 여러 장 / 영상 여러 개 / 혼합 캐러셀 (최대 20개)
     const childIds = [];
-    for (const url of imageUrls) {
+    for (const url of (imageUrls||[])) {
       const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'IMAGE', image_url: url, is_carousel_item: true, access_token: accessToken }) });
+      const d = await r.json(); if (d.error) throw new Error(d.error.message);
+      childIds.push(d.id);
+    }
+    for (const url of (videoUrls||[])) {
+      const r = await fetch(`https://graph.threads.net/v1.0/me/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ media_type: 'VIDEO', video_url: url, is_carousel_item: true, access_token: accessToken }) });
       const d = await r.json(); if (d.error) throw new Error(d.error.message);
       childIds.push(d.id);
     }
@@ -1025,6 +1039,7 @@ async function publishToThreads(accessToken, text, imageUrls = [], videoUrl = ''
     const d = await r.json(); if (d.error) throw new Error(d.error.message);
     containerId = d.id;
   }
+
   await new Promise(r => setTimeout(r, 2000));
   const pub = await fetch(`https://graph.threads.net/v1.0/me/threads_publish`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ creation_id: containerId, access_token: accessToken }) });
   const pubData = await pub.json();
@@ -1075,7 +1090,7 @@ app.post('/api/publish', auth, rateLimit(20, 60000), async (req, res) => {
     for (const u of imageUrls) { const ic = validateMediaUrl(u); if (!ic.ok) return res.status(400).json({ error: '이미지 URL 오류: ' + ic.reason }); }
   }
   try {
-    const postId = await publishToThreads(account.accessToken, text, imageUrls || [], videoUrl || '');
+    const postId = await publishToThreads(account.accessToken, text, imageUrls || [], videoUrl ? [videoUrl] : []);
     let commentId = null;
     if (commentText && commentText.trim()) {
       await new Promise(r => setTimeout(r, 3000));
@@ -1153,8 +1168,8 @@ app.post('/api/schedule/:id/publish-now', auth, async (req, res) => {
       return res.json({ ok: true });
     }
     let postId;
-    try { postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrl || ''); }
-    catch(imgErr) { postId = await publishToThreads(account.accessToken, post.text, [], ''); }
+    try { postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrl ? [post.videoUrl] : []); }
+    catch(imgErr) { postId = await publishToThreads(account.accessToken, post.text, [], []); }
     if (post.commentText && post.commentText.trim()) {
       await new Promise(r => setTimeout(r, 3000));
       await replyToThread(account.accessToken, postId, post.commentText.trim());
@@ -1201,8 +1216,8 @@ cron.schedule('* * * * *', async () => {
           }
         } else {
           let postId;
-          try { postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrl || ''); }
-          catch(imgErr) { postId = await publishToThreads(account.accessToken, post.text, [], ''); }
+          try { postId = await publishToThreads(account.accessToken, post.text, post.imageUrls || [], post.videoUrl ? [post.videoUrl] : []); }
+          catch(imgErr) { postId = await publishToThreads(account.accessToken, post.text, [], []); }
           if (post.commentText && post.commentText.trim()) {
             await new Promise(r => setTimeout(r, 3000));
             await replyToThread(account.accessToken, postId, post.commentText.trim());
@@ -1549,7 +1564,7 @@ cron.schedule('* * * * *', async () => {
         }
         if (!text) continue;
 
-        const postId = await publishToThreads(account.accessToken, text, [], '');
+        const postId = await publishToThreads(account.accessToken, text, [], []);
         saveAutoLog(userId, { id: postId, accountName: account.name, topic: selectedTopic, tone: sched.tone, postText: text, status: 'success', publishedAt: new Date().toISOString() });
 
         if (sched.commentTone) {
