@@ -2627,91 +2627,27 @@ async function loadStats() {
 // 미리보기 실시간 업데이트
 
 
-function selectProduct(btn, name, price) {
-  document.getElementById('selectedProductBox').style.display = 'block';
-  document.getElementById('selectedProductName').textContent = name;
-  document.getElementById('selectedProductPrice').textContent = price;
-  // 모든 선택 버튼 초기화
-  document.querySelectorAll('.product-card .btn-p').forEach(function(b) {
-    b.textContent = '선택'; b.style.background = 'var(--acc)';
-  });
-  btn.textContent = '선택됨';
-}
-function genLink() { toast('링크가 생성됐어!'); }
-function saveDraft() { toast('초안이 저장됐어!'); }
-function editPostModal() {
-  var t = prompt('게시글을 수정해줘:', document.getElementById('previewPost').textContent);
-  if (t !== null) {
-    document.getElementById('previewPost').textContent = t;
-    document.getElementById('postText').value = t;
-  }
-}
-function editCommentModal() {
-  var t = prompt('댓글을 수정해줘:', document.getElementById('previewComment').textContent);
-  if (t !== null) {
-    document.getElementById('previewComment').textContent = t;
-    document.getElementById('commentText').value = t;
-  }
-}
+// selectProduct moved
+// genLink moved
+// saveDraft moved to new UI functions
+// editPostModal/editCommentModal moved
 function pickToneHalf(el, val) {
   el.parentElement.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
   el.classList.add('active');
 }
-function searchProducts() { toast('상품 검색 중...'); }
-function filterProducts(el, cat) {
-  el.parentElement.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
-  el.classList.add('active');
-}
-function updateTopicCount(el) {
-  var c = document.getElementById('topicCount');
-  if (c) c.textContent = el.value.length;
-}
+// searchProducts moved
+// filterProducts moved
+// updateTopicCount moved
 
-function loadProducts() {
-  // TODO: 인기상품 페이지 로드
-}
+// loadProducts moved to new UI functions
 
-function filterSaved(el, type) {
-  el.parentElement.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
-  el.classList.add('active');
-}
-function pickBlogLen(el) {
-  el.parentElement.querySelectorAll('div').forEach(function(d) {
-    d.style.border = '1px solid var(--bdr)';
-    d.style.background = '';
-    d.querySelector && d.querySelector('div') && (d.querySelector('div').style.color = '');
-  });
-  el.style.border = '2px solid var(--acc)';
-  el.style.background = 'var(--acc-soft)';
-}
+// filterSaved moved
+// pickBlogLen moved
 function testToken() { toast('토큰 테스트 중...'); }
 
-function loadBlog() {
-  // TODO: 블로그 작성 페이지 로드
-}
+// loadBlog moved
 
-function updatePreview() {
-  var postEl = document.getElementById('postText');
-  var commentEl = document.getElementById('commentText');
-  var prevPost = document.getElementById('previewPost');
-  var prevComment = document.getElementById('previewComment');
-  var prevCommentWrap = document.getElementById('previewCommentWrap');
-  if (prevPost && postEl) {
-    var txt = postEl.value;
-    prevPost.textContent = txt || '글을 생성하면 여기에 미리보기가 나와요';
-    prevPost.style.fontStyle = txt ? 'normal' : 'italic';
-    prevPost.style.color = txt ? 'var(--txt)' : 'var(--txt2)';
-  }
-  if (prevComment && commentEl && prevCommentWrap) {
-    var ctxt = commentEl.value;
-    if (ctxt) {
-      prevComment.textContent = ctxt;
-      prevCommentWrap.style.display = 'block';
-    } else {
-      prevCommentWrap.style.display = 'none';
-    }
-  }
-}
+// updatePreview moved to new UI functions
 
 
 function openSchedModal() {
