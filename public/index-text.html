@@ -588,35 +588,13 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
             </div>
           </div>
 
-          <!-- 링크 직접 입력 + 쿠팡 설정 -->
-          <div style="border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--sur)">
-            <div style="font-size:12px;font-weight:700;margin-bottom:8px">🔗 링크 입력</div>
-            <div style="display:flex;gap:6px;margin-bottom:8px">
-              <input id="manualLink" placeholder="쿠팡 파트너스 링크 직접 붙여넣기" style="flex:1;font-size:12px">
-              <button class="btn btn-sm" onclick="applyManualLink()" style="font-size:12px;white-space:nowrap">적용</button>
-            </div>
-            <div style="font-size:11px;color:var(--txt2)">링크는 댓글 하단에 자동 삽입됩니다</div>
-
-            <!-- 쿠팡 설정 (플랜 허용 시) -->
-            <div id="coupangCommentWrap" style="display:none">
-            <div id="coupangLinkCard" style="display:none;margin-top:10px;border-top:1px solid var(--bdr);padding-top:10px">
-              <div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:8px">🛒 쿠팡/홍보 설정</div>
-              <div style="font-size:11px;color:var(--acc);padding:6px 8px;background:var(--acc-soft);border-radius:6px;margin-bottom:8px;border:1px solid var(--acc-border)">링크 입력 → 저장 → 댓글 적용 → 발행</div>
-              <textarea id="coupangNoticeText" style="min-height:40px;font-size:12px;margin-bottom:6px">이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</textarea>
-              <div style="display:flex;gap:6px;margin-bottom:6px">
-                <label class="label" style="font-size:11px;white-space:nowrap;align-self:center">문구 위치</label>
-                <div class="chips" id="coupangPosChips" style="margin-bottom:0">
-                  <div class="chip active" onclick="pickCoupangPos(this)">1번</div>
-                  <div class="chip" onclick="pickCoupangPos(this)">2번</div>
-                  <div class="chip" onclick="pickCoupangPos(this)">3번</div>
-                </div>
-              </div>
-              <div style="display:flex;gap:6px">
-                <button class="btn btn-sm" onclick="saveCoupangSettings()" style="flex:1;font-size:11px">💾 저장</button>
-                <button class="btn btn-p btn-sm" onclick="applyCoupangComment()" style="flex:1;font-size:11px">✅ 댓글 적용</button>
-              </div>
-            </div>
-            </div><!-- /coupangCommentWrap -->
+          <!-- 하단 액션 버튼 5개 - 댓글 바로 아래 -->
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px">
+            <button class="btn btn-sm" onclick="saveDraft()" style="flex-direction:column;gap:2px;padding:8px 4px;font-size:11px;display:flex;align-items:center">🔖<span>저장하기</span></button>
+            <button class="btn btn-sm" onclick="copyEl('postText')" style="flex-direction:column;gap:2px;padding:8px 4px;font-size:11px;display:flex;align-items:center">📋<span>게시글</span></button>
+            <button class="btn btn-sm" onclick="copyEl('commentText')" style="flex-direction:column;gap:2px;padding:8px 4px;font-size:11px;display:flex;align-items:center">📋<span>댓글</span></button>
+            <button class="btn btn-sm" onclick="openSchedModal()" style="flex-direction:column;gap:2px;padding:8px 4px;font-size:11px;display:flex;align-items:center;border-color:var(--acc);color:var(--acc)">📅<span>예약하기</span></button>
+            <button class="btn btn-p btn-sm" onclick="pubNow()" style="flex-direction:column;gap:2px;padding:8px 4px;font-size:11px;display:flex;align-items:center">🚀<span>발행하기</span></button>
           </div>
 
           <!-- 예약 설정 (hidden inputs - openSchedModal에서 사용) -->
@@ -624,15 +602,6 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
           <input id="schedTime" type="time" style="display:none">
           <input id="schedCommentDate" type="date" style="display:none">
           <input id="schedCommentTime" type="time" style="display:none">
-
-          <!-- 하단 액션 버튼 5개 -->
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
-            <button class="btn btn-sm" onclick="saveDraft()" style="flex-direction:column;gap:2px;padding:8px 4px;font-size:11px;display:flex;align-items:center">🔖<span>저장하기</span></button>
-            <button class="btn btn-sm" onclick="copyEl('postText')" style="flex-direction:column;gap:2px;padding:8px 4px;font-size:11px;display:flex;align-items:center">📋<span>게시글</span></button>
-            <button class="btn btn-sm" onclick="copyEl('commentText')" style="flex-direction:column;gap:2px;padding:8px 4px;font-size:11px;display:flex;align-items:center">📋<span>댓글</span></button>
-            <button class="btn btn-sm" onclick="openSchedModal()" style="flex-direction:column;gap:2px;padding:8px 4px;font-size:11px;display:flex;align-items:center;border-color:var(--acc);color:var(--acc)">📅<span>예약하기</span></button>
-            <button class="btn btn-p btn-sm" onclick="pubNow()" style="flex-direction:column;gap:2px;padding:8px 4px;font-size:11px;display:flex;align-items:center">🚀<span>발행하기</span></button>
-          </div>
 
           <!-- 요금제 배너 -->
           <div id="freePlanBannerCard" style="display:none;margin-top:14px">
