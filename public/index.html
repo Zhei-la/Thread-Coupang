@@ -846,7 +846,8 @@ function enterApp(user) {
   loadCoupangSettings();
   loadSavedPrompts();
   updateSidePlanInfo();
-  // 무료 플랜이면 계정 추가 폼 숨기고 태그 전용 UI 표시
+  // 베이직 플랜 처리
+  var isBasicUser = (user.plan === 'basic' || user.plan === 'free') && user.role !== 'admin';
   if (user.plan === 'basic') {
     var notice = document.getElementById('basicPlanNotice');
     var form = document.getElementById('accAddForm');
@@ -855,7 +856,26 @@ function enterApp(user) {
     if (form) form.style.display = 'none';
     if (tagOnly) tagOnly.style.display = 'block';
   }
+  // 자동스케줄러 - 베이직/이벤트는 잠금
+  var autoNav = document.getElementById('autoSchedNav');
+  if (autoNav) {
+    if (isBasicUser) {
+      autoNav.style.opacity = '0.4';
+      autoNav.style.cursor = 'not-allowed';
+      autoNav.style.pointerEvents = 'none';
+      if (!autoNav.textContent.includes('🔒')) autoNav.textContent = autoNav.textContent + ' 🔒';
+    } else {
+      autoNav.style.opacity = '';
+      autoNav.style.cursor = '';
+      autoNav.style.pointerEvents = '';
+      autoNav.textContent = autoNav.textContent.replace(' 🔒', '');
+    }
+  }
+  // 요금제 안내 카드 - 베이직/이벤트는 표시
+  var lrc = document.getElementById('limitRequestCard');
+  if (lrc) lrc.style.display = isBasicUser ? 'block' : 'none';
   var saved = localStorage.getItem('page') || 'write';
+  if (!saved || saved === 'null' || saved === 'undefined') saved = 'write';
   go(saved, null);
 }
 
@@ -2250,8 +2270,8 @@ async function updateSidePlanInfo() {
     var myInfo = allUsers.find(function(u) { return u.nickname === me.nickname; });
     if (!myInfo) return;
 
-    var planMap = { basic: '무료', pro: '베이직', premium: '프로', free: '이벤트' };
-    var planColors = { basic: '#aaa', pro: 'var(--green)', premium: 'var(--yellow)', free: 'var(--blue)' };
+    var planMap = { basic: '베이직', pro: '프로', premium: '프로', free: '이벤트' };
+    var planColors = { basic: 'var(--green)', pro: 'var(--yellow)', premium: 'var(--yellow)', free: 'var(--blue)' };
     var planName = planMap[myInfo.plan] || '멤버';
     var planColor = planColors[myInfo.plan] || 'var(--txt)';
 
