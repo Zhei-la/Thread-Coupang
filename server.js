@@ -261,7 +261,14 @@ app.post('/api/auth/login', rateLimit(5, 60000), (req, res) => {
   if (user.status === 'pending') return res.status(403).json({ error: 'pending' });
   if (user.status === 'suspended') return res.status(403).json({ error: 'suspended' });
   if (user.expiresAt && new Date() > new Date(user.expiresAt) && user.role !== 'admin' && user.plan !== 'basic') {
-    return res.status(403).json({ error: 'expired' });
+    // 만료 시 정지가 아닌 베이직으로 자동 강등 후 로그인 허용
+    user.plan = 'basic';
+    user.expiresAt = null;
+    user.accountLimit = 0;
+    user.dailyPublishLimit = 0;
+    user._downgradedAt = new Date().toISOString();
+    saveJSON(`${DATA_ROOT}/users.json`, users);
+    console.log(`[LOGIN-EXPIRE] ${user.nickname} 만료 → 베이직 강등`);
   }
   const stored = user.passwordHash || user.password || '';
   if (stored !== hashPw(password)) {
@@ -445,21 +452,37 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
   user.status = req.body.status;
   if (req.body.status === 'approved' && !user.approvedAt) {
     user.approvedAt = new Date().toISOString();
-    const days = req.body.planDays || 30;
-    user.expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
     user.plan = req.body.plan || 'basic';
-    if (req.body.plan === 'basic') { user.accountLimit = 0; user.dailyPublishLimit = 0; }
-    else if (req.body.plan === 'legacy') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
-    else if (req.body.plan === 'pro') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
-    else if (req.body.plan === 'free') { user.accountLimit = 2; user.dailyPublishLimit = 5; }
+    if (req.body.plan === 'basic' || !req.body.plan) {
+      // 베이직은 영구 - expiresAt 없음
+      user.accountLimit = 0; user.dailyPublishLimit = 0; user.expiresAt = null;
+    } else if (req.body.plan === 'free') {
+      const days = req.body.planDays || 7;
+      user.expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+      user.accountLimit = 2; user.dailyPublishLimit = 5;
+    } else if (req.body.plan === 'pro') {
+      const days = req.body.planDays || 30;
+      user.expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+      user.accountLimit = 6; user.dailyPublishLimit = 5;
+    } else if (req.body.plan === 'legacy') {
+      const days = req.body.planDays || 30;
+      user.expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+      user.accountLimit = 2; user.dailyPublishLimit = 3;
+    }
   }
   if (req.body.changePlan) {
     user.plan = req.body.plan;
-    if (req.body.plan === 'basic') { user.accountLimit = 0; user.dailyPublishLimit = 0; }
-    else if (req.body.plan === 'legacy') { user.accountLimit = 2; user.dailyPublishLimit = 3; }
-    else if (req.body.plan === 'pro') { user.accountLimit = 6; user.dailyPublishLimit = 5; }
-    const base = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
-    user.expiresAt = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    if (req.body.plan === 'basic') {
+      user.accountLimit = 0; user.dailyPublishLimit = 0; user.expiresAt = null; // 베이직 영구
+    } else if (req.body.plan === 'legacy') {
+      user.accountLimit = 2; user.dailyPublishLimit = 3;
+      const base = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
+      user.expiresAt = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (req.body.plan === 'pro') {
+      user.accountLimit = 6; user.dailyPublishLimit = 5;
+      const base = user.expiresAt && new Date(user.expiresAt) > new Date() ? new Date(user.expiresAt) : new Date();
+      user.expiresAt = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    }
   }
   if (req.body.accountLimit) { user.accountLimit = req.body.accountLimit; user.limitRequest = null; }
   if (req.body.clearLimitRequest) user.limitRequest = null;
@@ -1457,13 +1480,104 @@ app.get('/api/coupang/clicks', adminAuth, (req, res) => {
   res.json(logs.slice(-200).reverse()); // 최근 200개
 });
 
+// 인기상품 캐시
+let _productCache = { data: [], cachedAt: 0 };
+const PRODUCT_CACHE_TTL = 30 * 60 * 1000; // 30분
+
+// 쿠팡 베스트셀러 스크래핑
+async function fetchCoupangBest(category) {
+  const catMap = {
+    '가전': '36405',
+    '뷰티': '36410',
+    '식품': '37527',
+    '스포츠': '36416',
+    '생활': '36415',
+    '패션': '36408',
+    '전체': '36405'
+  };
+  const catId = catMap[category] || catMap['가전'];
+  const url = `https://www.coupang.com/np/categories/${catId}?listSize=24&sorter=bestSeller&rating=0&isPriceRange=false&minPrice=&maxPrice=&channel=user&fromComponent=Y&selectedPlpKeepFilter=&filterType=`;
+  try {
+    const r = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ko-KR,ko;q=0.9',
+        'Referer': 'https://www.coupang.com/'
+      }
+    });
+    const html = await r.text();
+    const items = [];
+    const re = /"productId":(\d+),"name":"([^"]+)","rating":([\d.]+),"reviewCount":(\d+),"price":(\d+)/g;
+    let m, rank = 1;
+    while ((m = re.exec(html)) !== null && rank <= 20) {
+      const productId = m[1];
+      items.push({
+        rank: rank++,
+        productId,
+        productName: m[2],
+        rating: parseFloat(m[3]),
+        reviewCount: parseInt(m[4]),
+        price: parseInt(m[5]),
+        productUrl: `https://www.coupang.com/vp/products/${productId}`,
+        imageUrl: `https://thumbnail6.coupangcdn.com/thumbnails/remote/230x230ex/image/product/image/vendoritem/${productId}.jpg`
+      });
+    }
+    return items;
+  } catch(e) {
+    return [];
+  }
+}
+
+// GET /api/coupang/products - 인기상품 목록
+app.get('/api/coupang/products', auth, async (req, res) => {
+  const category = req.query.category || '전체';
+  const q = req.query.q || '';
+  const now = Date.now();
+
+  // 캐시 유효하면 반환
+  if (!q && _productCache.data.length && now - _productCache.cachedAt < PRODUCT_CACHE_TTL) {
+    let items = _productCache.data;
+    if (category && category !== '전체') items = items.filter(i => i.category === category);
+    return res.json(items);
+  }
+
+  // 실제 스크래핑 시도
+  let items = await fetchCoupangBest(category);
+
+  // 실패 시 샘플 데이터
+  if (!items.length) {
+    items = [
+      { rank:1, productName:'에어프라이어 6L 대용량', price:49800, reviewCount:8420, rating:4.7, productUrl:'https://www.coupang.com', imageUrl:'' },
+      { rank:2, productName:'무선 청소기 경량형', price:128000, reviewCount:5231, rating:4.6, productUrl:'https://www.coupang.com', imageUrl:'' },
+      { rank:3, productName:'스킨케어 세트 수분 집중', price:35000, reviewCount:12840, rating:4.8, productUrl:'https://www.coupang.com', imageUrl:'' },
+      { rank:4, productName:'단백질 쉐이크 초코맛 1kg', price:29800, reviewCount:6720, rating:4.5, productUrl:'https://www.coupang.com', imageUrl:'' },
+      { rank:5, productName:'요가매트 15mm 고밀도', price:18900, reviewCount:9150, rating:4.6, productUrl:'https://www.coupang.com', imageUrl:'' },
+      { rank:6, productName:'텀블러 보온보냉 500ml', price:15900, reviewCount:7340, rating:4.7, productUrl:'https://www.coupang.com', imageUrl:'' },
+      { rank:7, productName:'무선 이어폰 노이즈캔슬링', price:89000, reviewCount:4210, rating:4.5, productUrl:'https://www.coupang.com', imageUrl:'' },
+      { rank:8, productName:'식기세척기 6인용', price:398000, reviewCount:2840, rating:4.8, productUrl:'https://www.coupang.com', imageUrl:'' },
+      { rank:9, productName:'오메가3 고함량 90캡슐', price:19800, reviewCount:11200, rating:4.7, productUrl:'https://www.coupang.com', imageUrl:'' },
+      { rank:10, productName:'캠핑 의자 경량 접이식', price:32000, reviewCount:3890, rating:4.6, productUrl:'https://www.coupang.com', imageUrl:'' },
+      { rank:11, productName:'보조배터리 20000mAh', price:25800, reviewCount:7610, rating:4.5, productUrl:'https://www.coupang.com', imageUrl:'' },
+      { rank:12, productName:'핸드크림 세트 5종', price:12900, reviewCount:15400, rating:4.8, productUrl:'https://www.coupang.com', imageUrl:'' },
+    ];
+  }
+
+  if (!q) { _productCache = { data: items, cachedAt: now }; }
+
+  // 검색어 필터
+  if (q) items = items.filter(i => i.productName && i.productName.includes(q));
+
+  res.json(items);
+});
+
 // GET /api/coupang/settings - 쿠팡 파트너스 설정 조회 (관리자)
 app.get('/api/coupang/settings', adminAuth, (req, res) => {
   const s = getSettings();
   res.json({
     coupangPartnersEnabled: !!s.coupangPartnersEnabled,
     coupangPartnerAccessKey: s.coupangPartnerAccessKey || '',
-    coupangPartnerSecretKey: s.coupangPartnerSecretKey ? '***' : '',
+    coupangPartnerSecretKey: s.coupangPartnerSecretKey || '',
     coupangPartnerSubIdDefault: s.coupangPartnerSubIdDefault || 'app',
     coupangDeepLinkMode: s.coupangDeepLinkMode || 'template',
     partnerId: COUPANG_PARTNER_ID
@@ -1583,10 +1697,15 @@ cron.schedule('0 15 * * *', () => {
   const now = new Date();
   let changed = false;
   users.forEach(u => {
-    if (u.role === 'admin' || !u.expiresAt) return;
-    if (u.plan === 'basic') { u.expiresAt = null; changed = true; return; } // 베이직은 기간 없음
-    if (new Date(u.expiresAt) < now && u.status === 'approved') {
-      // 정지 대신 베이직으로 강등
+    if (u.role === 'admin') return;
+    // 베이직은 expiresAt 항상 null (영구)
+    if (u.plan === 'basic') {
+      if (u.expiresAt !== null && u.expiresAt !== undefined) {
+        u.expiresAt = null; changed = true;
+      }
+      return;
+    }
+    if (u.expiresAt && new Date(u.expiresAt) < now && u.status === 'approved') {
       u.plan = 'basic';
       u.expiresAt = null;
       u.accountLimit = 0;
@@ -1598,6 +1717,34 @@ cron.schedule('0 15 * * *', () => {
   });
   if (changed) saveJSON(`${DATA_ROOT}/users.json`, users);
 });
+
+// ── 서버 시작 시 만료 유저 즉시 베이직 전환 ──
+(function fixExpiredUsers() {
+  const now = new Date();
+  let changed = false;
+  users.forEach(u => {
+    if (u.role === 'admin') return;
+    // 베이직인데 expiresAt이 있으면 null로
+    if (u.plan === 'basic' && u.expiresAt) {
+      u.expiresAt = null; changed = true;
+      console.log(`[FIX] ${u.nickname} 베이직 expiresAt 제거`);
+    }
+    // 만료된 유저 베이직으로 강등
+    if (u.plan !== 'basic' && u.expiresAt && new Date(u.expiresAt) < now && u.status === 'approved') {
+      u.plan = 'basic';
+      u.expiresAt = null;
+      u.accountLimit = 0;
+      u.dailyPublishLimit = 0;
+      u._downgradedAt = now.toISOString();
+      changed = true;
+      console.log(`[FIX] ${u.nickname} 만료 → 베이직 강등`);
+    }
+  });
+  if (changed) {
+    saveJSON(`${DATA_ROOT}/users.json`, users);
+    console.log('[FIX] 만료 유저 베이직 강등 완료');
+  }
+})();
 
 // 자동 스케줄러 cron (매 분마다) - OpenAI 사용
 cron.schedule('* * * * *', async () => {
