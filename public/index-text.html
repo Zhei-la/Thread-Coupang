@@ -779,59 +779,82 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
 
     <!-- ========== 실시간 인기상품 ========== -->
     <div class="page" id="page-products">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-        <h1 style="margin:0">실시간 인기상품</h1>
-        <span class="panel-badge orange">Top 100</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <h1 style="margin:0">실시간 인기상품</h1>
+          <span class="panel-badge orange">Top 100</span>
+        </div>
+        <button class="btn btn-sm" onclick="refreshProducts()" style="display:flex;align-items:center;gap:6px;font-size:13px">🔄 새로고침</button>
       </div>
 
       <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:20px;box-shadow:var(--shadow)">
+        <!-- 검색 + 정렬 -->
         <div style="display:flex;gap:10px;margin-bottom:14px">
           <div style="position:relative;flex:1">
             <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--txt2);font-size:14px">🔍</span>
-            <input id="productSearchMain" placeholder="고양이 자동급식기" style="padding-left:38px" onkeydown="if(event.key==='Enter')searchProductsMain()">
+            <input id="productSearchMain" placeholder="상품명 검색..." style="padding-left:38px" onkeydown="if(event.key==='Enter')searchProductsMain()">
           </div>
           <button class="btn btn-p" onclick="searchProductsMain()" style="padding:10px 24px">검색</button>
-          <select id="productSortMain" style="width:100px;padding:10px 10px;font-size:14px" onchange="sortProductsMain()">
+          <select id="productSortMain" style="width:100px;padding:10px;font-size:14px" onchange="sortProductsMain()">
             <option value="popular">인기순</option><option value="review">리뷰순</option><option value="latest">최신순</option>
           </select>
         </div>
 
-        <div class="chips" id="productCatMain" style="margin-bottom:16px">
-          <div class="chip active" onclick="filterProductsMain(this,'전체')">전체</div>
-          <div class="chip" onclick="filterProductsMain(this,'반려동물')">반려동물</div>
-          <div class="chip" onclick="filterProductsMain(this,'생활가전')">생활가전</div>
-          <div class="chip" onclick="filterProductsMain(this,'주방용품')">주방용품</div>
-          <div class="chip" onclick="filterProductsMain(this,'육아')">육아</div>
-          <div class="chip" onclick="filterProductsMain(this,'캠핑')">캠핑</div>
-          <div class="chip" onclick="filterProductsMain(this,'Top100')">Top 100</div>
+        <!-- 특별메뉴 칩 -->
+        <div style="margin-bottom:8px;font-size:11px;font-weight:700;color:var(--txt2)">✨ 특별관</div>
+        <div class="chips" id="productSpecialChips" style="margin-bottom:12px;flex-wrap:wrap;gap:6px">
+          <div class="chip active" onclick="filterProductsCat(this,'best','베스트')">🏆 베스트</div>
+          <div class="chip" onclick="filterProductsCat(this,'rocket','로켓배송')">🚀 로켓배송</div>
+          <div class="chip" onclick="filterProductsCat(this,'rocket_fresh','로켓프레시')">🥦 로켓프레시</div>
+          <div class="chip" onclick="filterProductsCat(this,'discount','오늘의딜')">🔥 오늘의딜</div>
+          <div class="chip" onclick="filterProductsCat(this,'global','로켓직구')">✈️ 로켓직구</div>
+        </div>
+
+        <!-- 대카테고리 -->
+        <div style="margin-bottom:8px;font-size:11px;font-weight:700;color:var(--txt2)">📦 카테고리</div>
+        <div class="chips" id="productCatMain" style="margin-bottom:16px;flex-wrap:wrap;gap:6px">
+          <div class="chip" onclick="filterProductsCat(this,'fashion','패션의류/잡화')">👗 패션의류/잡화</div>
+          <div class="chip" onclick="filterProductsCat(this,'beauty','뷰티')">💄 뷰티</div>
+          <div class="chip" onclick="filterProductsCat(this,'baby','출산/유아동')">👶 출산/유아동</div>
+          <div class="chip" onclick="filterProductsCat(this,'food','식품')">🍎 식품</div>
+          <div class="chip" onclick="filterProductsCat(this,'kitchen','주방용품')">🍳 주방용품</div>
+          <div class="chip" onclick="filterProductsCat(this,'living','생활용품')">🏠 생활용품</div>
+          <div class="chip" onclick="filterProductsCat(this,'interior','홈인테리어')">🛋️ 홈인테리어</div>
+          <div class="chip" onclick="filterProductsCat(this,'digital','가전디지털')">📱 가전디지털</div>
+          <div class="chip" onclick="filterProductsCat(this,'sports','스포츠/레저')">⚽ 스포츠/레저</div>
+          <div class="chip" onclick="filterProductsCat(this,'car','자동차용품')">🚗 자동차용품</div>
+          <div class="chip" onclick="filterProductsCat(this,'book','도서/음반/DVD')">📚 도서/음반</div>
+          <div class="chip" onclick="filterProductsCat(this,'hobby','완구/취미')">🎮 완구/취미</div>
+          <div class="chip" onclick="filterProductsCat(this,'office','문구/오피스')">✏️ 문구/오피스</div>
+          <div class="chip" onclick="filterProductsCat(this,'pet','반려동물용품')">🐾 반려동물</div>
+          <div class="chip" onclick="filterProductsCat(this,'health','헬스/건강식품')">💊 헬스/건강</div>
+          <div class="chip" onclick="filterProductsCat(this,'travel','여행/티켓')">✈️ 여행/티켓</div>
         </div>
 
         <!-- 테이블 헤더 -->
-        <div style="display:grid;grid-template-columns:56px 64px 1fr 110px 70px 1fr;gap:12px;padding:12px 16px;background:var(--sur2);border-radius:10px;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:6px">
+        <div style="display:grid;grid-template-columns:52px 60px 1fr 110px 80px 160px;gap:8px;padding:10px 14px;background:var(--sur2);border-radius:10px;font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:6px">
           <div>순위</div><div></div><div>상품명</div><div>가격</div><div>리뷰</div><div>액션</div>
         </div>
 
-        <!-- 실제 상품 목록 - API 연동 -->
         <div id="productListMain" style="display:flex;flex-direction:column;gap:4px">
           <div style="text-align:center;padding:30px;color:var(--txt2)"><span class="spin"></span> 상품 로딩 중...</div>
         </div>
 
-        <!-- 선택한 상품 고정 영역 -->
+        <!-- 선택한 상품 -->
         <div id="productSelectedMain" style="display:none;margin-top:16px;border:1px solid var(--acc-border);border-radius:14px;padding:16px;background:var(--acc-soft)">
-          <div style="display:grid;grid-template-columns:auto 48px 1fr auto auto;align-items:center;gap:12px">
-            <div style="font-size:13px;font-weight:700;color:var(--txt2)">선택한 상품</div>
-            <div id="mainSelThumb" style="width:48px;height:48px;border-radius:10px;background:var(--sur2);border:1px solid var(--bdr);display:grid;place-items:center;font-size:20px">📦</div>
-            <div>
-              <div id="mainSelName" style="font-size:14px;font-weight:700">-</div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:13px;font-weight:700;color:var(--txt2);white-space:nowrap">선택한 상품</div>
+            <div id="mainSelThumb" style="width:48px;height:48px;border-radius:10px;background:var(--sur2);border:1px solid var(--bdr);display:grid;place-items:center;font-size:20px;flex-shrink:0">📦</div>
+            <div style="flex:1;min-width:0">
+              <div id="mainSelName" style="font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">-</div>
               <div id="mainSelPrice" style="font-size:12px;color:var(--txt2)">-</div>
-              <div style="font-size:11px;color:var(--txt2)">ⓘ 관리자 기본 트래킹 링크 규칙 적용</div>
             </div>
-            <button class="btn btn-sm" id="mainSelViewBtn" style="white-space:nowrap">상품 보러가기 ↗</button>
-            <button class="btn btn-p" onclick="genMainLink()" style="white-space:nowrap;padding:10px 18px">링크 생성하기 🔗</button>
+            <button class="btn btn-sm" id="mainSelViewBtn" style="white-space:nowrap;flex-shrink:0">상품 보러가기 ↗</button>
+            <button class="btn btn-p" onclick="genMainLink()" style="white-space:nowrap;flex-shrink:0;padding:10px 18px">링크 생성하기 🔗</button>
           </div>
           <div id="mainGenLinkResult" style="margin-top:10px;font-size:13px;color:var(--blue);display:none;word-break:break-all"></div>
         </div>
-        <div style="font-size:12px;color:var(--txt2);margin-top:12px;text-align:center">ⓘ 카테고리별 Top 100 상품을 실시간으로 제공하며, 상품명 검색을 지원합니다.</div>
+        <div style="font-size:12px;color:var(--txt2);margin-top:12px;text-align:center">ⓘ 쿠팡 카테고리별 인기상품을 제공합니다. Access/Secret Key 입력 시 실시간 파트너스 API 연동됩니다.</div>
       </div>
     </div><!-- /page-products -->
 
@@ -2939,20 +2962,44 @@ function saveDraft() {
 
 // ===== 인기상품 전체 페이지 =====
 var mainProducts = [], mainSelectedProduct = null;
+// 쿠팡 카테고리 ID 맵
+var COUPANG_CATS = {
+  'best':'36405','fashion':'36407','beauty':'36410','baby':'36413','food':'37527',
+  'kitchen':'36416','living':'36415','interior':'36412','digital':'36405',
+  'sports':'36416','car':'36417','book':'36418','hobby':'36419','office':'36420',
+  'pet':'36421','health':'36422','travel':'36423',
+  'rocket':'rocket','rocket_fresh':'rocket_fresh','discount':'discount','global':'global'
+};
+var _currentCatKey = 'best';
+var _currentCatName = '베스트';
+
 async function loadProducts() {
-  await loadProductsMain('', '전체');
+  await loadProductsMain('', 'best');
+}
+async function refreshProducts() {
+  var btn = document.querySelector('[onclick="refreshProducts()"]');
+  if (btn) { btn.textContent = '🔄 로딩중...'; btn.disabled = true; }
+  // 캐시 무효화 파라미터
+  window._productCacheBust = Date.now();
+  await loadProductsMain(document.getElementById('productSearchMain').value.trim(), _currentCatKey);
+  if (btn) { btn.textContent = '🔄 새로고침'; btn.disabled = false; }
+  toast('새로고침됐어!');
 }
 async function searchProductsMain() {
   var q = document.getElementById('productSearchMain').value.trim();
-  await loadProductsMain(q, '');
+  await loadProductsMain(q, _currentCatKey);
 }
-function filterProductsMain(el, cat) {
-  el.parentElement.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
+function filterProductsCat(el, catKey, catName) {
+  // 특별관 + 카테고리 칩 모두에서 active 제거
+  document.querySelectorAll('#productSpecialChips .chip, #productCatMain .chip').forEach(function(c) { c.classList.remove('active'); });
   el.classList.add('active');
+  _currentCatKey = catKey;
+  _currentCatName = catName;
   var q = document.getElementById('productSearchMain').value.trim();
-  loadProductsMain(q, cat);
+  loadProductsMain(q, catKey);
 }
-function sortProductsMain() { loadProductsMain('', ''); }
+function filterProductsMain(el, cat) { filterProductsCat(el, cat, cat); }
+function sortProductsMain() { loadProductsMain('', _currentCatKey); }
 async function loadProductsMain(query, category) {
   var list = document.getElementById('productListMain');
   list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--txt2)"><span class="spin"></span> 로딩 중...</div>';
@@ -3033,7 +3080,11 @@ function renderProductsMain(items) {
     viewBtn.className = 'btn btn-sm';
     viewBtn.style.cssText = 'font-size:12px';
     viewBtn.textContent = '보러가기 ↗';
-    viewBtn.onclick = (function(url) { return function() { openCoupangLink(url, 'product_list', 'products'); }; })(p.productUrl);
+    viewBtn.onclick = (function(prod) { return function() {
+      var url = prod.productUrl && prod.productUrl !== '#' ? prod.productUrl :
+        'https://www.coupang.com/np/search?q=' + encodeURIComponent(prod.productName || '');
+      window.open(url, '_blank');
+    }; })(p);
     
     var linkBtn = document.createElement('button');
     linkBtn.className = 'btn btn-sm';
@@ -3062,7 +3113,11 @@ function selectMainProduct(p) {
   var thumb = document.getElementById('mainSelThumb');
   if (p.imageUrl) thumb.innerHTML = '<img src="'+p.imageUrl+'" style="width:48px;height:48px;object-fit:cover;border-radius:10px">';
   else thumb.textContent = '📦';
-  document.getElementById('mainSelViewBtn').onclick = (function(url) { return function() { openCoupangLink(url, 'product_list', 'products'); }; })(p.productUrl);
+  document.getElementById('mainSelViewBtn').onclick = (function(prod) { return function() {
+    var url = prod.productUrl && prod.productUrl !== '#' ? prod.productUrl :
+      'https://www.coupang.com/np/search?q=' + encodeURIComponent(prod.productName || '');
+    window.open(url, '_blank');
+  }; })(p);
   var genResult = document.getElementById('mainGenLinkResult');
   if (genResult) genResult.style.display = 'none';
   // 스레드/블로그 상품도 sync
@@ -3074,16 +3129,9 @@ function selectAndGenLink(p) {
   genMainLink();
 }
 function genMainLink() {
-  if (!mainSelectedProduct) return toast('상품을 먼저 선택해줘', 'err');
-  var link = mainSelectedProduct.trackingUrl || mainSelectedProduct.productUrl || '';
-  var resultEl = document.getElementById('mainGenLinkResult');
-  if (link) {
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = '🔗 생성된 링크:<br><a href="'+link+'" target="_blank" style="color:var(--blue);word-break:break-all">'+link+'</a>';
-    navigator.clipboard.writeText(link).then(function() { toast('링크 복사됐어!'); }).catch(function() { toast('링크 생성됨!'); });
-  } else {
-    toast('트래킹 링크가 없어', 'err');
-  }
+  // 링크 생성하기 → 쿠팡 파트너스 홈으로 이동
+  window.open('https://partners.coupang.com/', '_blank');
+  toast('쿠팡 파트너스 홈으로 이동해!');
 }
 
 // ===== 저장된 게시물 (실제 /api/schedule 연동) =====
