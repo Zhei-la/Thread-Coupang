@@ -1480,50 +1480,52 @@ app.get('/api/coupang/clicks', adminAuth, (req, res) => {
   res.json(logs.slice(-200).reverse()); // 최근 200개
 });
 
-// 인기상품 캐시
-let _productCache = { data: [], cachedAt: 0 };
+// 인기상품 캐시 (카테고리별)
+const _productCaches = {};
 const PRODUCT_CACHE_TTL = 30 * 60 * 1000; // 30분
 
-// 쿠팡 베스트셀러 스크래핑
-async function fetchCoupangBest(category) {
-  const catMap = {
-    '가전': '36405',
-    '뷰티': '36410',
-    '식품': '37527',
-    '스포츠': '36416',
-    '생활': '36415',
-    '패션': '36408',
-    '전체': '36405'
-  };
-  const catId = catMap[category] || catMap['가전'];
-  const url = `https://www.coupang.com/np/categories/${catId}?listSize=24&sorter=bestSeller&rating=0&isPriceRange=false&minPrice=&maxPrice=&channel=user&fromComponent=Y&selectedPlpKeepFilter=&filterType=`;
+// 쿠팡 카테고리 키 → ID 맵
+const COUPANG_CAT_IDS = {
+  'best':'36405', 'fashion':'36407', 'beauty':'36410', 'baby':'36413', 'food':'37527',
+  'kitchen':'36415', 'living':'36416', 'interior':'36412', 'digital':'36405',
+  'sports':'36416', 'car':'36417', 'book':'36418', 'hobby':'36419', 'office':'36420',
+  'pet':'36421', 'health':'36422', 'travel':'36423',
+  '전체':'36405', '반려동물':'36421', '생활가전':'36405', '주방용품':'36415',
+  '육아':'36413', '캠핑':'36416', '뷰티':'36410', '식품':'37527'
+};
+
+// 쿠팡 파트너스 API로 베스트셀러 가져오기
+async function fetchCoupangBestByApi(accessKey, secretKey, categoryId, limit) {
+  limit = limit || 20;
+  const crypto = require('crypto');
+  const method = 'GET';
+  const apiPath = '/v2/providers/affiliate_open_api/apis/openapi/v1/products/bestseller';
+  const query = 'categoryId=' + categoryId + '&limit=' + limit;
+  const dt = new Date();
+  const pad = function(n){return String(n).padStart(2,'0');};
+  const datetime = String(dt.getUTCFullYear()).slice(2) + pad(dt.getUTCMonth()+1) + pad(dt.getUTCDate()) + 'T' + pad(dt.getUTCHours()) + pad(dt.getUTCMinutes()) + pad(dt.getUTCSeconds()) + 'Z';
+  const message = datetime + method + apiPath + query;
+  const signature = crypto.createHmac('sha256', secretKey).update(message).digest('hex');
+  const authorization = 'CEA algorithm=HmacSHA256, access-key=' + accessKey + ', signed-date=' + datetime + ', signature=' + signature;
   try {
-    const r = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'ko-KR,ko;q=0.9',
-        'Referer': 'https://www.coupang.com/'
-      }
+    const r = await fetch('https://api-gateway.coupang.com' + apiPath + '?' + query, {
+      headers: { 'Authorization': authorization, 'Content-Type': 'application/json;charset=UTF-8' }
     });
-    const html = await r.text();
-    const items = [];
-    const re = /"productId":(\d+),"name":"([^"]+)","rating":([\d.]+),"reviewCount":(\d+),"price":(\d+)/g;
-    let m, rank = 1;
-    while ((m = re.exec(html)) !== null && rank <= 20) {
-      const productId = m[1];
-      items.push({
-        rank: rank++,
-        productId,
-        productName: m[2],
-        rating: parseFloat(m[3]),
-        reviewCount: parseInt(m[4]),
-        price: parseInt(m[5]),
-        productUrl: `https://www.coupang.com/vp/products/${productId}`,
-        imageUrl: `https://thumbnail6.coupangcdn.com/thumbnails/remote/230x230ex/image/product/image/vendoritem/${productId}.jpg`
-      });
-    }
-    return items;
+    const data = await r.json();
+    if (!data.data || !data.data.productData) return [];
+    return data.data.productData.map(function(p, i) {
+      return {
+        rank: i + 1,
+        productId: String(p.productId),
+        productName: p.productName,
+        price: p.productPrice,
+        reviewCount: p.productReview || 0,
+        rating: p.productRating || 0,
+        productUrl: p.productUrl || ('https://www.coupang.com/vp/products/' + p.productId),
+        imageUrl: p.productImage || '',
+        trackingUrl: p.deepLink || ''
+      };
+    });
   } catch(e) {
     return [];
   }
@@ -1531,41 +1533,80 @@ async function fetchCoupangBest(category) {
 
 // GET /api/coupang/products - 인기상품 목록
 app.get('/api/coupang/products', auth, async (req, res) => {
-  const category = req.query.category || '전체';
+  const catKey = req.query.category || 'best';
   const q = req.query.q || '';
   const now = Date.now();
+  const cacheKey = catKey;
 
   // 캐시 유효하면 반환
-  if (!q && _productCache.data.length && now - _productCache.cachedAt < PRODUCT_CACHE_TTL) {
-    let items = _productCache.data;
-    if (category && category !== '전체') items = items.filter(i => i.category === category);
+  if (!q && _productCaches[cacheKey] && _productCaches[cacheKey].data.length && now - _productCaches[cacheKey].cachedAt < PRODUCT_CACHE_TTL) {
+    let items = _productCaches[cacheKey].data;
+    if (q) items = items.filter(i => i.productName && i.productName.includes(q));
     return res.json(items);
   }
 
-  // 실제 스크래핑 시도
-  let items = await fetchCoupangBest(category);
-
-  // 실패 시 샘플 데이터
-  if (!items.length) {
-    items = [
-      { rank:1, productName:'에어프라이어 6L 대용량', price:49800, reviewCount:8420, rating:4.7, productUrl:'https://www.coupang.com', imageUrl:'' },
-      { rank:2, productName:'무선 청소기 경량형', price:128000, reviewCount:5231, rating:4.6, productUrl:'https://www.coupang.com', imageUrl:'' },
-      { rank:3, productName:'스킨케어 세트 수분 집중', price:35000, reviewCount:12840, rating:4.8, productUrl:'https://www.coupang.com', imageUrl:'' },
-      { rank:4, productName:'단백질 쉐이크 초코맛 1kg', price:29800, reviewCount:6720, rating:4.5, productUrl:'https://www.coupang.com', imageUrl:'' },
-      { rank:5, productName:'요가매트 15mm 고밀도', price:18900, reviewCount:9150, rating:4.6, productUrl:'https://www.coupang.com', imageUrl:'' },
-      { rank:6, productName:'텀블러 보온보냉 500ml', price:15900, reviewCount:7340, rating:4.7, productUrl:'https://www.coupang.com', imageUrl:'' },
-      { rank:7, productName:'무선 이어폰 노이즈캔슬링', price:89000, reviewCount:4210, rating:4.5, productUrl:'https://www.coupang.com', imageUrl:'' },
-      { rank:8, productName:'식기세척기 6인용', price:398000, reviewCount:2840, rating:4.8, productUrl:'https://www.coupang.com', imageUrl:'' },
-      { rank:9, productName:'오메가3 고함량 90캡슐', price:19800, reviewCount:11200, rating:4.7, productUrl:'https://www.coupang.com', imageUrl:'' },
-      { rank:10, productName:'캠핑 의자 경량 접이식', price:32000, reviewCount:3890, rating:4.6, productUrl:'https://www.coupang.com', imageUrl:'' },
-      { rank:11, productName:'보조배터리 20000mAh', price:25800, reviewCount:7610, rating:4.5, productUrl:'https://www.coupang.com', imageUrl:'' },
-      { rank:12, productName:'핸드크림 세트 5종', price:12900, reviewCount:15400, rating:4.8, productUrl:'https://www.coupang.com', imageUrl:'' },
-    ];
+  // 파트너스 API 키가 있으면 실제 API 호출
+  const s = getSettings();
+  let items = [];
+  if (s.coupangPartnerAccessKey && s.coupangPartnerSecretKey && s.coupangPartnerSecretKey !== '***') {
+    const catId = COUPANG_CAT_IDS[catKey] || '36405';
+    items = await fetchCoupangBestByApi(s.coupangPartnerAccessKey, s.coupangPartnerSecretKey, catId, 20);
   }
 
-  if (!q) { _productCache = { data: items, cachedAt: now }; }
+  // 키 없거나 실패 시 카테고리별 샘플 데이터
+  if (!items.length) {
+    const samples = {
+      best: [
+        { rank:1, productName:'에어프라이어 6L 대용량', price:49800, reviewCount:8420, rating:4.7, productUrl:'https://www.coupang.com/np/search?q=에어프라이어', imageUrl:'' },
+        { rank:2, productName:'무선 청소기 경량형', price:128000, reviewCount:5231, rating:4.6, productUrl:'https://www.coupang.com/np/search?q=무선청소기', imageUrl:'' },
+        { rank:3, productName:'스킨케어 세트 수분 집중', price:35000, reviewCount:12840, rating:4.8, productUrl:'https://www.coupang.com/np/search?q=스킨케어세트', imageUrl:'' },
+        { rank:4, productName:'단백질 쉐이크 초코맛 1kg', price:29800, reviewCount:6720, rating:4.5, productUrl:'https://www.coupang.com/np/search?q=단백질쉐이크', imageUrl:'' },
+        { rank:5, productName:'요가매트 15mm 고밀도', price:18900, reviewCount:9150, rating:4.6, productUrl:'https://www.coupang.com/np/search?q=요가매트', imageUrl:'' },
+        { rank:6, productName:'텀블러 보온보냉 500ml', price:15900, reviewCount:7340, rating:4.7, productUrl:'https://www.coupang.com/np/search?q=텀블러', imageUrl:'' },
+        { rank:7, productName:'무선 이어폰 노이즈캔슬링', price:89000, reviewCount:4210, rating:4.5, productUrl:'https://www.coupang.com/np/search?q=무선이어폰', imageUrl:'' },
+        { rank:8, productName:'오메가3 고함량 90캡슐', price:19800, reviewCount:11200, rating:4.7, productUrl:'https://www.coupang.com/np/search?q=오메가3', imageUrl:'' },
+        { rank:9, productName:'보조배터리 20000mAh', price:25800, reviewCount:7610, rating:4.5, productUrl:'https://www.coupang.com/np/search?q=보조배터리', imageUrl:'' },
+        { rank:10, productName:'핸드크림 세트 5종', price:12900, reviewCount:15400, rating:4.8, productUrl:'https://www.coupang.com/np/search?q=핸드크림', imageUrl:'' },
+      ],
+      beauty: [
+        { rank:1, productName:'선크림 UV 차단 SPF50+', price:18900, reviewCount:22400, rating:4.8, productUrl:'https://www.coupang.com/np/search?q=선크림', imageUrl:'' },
+        { rank:2, productName:'히알루론산 앰플 30ml', price:24800, reviewCount:15600, rating:4.7, productUrl:'https://www.coupang.com/np/search?q=히알루론산앰플', imageUrl:'' },
+        { rank:3, productName:'콜라겐 크림 50ml', price:32000, reviewCount:9800, rating:4.6, productUrl:'https://www.coupang.com/np/search?q=콜라겐크림', imageUrl:'' },
+        { rank:4, productName:'비타민C 세럼', price:19800, reviewCount:18200, rating:4.7, productUrl:'https://www.coupang.com/np/search?q=비타민C세럼', imageUrl:'' },
+        { rank:5, productName:'마스크팩 10매입', price:12900, reviewCount:31400, rating:4.5, productUrl:'https://www.coupang.com/np/search?q=마스크팩', imageUrl:'' },
+      ],
+      food: [
+        { rank:1, productName:'제주 삼다수 2L 24개', price:21600, reviewCount:45200, rating:4.8, productUrl:'https://www.coupang.com/np/search?q=제주삼다수', imageUrl:'' },
+        { rank:2, productName:'바나나 1송이 1.2kg', price:4900, reviewCount:28900, rating:4.6, productUrl:'https://www.coupang.com/np/search?q=바나나', imageUrl:'' },
+        { rank:3, productName:'냉동 삼겹살 1kg', price:17900, reviewCount:12400, rating:4.5, productUrl:'https://www.coupang.com/np/search?q=냉동삼겹살', imageUrl:'' },
+        { rank:4, productName:'아메리카노 블랙 50개입', price:14900, reviewCount:35600, rating:4.7, productUrl:'https://www.coupang.com/np/search?q=아메리카노블랙', imageUrl:'' },
+        { rank:5, productName:'그래놀라 시리얼 500g', price:9800, reviewCount:19800, rating:4.6, productUrl:'https://www.coupang.com/np/search?q=그래놀라', imageUrl:'' },
+      ],
+      pet: [
+        { rank:1, productName:'자동 급식기 5L 앱 연동형', price:39800, reviewCount:4820, rating:4.7, productUrl:'https://www.coupang.com/np/search?q=자동급식기', imageUrl:'' },
+        { rank:2, productName:'고양이 모래 10kg 무향', price:18900, reviewCount:8400, rating:4.5, productUrl:'https://www.coupang.com/np/search?q=고양이모래', imageUrl:'' },
+        { rank:3, productName:'강아지 패드 100매 특대형', price:24800, reviewCount:12600, rating:4.6, productUrl:'https://www.coupang.com/np/search?q=강아지패드', imageUrl:'' },
+        { rank:4, productName:'캣타워 스크래처 대형', price:69800, reviewCount:3200, rating:4.7, productUrl:'https://www.coupang.com/np/search?q=캣타워', imageUrl:'' },
+        { rank:5, productName:'강아지 사료 닭가슴살 5kg', price:32000, reviewCount:6800, rating:4.8, productUrl:'https://www.coupang.com/np/search?q=강아지사료', imageUrl:'' },
+      ],
+      health: [
+        { rank:1, productName:'오메가3 고함량 90캡슐', price:19800, reviewCount:22400, rating:4.7, productUrl:'https://www.coupang.com/np/search?q=오메가3', imageUrl:'' },
+        { rank:2, productName:'유산균 60억 30포', price:24800, reviewCount:15600, rating:4.8, productUrl:'https://www.coupang.com/np/search?q=유산균', imageUrl:'' },
+        { rank:3, productName:'비타민D 2000IU 90정', price:12900, reviewCount:18900, rating:4.6, productUrl:'https://www.coupang.com/np/search?q=비타민D', imageUrl:'' },
+        { rank:4, productName:'콜라겐 분말 300g', price:32000, reviewCount:8400, rating:4.5, productUrl:'https://www.coupang.com/np/search?q=콜라겐분말', imageUrl:'' },
+        { rank:5, productName:'마그네슘 글리시네이트 60정', price:18900, reviewCount:11200, rating:4.7, productUrl:'https://www.coupang.com/np/search?q=마그네슘', imageUrl:'' },
+      ],
+    };
+    items = samples[catKey] || samples.best;
+    // 상품명 검색이면 best 샘플에서 필터
+    if (q) {
+      let allSamples = Object.values(samples).flat();
+      items = allSamples.filter(i => i.productName && i.productName.includes(q));
+      if (!items.length) items = [{ rank:1, productName: q + ' (쿠팡 검색)', price:0, reviewCount:0, rating:0, productUrl:'https://www.coupang.com/np/search?q=' + encodeURIComponent(q), imageUrl:'' }];
+    }
+  }
 
-  // 검색어 필터
+  if (!q) { _productCaches[cacheKey] = { data: items, cachedAt: now }; }
   if (q) items = items.filter(i => i.productName && i.productName.includes(q));
 
   res.json(items);
