@@ -535,6 +535,88 @@ app.put('/api/users/:id/status', adminAuth, (req, res) => {
 //  Threads 계정 관리
 // ══════════════════════════════════
 
+// ===== 네이버 계정 API =====
+const naverAccsFile = () => `${DATA_ROOT}/naver_accounts.json`;
+function getNaverAccs(userId) {
+  const all = loadJSON(naverAccsFile(), []);
+  return all.filter(a => a.userId_app === userId);
+}
+
+app.get('/api/naver/accounts', auth, (req, res) => {
+  const accs = getNaverAccs(req.userId);
+  res.json(accs.map(a => ({ userId: a.userId, clientId: a.clientId ? a.clientId.slice(0,4)+'***' : '', category: a.category || '' })));
+});
+
+app.post('/api/naver/accounts', auth, (req, res) => {
+  const { userId, clientId, clientSecret, category } = req.body;
+  if (!userId) return res.status(400).json({ error: '네이버 아이디 필요' });
+  const all = loadJSON(naverAccsFile(), []);
+  const existing = all.findIndex(a => a.userId_app === req.userId && a.userId === userId);
+  const acc = { userId_app: req.userId, userId, clientId: clientId||'', clientSecret: clientSecret||'', category: category||'', createdAt: new Date().toISOString() };
+  if (existing >= 0) all[existing] = acc;
+  else all.push(acc);
+  saveJSON(naverAccsFile(), all);
+  res.json({ ok: true });
+});
+
+app.delete('/api/naver/accounts/:userId', auth, (req, res) => {
+  let all = loadJSON(naverAccsFile(), []);
+  all = all.filter(a => !(a.userId_app === req.userId && a.userId === req.params.userId));
+  saveJSON(naverAccsFile(), all);
+  res.json({ ok: true });
+});
+
+app.post('/api/naver/test', auth, async (req, res) => {
+  const { userId } = req.body;
+  const all = loadJSON(naverAccsFile(), []);
+  const acc = all.find(a => a.userId_app === req.userId && a.userId === userId);
+  if (!acc) return res.status(404).json({ error: '등록된 계정 없음' });
+  // 네이버 오픈API로 블로그 정보 조회 테스트
+  if (acc.clientId && acc.clientSecret) {
+    try {
+      const r = await fetch(`https://openapi.naver.com/v1/me`, {
+        headers: { 'X-Naver-Client-Id': acc.clientId, 'X-Naver-Client-Secret': acc.clientSecret }
+      });
+      if (r.status === 401) return res.status(400).json({ error: 'Client ID/Secret 인증 실패' });
+      return res.json({ ok: true, method: 'openapi' });
+    } catch(e) {
+      return res.status(400).json({ error: '연결 실패: ' + e.message });
+    }
+  }
+  res.json({ ok: true, method: 'saved', note: 'API 키 없이 저장만 됨' });
+});
+
+// 네이버 블로그 발행 API (오픈API 방식)
+app.post('/api/naver/publish', auth, async (req, res) => {
+  const { naverUserId, title, content: blogContent, tags, category } = req.body;
+  if (!naverUserId || !title || !blogContent) return res.status(400).json({ error: '필수 항목 누락' });
+  const all = loadJSON(naverAccsFile(), []);
+  const acc = all.find(a => a.userId_app === req.userId && a.userId === naverUserId);
+  if (!acc) return res.status(404).json({ error: '등록된 네이버 계정 없음' });
+  if (!acc.clientId || !acc.clientSecret) return res.status(400).json({ error: '오픈API Client ID/Secret 필요' });
+  try {
+    const params = new URLSearchParams();
+    params.append('title', title);
+    params.append('contents', blogContent);
+    if (tags) params.append('tags', Array.isArray(tags) ? tags.join(',') : tags);
+    if (category || acc.category) params.append('categoryNo', category || acc.category);
+    const r = await fetch('https://openapi.naver.com/blog/post.json', {
+      method: 'POST',
+      headers: {
+        'X-Naver-Client-Id': acc.clientId,
+        'X-Naver-Client-Secret': acc.clientSecret,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: params.toString()
+    });
+    const data = await r.json();
+    if (data.errorCode) return res.status(400).json({ error: data.errorMessage || '발행 실패' });
+    res.json({ ok: true, postId: data.postId, url: data.url });
+  } catch(e) {
+    res.status(500).json({ error: '발행 실패: ' + e.message });
+  }
+});
+
 app.get('/api/accounts', auth, (req, res) => {
   const accs = getAccounts(req.userId);
   res.json(accs.map(a => ({ ...a, accessToken: (a.accessToken || '').slice(0, 6) + '...' + (a.accessToken || '').slice(-4), tokenRegisteredAt: a.tokenRegisteredAt || null })));
