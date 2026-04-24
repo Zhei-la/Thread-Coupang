@@ -708,33 +708,43 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
         <div class="panel">
           <div class="panel-header"><div class="panel-title">문단별 미디어 배치</div><span class="panel-badge orange" id="blogMediaBadge">활성화됨</span></div>
 
-          <!-- 인기상품 선택 -->
-          <div style="margin-bottom:14px">
-            <label class="label" style="margin-bottom:8px">상품 선택</label>
-            <div style="border:1px solid var(--bdr);border-radius:12px;padding:12px;margin-bottom:8px">
-              <div style="display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center">
-                <div id="blogSelThumb" style="width:44px;height:44px;border-radius:10px;background:var(--sur2);border:1px solid var(--bdr);display:grid;place-items:center;font-size:20px">📦</div>
-                <div>
-                  <div id="blogSelName" style="font-size:13px;font-weight:700;color:var(--txt2)">상품을 선택해줘</div>
-                  <div id="blogSelPrice" style="font-size:12px;color:var(--txt2)"></div>
-                </div>
-                <button class="btn btn-sm" style="font-size:12px;flex-shrink:0" onclick="openBlogProductPicker()">상품 변경</button>
-              </div>
-            </div>
-            <!-- 인기상품 미니 목록 -->
-            <div id="blogProductMini" style="display:none;border:1px solid var(--bdr);border-radius:12px;padding:10px;max-height:220px;overflow-y:auto">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                <div style="font-size:12px;font-weight:700;color:var(--txt2)">인기상품 선택</div>
-                <button class="btn btn-sm" onclick="document.getElementById('blogProductMini').style.display='none'" style="font-size:11px;padding:3px 8px">닫기</button>
-              </div>
-              <input id="blogProductSearch" placeholder="상품명 검색..." style="font-size:12px;padding:7px 10px;margin-bottom:8px" oninput="searchBlogProducts()">
-              <div id="blogProductMiniList" style="display:flex;flex-direction:column;gap:6px">
-                <div style="text-align:center;color:var(--txt2);font-size:12px;padding:12px"><span class="spin"></span> 로딩 중...</div>
+          <!-- 상품 검색 (스레드 패널과 동일한 UI) -->
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input id="blogProductSearch" placeholder="상품 검색..." style="flex:1" onkeydown="if(event.key==='Enter')searchBlogProductsMain()">
+            <button class="btn btn-p btn-sm" onclick="searchBlogProductsMain()">검색</button>
+          </div>
+
+          <!-- 카테고리 칩 -->
+          <div class="chips" id="blogProductCatChips" style="margin-bottom:12px;flex-wrap:wrap;gap:6px">
+            <div class="chip active" onclick="filterBlogProducts(this,'best')">전체</div>
+            <div class="chip" onclick="filterBlogProducts(this,'beauty')">뷰티</div>
+            <div class="chip" onclick="filterBlogProducts(this,'food')">식품</div>
+            <div class="chip" onclick="filterBlogProducts(this,'pet')">반려동물</div>
+            <div class="chip" onclick="filterBlogProducts(this,'health')">헬스/건강</div>
+            <div class="chip" onclick="filterBlogProducts(this,'digital')">가전디지털</div>
+            <div class="chip" onclick="filterBlogProducts(this,'kitchen')">주방용품</div>
+            <div class="chip" onclick="filterBlogProducts(this,'living')">생활용품</div>
+            <div class="chip" onclick="filterBlogProducts(this,'sports')">스포츠</div>
+          </div>
+
+          <!-- 상품 리스트 -->
+          <div id="blogProductList" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;margin-bottom:12px">
+            <div style="text-align:center;padding:20px;color:var(--txt2);font-size:13px"><span class="spin"></span> 로딩 중...</div>
+          </div>
+
+          <!-- 선택한 상품 -->
+          <div id="blogSelectedProduct" style="display:none;border:1px solid var(--acc-border);border-radius:12px;padding:14px;background:var(--acc-soft);margin-bottom:14px">
+            <div style="font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:8px">선택한 상품</div>
+            <div style="display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center">
+              <div id="blogSelThumb" style="width:44px;height:44px;border-radius:10px;background:var(--sur2);border:1px solid var(--bdr);display:grid;place-items:center;font-size:20px;overflow:hidden">📦</div>
+              <div>
+                <div id="blogSelName" style="font-size:14px;font-weight:700">-</div>
+                <div id="blogSelPrice" style="font-size:12px;color:var(--txt2)">-</div>
               </div>
             </div>
           </div>
 
-          <!-- 문단 블록 구성 -->
+          <!-- 문단 블록 구성 (아래로 이동) -->
           <div class="form-group" style="margin-bottom:14px">
             <label class="label">문단 블록 구성</label>
             <div id="blogBlocks" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -1590,7 +1600,7 @@ function go(name, el) {
   if (name === 'admin') { loadAdmin(); loadStats(); loadCoupangPartnerSettings(); loadCoupangClickLogs(); }
   if (name === 'autoSchedule' && typeof loadAutoSched === 'function') loadAutoSched();
   if (name === 'products') loadProducts();
-  if (name === 'blog') loadBlog();
+  if (name === 'blog') { loadBlog(); setTimeout(function(){ loadBlogProductsPanel('','best'); }, 200); }
   closeSidebar();
 }
 
@@ -3981,53 +3991,71 @@ async function delInvite(code) {
 }
 
 
-// ===== 블로그 상품 선택 미니 피커 =====
-async function openBlogProductPicker() {
-  var mini = document.getElementById('blogProductMini');
-  if (!mini) return;
-  mini.style.display = mini.style.display === 'none' ? 'block' : 'none';
-  if (mini.style.display === 'block') await loadBlogProductMini();
-}
-async function loadBlogProductMini(q) {
-  var list = document.getElementById('blogProductMiniList');
+// ===== 블로그 상품 선택 (스레드 패널과 동일한 구조) =====
+var _blogCatKey = 'best';
+
+async function loadBlogProductsPanel(query, catKey) {
+  catKey = catKey || _blogCatKey;
+  var list = document.getElementById('blogProductList');
   if (!list) return;
-  list.innerHTML = '<div style="text-align:center;color:var(--txt2);font-size:12px;padding:12px"><span class="spin"></span></div>';
+  list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--txt2)"><span class="spin"></span> 로딩 중...</div>';
   try {
     var params = new URLSearchParams();
-    if (q) params.set('q', q);
+    if (query) params.set('q', query);
+    params.set('category', catKey);
     var data = await api('/api/coupang/products?' + params.toString());
-    var items = Array.isArray(data) ? data.slice(0, 12) : [];
-    if (!items.length) { list.innerHTML = '<div style="text-align:center;color:var(--txt2);font-size:12px;padding:8px">결과 없음</div>'; return; }
+    var items = Array.isArray(data) ? data : [];
+    if (!items.length) { list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--txt2)">검색 결과가 없어</div>'; return; }
     list.innerHTML = '';
     items.forEach(function(p) {
       var row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;border:1px solid var(--bdr);background:var(--sur)';
+      row.style.cssText = 'display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--bdr);border-radius:10px;background:var(--sur);cursor:pointer';
       row.onmouseover = function() { this.style.background='var(--sur2)'; };
       row.onmouseout = function() { this.style.background='var(--sur)'; };
-      row.onclick = (function(prod) { return function() { selectBlogProduct(prod); }; })(p);
+      row.onclick = (function(prod) { return function() { selectBlogProductMain(prod); }; })(p);
       var thumb = document.createElement('div');
-      thumb.style.cssText = 'width:34px;height:34px;border-radius:6px;background:var(--sur2);border:1px solid var(--bdr);display:grid;place-items:center;font-size:16px;flex-shrink:0;overflow:hidden';
-      if (p.imageUrl) { var img = document.createElement('img'); img.src = p.imageUrl; img.style.cssText='width:34px;height:34px;object-fit:cover;border-radius:6px'; thumb.appendChild(img); } else { thumb.textContent = '📦'; }
+      thumb.style.cssText = 'width:44px;height:44px;border-radius:10px;background:var(--sur2);border:1px solid var(--bdr);display:grid;place-items:center;font-size:20px;overflow:hidden;flex-shrink:0';
+      if (p.imageUrl) { var img = document.createElement('img'); img.src=p.imageUrl; img.style.cssText='width:44px;height:44px;object-fit:cover;border-radius:10px'; img.onerror=function(){this.parentElement.textContent='📦';}; thumb.appendChild(img); } else { thumb.textContent = '📦'; }
       var info = document.createElement('div');
-      info.style.cssText = 'flex:1;min-width:0';
-      info.innerHTML = '<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.productName||'-') + '</div><div style="font-size:11px;color:var(--txt2)">' + (p.price ? p.price.toLocaleString()+'원' : '') + '</div>';
-      row.appendChild(thumb);
-      row.appendChild(info);
+      info.style.cssText = 'min-width:0';
+      info.innerHTML = '<div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.productName||'-') + '</div><div style="font-size:12px;color:var(--txt2)">' + (p.price ? p.price.toLocaleString()+'원' : '') + ' · 리뷰 '+(p.reviewCount||0)+'</div>';
+      var selBtn = document.createElement('button');
+      selBtn.className = 'btn btn-p btn-sm';
+      selBtn.style.cssText = 'font-size:12px;flex-shrink:0;padding:6px 12px';
+      selBtn.textContent = '선택';
+      selBtn.onclick = (function(prod) { return function(e) { e.stopPropagation(); selectBlogProductMain(prod); }; })(p);
+      row.appendChild(thumb); row.appendChild(info); row.appendChild(selBtn);
       list.appendChild(row);
     });
-  } catch(e) { list.innerHTML = '<div style="color:var(--red);font-size:12px;padding:8px">로드 실패</div>'; }
+  } catch(e) {
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--txt2)">로드 실패</div>';
+  }
 }
-function selectBlogProduct(p) {
+
+function filterBlogProducts(el, catKey) {
+  document.querySelectorAll('#blogProductCatChips .chip').forEach(function(c) { c.classList.remove('active'); });
+  el.classList.add('active');
+  _blogCatKey = catKey;
+  loadBlogProductsPanel('', catKey);
+}
+
+function searchBlogProductsMain() {
+  var q = document.getElementById('blogProductSearch').value.trim();
+  loadBlogProductsPanel(q, _blogCatKey);
+}
+
+function searchBlogProducts() { searchBlogProductsMain(); }
+
+function selectBlogProductMain(p) {
   syncProductToBlog(p);
-  var mini = document.getElementById('blogProductMini');
-  if (mini) mini.style.display = 'none';
+  var sel = document.getElementById('blogSelectedProduct');
+  if (sel) sel.style.display = 'block';
   toast('블로그 상품 선택됐어!');
 }
-function searchBlogProducts() {
-  var q = document.getElementById('blogProductSearch').value.trim();
-  clearTimeout(window._blogSearchTimer);
-  window._blogSearchTimer = setTimeout(function() { loadBlogProductMini(q); }, 300);
-}
+
+function openBlogProductPicker() { loadBlogProductsPanel('', _blogCatKey); }
+function loadBlogProductMini(q) { loadBlogProductsPanel(q, _blogCatKey); }
+function selectBlogProduct(p) { selectBlogProductMain(p); }
 
 // ===== 네이버 계정 연동 =====
 async function saveNaverAcc() {
