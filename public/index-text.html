@@ -914,8 +914,20 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
 
     <!-- ========== 발행 관리 ========== -->
     <div class="page" id="page-accounts">
-      <h1 style="margin-bottom:20px">발행 관리</h1>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+        <h1 style="margin:0">발행 관리</h1>
+        <div style="display:flex;gap:6px">
+          <div id="accTabThread" class="chip active" onclick="switchAccTab('thread')" style="font-size:14px;padding:8px 18px;font-weight:700">
+            🧵 스레드
+          </div>
+          <div id="accTabNaver" class="chip" onclick="switchAccTab('naver')" style="font-size:14px;padding:8px 18px;font-weight:700">
+            <span style="background:#03c75a;color:#fff;border-radius:4px;padding:1px 5px;font-size:11px;font-weight:800;margin-right:4px">N</span>네이버 블로그
+          </div>
+        </div>
+      </div>
 
+      <!-- 스레드 탭 -->
+      <div id="accPanelThread">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
 
         <!-- 네이버 계정 등록 -->
@@ -985,11 +997,15 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
                 <div id="tagList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
               </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
               <button class="btn btn-sm" onclick="testToken()">🛡️ 토큰 테스트</button>
               <button class="btn btn-sm" onclick="loadAccs()">🔄 새로고침</button>
               <button class="btn btn-p btn-sm" onclick="addAcc()">💾 저장</button>
             </div>
+            <a href="https://developers.facebook.com/tools/explorer/" target="_blank" style="display:flex;align-items:center;gap:6px;padding:10px 14px;border:1px solid var(--acc-border);border-radius:10px;background:var(--acc-soft);text-decoration:none;font-size:12px;color:var(--acc);font-weight:700">
+              📖 토큰 발급받는 방법 가이드 →
+              <span style="font-size:11px;color:var(--txt2);font-weight:400">Meta Graph API Explorer에서 Threads 장기 토큰 발급</span>
+            </a>
           </div>
 
           <!-- 베이직 전용 태그 UI -->
@@ -1060,6 +1076,60 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
       <!-- 토큰 만료 안내 -->
       <div id="sideTokenInfo" style="display:none"></div>
       <div id="sideExpireInfo" style="display:none"></div>
+      </div><!-- /accPanelThread -->
+
+      <!-- 네이버 탭 패널 -->
+      <div id="accPanelNaver" style="display:none">
+        <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div style="width:28px;height:28px;background:#03c75a;border-radius:6px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px">N</div>
+            <div style="font-size:17px;font-weight:800">네이버 계정 연동</div>
+            <span id="naverConnBadge2" class="panel-badge" style="background:var(--sur2);color:var(--txt2);border-color:var(--bdr)">미연결</span>
+          </div>
+          <div style="background:var(--acc-soft);border:1px solid var(--acc-border);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--txt2)">
+            ⚠️ 네이버 블로그 발행은 <strong>네이버 오픈API</strong>(Client ID + Secret)로 연동됩니다.
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="form-group">
+              <label class="label">네이버 아이디</label>
+              <input id="naverUserId2" placeholder="네이버 아이디">
+            </div>
+            <div class="form-group">
+              <label class="label">Client ID</label>
+              <input id="naverClientId2" placeholder="오픈API Client ID">
+            </div>
+            <div class="form-group">
+              <label class="label">Client Secret</label>
+              <input id="naverClientSecret2" type="password" placeholder="Client Secret">
+            </div>
+            <div class="form-group">
+              <label class="label">블로그 카테고리 번호 (선택)</label>
+              <input id="naverBlogCategory2" placeholder="예: 1234567">
+            </div>
+          </div>
+          <div id="naverAccList2" style="margin-bottom:12px;display:flex;flex-direction:column;gap:8px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+            <button class="btn btn-sm" onclick="testNaverConn2()">🛡️ 연결 테스트</button>
+            <button class="btn btn-p btn-sm" onclick="saveNaverAcc2()">💾 네이버 계정 저장</button>
+          </div>
+          <a href="https://developers.naver.com/apps/#/register" target="_blank" style="display:flex;align-items:center;gap:6px;padding:10px 14px;border:1px solid #03c75a;border-radius:10px;background:#f0fff7;text-decoration:none;font-size:12px;color:#03c75a;font-weight:700">
+            📖 네이버 오픈API 키 발급 방법 →
+            <span style="font-size:11px;color:var(--txt2);font-weight:400">developers.naver.com에서 블로그 API 신청</span>
+          </a>
+        </div>
+
+        <!-- 네이버 발행 이력 -->
+        <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:20px;box-shadow:var(--shadow)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-size:17px;font-weight:800">네이버 블로그 발행 이력</div>
+            <button class="btn btn-sm" onclick="loadNaverPublishLogs()" style="font-size:12px">🔄 새로고침</button>
+          </div>
+          <div id="naverPublishLogs">
+            <div style="text-align:center;color:var(--txt2);font-size:13px;padding:20px">발행 이력 없음</div>
+          </div>
+        </div>
+      </div><!-- /accPanelNaver -->
+
     </div><!-- /page-accounts -->
 
     <!-- 자동 스케줄러 페이지 (기존 호환) -->
@@ -3999,6 +4069,89 @@ async function delNaverAcc(userId) {
   await api('/api/naver/accounts/' + userId, { method:'DELETE' });
   toast('삭제됐어!');
   loadNaverAccs();
+}
+
+// 발행관리 탭 전환
+function switchAccTab(tab) {
+  var threadPanel = document.getElementById('accPanelThread');
+  var naverPanel = document.getElementById('accPanelNaver');
+  var threadTab = document.getElementById('accTabThread');
+  var naverTab = document.getElementById('accTabNaver');
+  if (tab === 'thread') {
+    if (threadPanel) threadPanel.style.display = '';
+    if (naverPanel) naverPanel.style.display = 'none';
+    if (threadTab) threadTab.classList.add('active');
+    if (naverTab) naverTab.classList.remove('active');
+  } else {
+    if (threadPanel) threadPanel.style.display = 'none';
+    if (naverPanel) naverPanel.style.display = '';
+    if (threadTab) threadTab.classList.remove('active');
+    if (naverTab) naverTab.classList.add('active');
+    loadNaverAccList2();
+  }
+}
+
+async function saveNaverAcc2() {
+  var userId = document.getElementById('naverUserId2').value.trim();
+  var clientId = document.getElementById('naverClientId2').value.trim();
+  var clientSecret = document.getElementById('naverClientSecret2').value.trim();
+  var category = document.getElementById('naverBlogCategory2').value.trim();
+  if (!userId) return toast('네이버 아이디를 입력해줘', 'err');
+  var d = await api('/api/naver/accounts', { method:'POST', body:{ userId, clientId, clientSecret, category } });
+  if (d && d.error) return toast(d.error, 'err');
+  toast('네이버 계정 저장됐어!');
+  loadNaverAccList2();
+}
+
+async function testNaverConn2() {
+  var userId = document.getElementById('naverUserId2').value.trim();
+  if (!userId) return toast('아이디를 먼저 입력해줘', 'err');
+  var d = await api('/api/naver/test', { method:'POST', body:{ userId } });
+  if (d && d.error) return toast('연결 실패: ' + d.error, 'err');
+  toast('✅ 네이버 연결 확인됐어!');
+}
+
+async function loadNaverAccList2() {
+  var list = document.getElementById('naverAccList2');
+  var badge = document.getElementById('naverConnBadge2');
+  if (!list) return;
+  try {
+    var accs = await api('/api/naver/accounts');
+    if (!Array.isArray(accs) || !accs.length) {
+      list.innerHTML = '<div style="color:var(--txt2);font-size:13px;padding:8px 0">등록된 네이버 계정 없음</div>';
+      return;
+    }
+    if (badge) { badge.textContent = accs.length + '개 연결됨'; badge.style.background='var(--green-soft)'; badge.style.color='var(--green)'; badge.style.borderColor='var(--green-border)'; }
+    list.innerHTML = accs.map(function(a) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--bdr);border-radius:10px;background:var(--sur2)">' +
+        '<div><div style="font-weight:700;font-size:13px">@' + a.userId + '</div><div style="font-size:11px;color:var(--txt2)">' + (a.clientId ? 'API 연동됨' : '아이디만 저장됨') + (a.category ? ' · 카테고리: '+a.category : '') + '</div></div>' +
+        '<button class="btn btn-sm" style="color:var(--red);border-color:var(--red-border);font-size:12px" onclick="delNaverAcc2(\'' + a.userId + '\')">삭제</button>' +
+        '</div>';
+    }).join('');
+  } catch(e) {}
+}
+
+async function delNaverAcc2(userId) {
+  if (!confirm('@' + userId + ' 삭제할까?')) return;
+  await api('/api/naver/accounts/' + userId, { method:'DELETE' });
+  toast('삭제됐어!'); loadNaverAccList2();
+}
+
+async function loadNaverPublishLogs() {
+  var el = document.getElementById('naverPublishLogs');
+  if (!el) return;
+  try {
+    var logs = await api('/api/naver/logs');
+    if (!Array.isArray(logs) || !logs.length) { el.innerHTML = '<div style="text-align:center;color:var(--txt2);font-size:13px;padding:20px">발행 이력 없음</div>'; return; }
+    el.innerHTML = logs.slice(0,20).map(function(l) {
+      var t = l.publishedAt ? new Date(l.publishedAt).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--bdr);border-radius:10px;margin-bottom:6px">' +
+        '<span style="font-size:11px;color:var(--txt2);flex-shrink:0">' + t + '</span>' +
+        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (l.title||'-') + '</div><div style="font-size:11px;color:var(--txt2)">@' + (l.naverUserId||'-') + '</div></div>' +
+        (l.url ? '<a href="'+l.url+'" target="_blank" style="font-size:12px;color:var(--acc);text-decoration:none;flex-shrink:0">보기 ↗</a>' : '') +
+        '</div>';
+    }).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px">로드 실패</div>'; }
 }
 
 init();
