@@ -296,10 +296,10 @@ app.get('/api/auth/me', auth, (req, res) => {
   const today = getTodayKey();
   const counts = getPublishCount(u.id);
   const genUsed = counts['gen_' + today] || 0;
-  const genLimit = u.plan === 'free' ? 100 : 200;
+  const genLimit = (u.plan === 'free') ? 100 : 200; // basic/pro 모두 200
   res.json({
     id: u.id, nickname: u.nickname, name: u.name || '', role: safeRole,
-    plan: u.plan || 'free', accountLimit: u.accountLimit || 1,
+    plan: u.plan || 'basic', accountLimit: u.accountLimit !== undefined ? u.accountLimit : (u.plan === 'pro' ? 6 : u.plan === 'free' ? 2 : 0),
     expiresAt: u.expiresAt || null, genUsed, genLimit, status: u.status || 'approved'
   });
 });
@@ -361,7 +361,7 @@ app.delete('/api/invites/:code', adminAuth, (req, res) => {
 });
 
 app.get('/api/users', adminAuth, (req, res) => {
-  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', plan: u.plan||'free', accountLimit: u.accountLimit||2, dailyPublishLimit: u.dailyPublishLimit||null, limitRequest: u.limitRequest||null, extendRequest: u.extendRequest||null, upgradeRequest: u.upgradeRequest||null, planChangeRequest: u.planChangeRequest||null, joinedVia: u.joinedVia||'normal', approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt, isExpired: u.expiresAt ? new Date(u.expiresAt) < new Date() : false })));
+  res.json(users.map(u => ({ id: u.id, nickname: u.nickname, name: u.name||'', role: u.role, status: u.status||'approved', plan: u.plan||'basic', accountLimit: u.accountLimit||2, dailyPublishLimit: u.dailyPublishLimit||null, limitRequest: u.limitRequest||null, extendRequest: u.extendRequest||null, upgradeRequest: u.upgradeRequest||null, planChangeRequest: u.planChangeRequest||null, joinedVia: u.joinedVia||'normal', approvedAt: u.approvedAt||null, expiresAt: u.expiresAt||null, createdAt: u.createdAt, isExpired: u.expiresAt ? new Date(u.expiresAt) < new Date() : false })));
 });
 
 app.get('/api/admin/stats', adminAuth, (req, res) => {
@@ -380,7 +380,7 @@ app.get('/api/admin/stats', adminAuth, (req, res) => {
     const totalPub = Object.keys(counts).filter(k => !k.startsWith('gen_')).reduce((s, k) => s + (counts[k] || 0), 0);
     const totalGen = Object.keys(counts).filter(k => k.startsWith('gen_')).reduce((s, k) => s + (counts[k] || 0), 0);
     const daily = last7.map(date => ({ date, gen: counts['gen_' + date] || 0, pub: counts[date] || 0 }));
-    return { nickname: u.nickname, name: u.name || '-', plan: u.plan || 'free', genToday, pubToday, totalGen, totalPub, daily };
+    return { nickname: u.nickname, name: u.name || '-', plan: u.plan || 'basic', genToday, pubToday, totalGen, totalPub, daily };
   })
   .filter(u => u.totalGen > 0 || u.totalPub > 0)
   .sort((a, b) => b.totalGen - a.totalGen);
@@ -673,7 +673,7 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
   if (genUser && genUser.role !== 'admin') {
     const genCount = getPublishCount(req.userId);
     const genKey = 'gen_' + getTodayKey();
-    const genLimit = genUser.plan === 'free' ? 100 : 200;
+    const genLimit = (genUser.plan === 'free') ? 100 : 200; // basic도 200
     if ((genCount[genKey] || 0) >= genLimit) {
       return res.status(429).json({ error: '오늘 글 생성 한도(' + genLimit + '번)를 초과했어.' });
     }
@@ -2156,7 +2156,7 @@ cron.schedule('0 15 * * *', () => {
       u.expiresAt = null; changed = true;
       console.log(`[FIX] ${u.nickname} 베이직 expiresAt 제거`);
     }
-    // 만료된 유저 베이직으로 강등
+    // 만료된 유저만 베이직으로 강등 (프로는 만료일 지난 것만)
     if (u.plan !== 'basic' && u.expiresAt && new Date(u.expiresAt) < now && u.status === 'approved') {
       u.plan = 'basic';
       u.expiresAt = null;
@@ -2166,12 +2166,41 @@ cron.schedule('0 15 * * *', () => {
       changed = true;
       console.log(`[FIX] ${u.nickname} 만료 → 베이직 강등`);
     }
+    // plan이 없거나 null이면 basic으로
+    if (!u.plan && u.role !== 'admin') {
+      u.plan = 'basic'; changed = true;
+      console.log(`[FIX] ${u.nickname} plan 없음 → 베이직 설정`);
+    }
   });
   if (changed) {
     saveJSON(`${DATA_ROOT}/users.json`, users);
-    console.log('[FIX] 만료 유저 베이직 강등 완료');
+    console.log('[FIX] 유저 플랜 정리 완료');
   }
 })();
+
+// ── 관리자용 유저 플랜 일괄 확인/수정 API ──
+app.get('/api/admin/users-plan-check', adminAuth, (req, res) => {
+  const result = users.filter(u => u.role !== 'admin').map(u => ({
+    id: u.id, nickname: u.nickname, plan: u.plan || 'MISSING',
+    expiresAt: u.expiresAt || null,
+    isExpired: u.expiresAt ? new Date(u.expiresAt) < new Date() : false,
+    accountLimit: u.accountLimit, dailyPublishLimit: u.dailyPublishLimit
+  }));
+  res.json(result);
+});
+
+// 특정 유저 플랜 직접 수동 수정
+app.put('/api/admin/fix-plan/:userId', adminAuth, (req, res) => {
+  const user = users.find(u => u.id === req.params.userId);
+  if (!user) return res.status(404).json({ error: '유저 없음' });
+  const { plan, expiresAt, accountLimit, dailyPublishLimit } = req.body;
+  if (plan) user.plan = plan;
+  if (expiresAt !== undefined) user.expiresAt = expiresAt || null;
+  if (accountLimit !== undefined) user.accountLimit = accountLimit;
+  if (dailyPublishLimit !== undefined) user.dailyPublishLimit = dailyPublishLimit;
+  saveJSON(`${DATA_ROOT}/users.json`, users);
+  res.json({ ok: true, user: { id: user.id, nickname: user.nickname, plan: user.plan, expiresAt: user.expiresAt } });
+});
 
 // 자동 스케줄러 cron (매 분마다) - OpenAI 사용
 cron.schedule('* * * * *', async () => {
