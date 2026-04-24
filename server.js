@@ -118,6 +118,9 @@ function getSession(token) {
   const s = sessions[token];
   if (!s) return null;
   if (Date.now() > s.expiresAt) { delete sessions[token]; saveSessions(); return null; }
+  // 마지막 활동 기준으로 3일 갱신 (sliding session)
+  s.expiresAt = Date.now() + SESSION_TTL;
+  saveSessions();
   return s;
 }
 setInterval(() => {
