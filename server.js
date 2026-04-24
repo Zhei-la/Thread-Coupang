@@ -9,7 +9,9 @@ const crypto = require('crypto');
 const app = express();
 
 // ── 보안 설정 ──
-const ALLOWED_ORIGINS = process.env.BASE_URL ? [process.env.BASE_URL] : [];
+const ALLOWED_ORIGINS = process.env.BASE_URL
+  ? [process.env.BASE_URL, 'https://zhei-la.github.io']
+  : ['https://zhei-la.github.io'];
 const corsOptions = {
   origin: function(origin, callback) {
     if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
@@ -322,6 +324,12 @@ app.put('/api/settings', adminAuth, (req, res) => {
   const settings = getSettings();
   if (req.body.kakaoLink !== undefined) settings.kakaoLink = req.body.kakaoLink;
   if (req.body.partnerCode !== undefined) settings.partnerCode = req.body.partnerCode.toUpperCase();
+  // 쿠팡 파트너스 설정
+  if (req.body.coupangPartnersEnabled !== undefined) settings.coupangPartnersEnabled = !!req.body.coupangPartnersEnabled;
+  if (req.body.coupangPartnerAccessKey !== undefined) settings.coupangPartnerAccessKey = req.body.coupangPartnerAccessKey;
+  if (req.body.coupangPartnerSecretKey !== undefined) settings.coupangPartnerSecretKey = req.body.coupangPartnerSecretKey;
+  if (req.body.coupangPartnerSubIdDefault !== undefined) settings.coupangPartnerSubIdDefault = req.body.coupangPartnerSubIdDefault;
+  if (req.body.coupangDeepLinkMode !== undefined) settings.coupangDeepLinkMode = req.body.coupangDeepLinkMode;
   saveSettings(settings);
   res.json({ ok: true });
 });
@@ -1336,6 +1344,129 @@ app.post('/api/upload-video', auth, videoUpload.single('video'), async (req, res
 //  쿠팡 파트너스 API
 // ==============================
 
+// ==============================
+//  쿠팡 파트너스 링크 생성 API
+// ==============================
+
+const COUPANG_PARTNER_ID = 'AF5722914'; // 관리자 파트너스 ID 고정
+
+function getCoupangClickLogs() { return loadJSON(`${DATA_ROOT}/coupang_clicks.json`, []); }
+function saveCoupangClickLogs(data) { saveJSON(`${DATA_ROOT}/coupang_clicks.json`, data); }
+
+// 쿠팡 파트너스 딥링크 생성 함수
+async function buildCoupangPartnerLink(productUrl, subId = '') {
+  const settings = getSettings();
+  const accessKey = settings.coupangPartnerAccessKey || process.env.COUPANG_ACCESS_KEY;
+  const secretKey = settings.coupangPartnerSecretKey || process.env.COUPANG_SECRET_KEY;
+  const partnerId = COUPANG_PARTNER_ID;
+  const subIdFinal = subId || settings.coupangPartnerSubIdDefault || 'app';
+  const deepLinkMode = settings.coupangDeepLinkMode || 'template';
+
+  // 딥링크 API 방식 시도
+  if (accessKey && secretKey && deepLinkMode === 'api') {
+    try {
+      const method = 'GET';
+      const path = `/v2/providers/affiliate_open_api/apis/openapi/deeplink?coupangUrls=${encodeURIComponent(productUrl)}&subId=${encodeURIComponent(subIdFinal)}`;
+      const datetime = new Date().toISOString().replace(/[:\-]|\..{3}/g, '').slice(0, 15) + 'Z';
+      const message = datetime + method + path;
+      const signature = crypto.createHmac('sha256', secretKey).update(message).digest('hex');
+      const authorization = `CEA algorithm=HmacSHA256, access-key=${accessKey}, signed-date=${datetime}, signature=${signature}`;
+      const r = await fetch(`https://api-gateway.coupang.com${path}`, { method, headers: { 'Authorization': authorization } });
+      const d = await r.json();
+      if (d.data && d.data.landingUrl) return d.data.landingUrl;
+    } catch(e) { /* API 실패 시 템플릿 방식으로 폴백 */ }
+  }
+
+  // 템플릿 방식 (항상 사용 가능)
+  // 쿠팡 URL에 파트너스 파라미터 주입
+  try {
+    const url = new URL(productUrl);
+    url.searchParams.set('partnersCoupangWhere', `${partnerId}_${subIdFinal}`);
+    url.searchParams.set('traceId', `${partnerId}_${subIdFinal}_${Date.now()}`);
+    return url.toString();
+  } catch(e) {
+    // URL 파싱 실패 시 바로 리다이렉트 URL 생성
+    const sep = productUrl.includes('?') ? '&' : '?';
+    return `${productUrl}${sep}partnersCoupangWhere=${partnerId}_${subIdFinal}`;
+  }
+}
+
+// POST /api/coupang/link - 파트너스 링크 생성
+app.post('/api/coupang/link', auth, async (req, res) => {
+  const { productUrl, subId, productId, sourcePage } = req.body;
+  if (!productUrl) return res.status(400).json({ error: 'productUrl 필요' });
+  const settings = getSettings();
+  if (!settings.coupangPartnersEnabled) {
+    // 파트너스 비활성화 시 원본 URL 반환
+    return res.json({ url: productUrl, partnered: false });
+  }
+  try {
+    const partnerUrl = await buildCoupangPartnerLink(productUrl, subId);
+    // 클릭 로그 저장
+    const logs = getCoupangClickLogs();
+    logs.push({
+      id: Date.now().toString(),
+      userId: req.userId,
+      productId: productId || '',
+      productUrl,
+      partnerUrl,
+      subId: subId || settings.coupangPartnerSubIdDefault || 'app',
+      sourcePage: sourcePage || '',
+      clickedAt: new Date().toISOString()
+    });
+    if (logs.length > 5000) logs.splice(0, logs.length - 5000); // 최대 5000개
+    saveCoupangClickLogs(logs);
+    res.json({ url: partnerUrl, partnered: true });
+  } catch(e) {
+    res.json({ url: productUrl, partnered: false, error: e.message });
+  }
+});
+
+// GET /api/coupang/click/:productId - 상품 클릭 리다이렉트
+app.get('/api/coupang/click/:productId', auth, async (req, res) => {
+  const { productId } = req.params;
+  const { subId, sourcePage } = req.query;
+  // productId가 URL 인코딩된 상품 URL인 경우
+  let productUrl = decodeURIComponent(productId);
+  if (!productUrl.startsWith('http')) {
+    productUrl = `https://www.coupang.com/vp/products/${productId}`;
+  }
+  const settings = getSettings();
+  if (!settings.coupangPartnersEnabled) {
+    return res.redirect(productUrl);
+  }
+  try {
+    const partnerUrl = await buildCoupangPartnerLink(productUrl, subId);
+    // 클릭 로그
+    const logs = getCoupangClickLogs();
+    logs.push({ id: Date.now().toString(), userId: req.userId, productId, productUrl, partnerUrl, subId: subId || 'click', sourcePage: sourcePage || '', clickedAt: new Date().toISOString() });
+    if (logs.length > 5000) logs.splice(0, logs.length - 5000);
+    saveCoupangClickLogs(logs);
+    res.redirect(partnerUrl);
+  } catch(e) {
+    res.redirect(productUrl);
+  }
+});
+
+// GET /api/coupang/clicks - 클릭 로그 조회 (관리자)
+app.get('/api/coupang/clicks', adminAuth, (req, res) => {
+  const logs = getCoupangClickLogs();
+  res.json(logs.slice(-200).reverse()); // 최근 200개
+});
+
+// GET /api/coupang/settings - 쿠팡 파트너스 설정 조회 (관리자)
+app.get('/api/coupang/settings', adminAuth, (req, res) => {
+  const s = getSettings();
+  res.json({
+    coupangPartnersEnabled: !!s.coupangPartnersEnabled,
+    coupangPartnerAccessKey: s.coupangPartnerAccessKey || '',
+    coupangPartnerSecretKey: s.coupangPartnerSecretKey ? '***' : '',
+    coupangPartnerSubIdDefault: s.coupangPartnerSubIdDefault || 'app',
+    coupangDeepLinkMode: s.coupangDeepLinkMode || 'template',
+    partnerId: COUPANG_PARTNER_ID
+  });
+});
+
 async function getCoupangLink(keyword) {
   const accessKey = process.env.COUPANG_ACCESS_KEY;
   const secretKey = process.env.COUPANG_SECRET_KEY;
@@ -1607,4 +1738,3 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`서버 실행중: ${PORT}`));
-
