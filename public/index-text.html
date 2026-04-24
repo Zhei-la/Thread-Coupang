@@ -358,7 +358,7 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
 
             <div class="form-group">
               <label class="label">후킹 문장 <span id="topicCountDisplay" style="float:right;font-size:11px;color:var(--txt2)">0/100</span></label>
-              <textarea id="topic" placeholder="이번에 밥통 바꿨더니 고양이가 밥시간만 기다려요" style="min-height:70px;resize:none" oninput="updateTopicCount(this)"></textarea>
+              <textarea id="topic" placeholder="예: 강아지가 이거 사준 뒤로 밥을 다 먹어요 / 남편이 매일 달라고 해서 질림" style="min-height:70px;resize:none" oninput="updateTopicCount(this)"></textarea>
             </div>
 
             <div class="form-group">
@@ -495,8 +495,8 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
               <div id="previewAccName" style="font-size:13px;font-weight:700">계정 미선택</div>
               <div style="font-size:11px;color:var(--txt2)">선택한 계정 기준 미리보기</div>
             </div>
-            <button class="btn btn-sm" style="font-size:12px;padding:5px 10px">일반글</button>
-            <button class="btn btn-p btn-sm" style="font-size:12px;padding:5px 10px">어그로글</button>
+            <button id="tabNormal" class="btn btn-p btn-sm" onclick="switchPostTab('normal')" style="font-size:12px;padding:5px 10px">일반글</button>
+            <button id="tabAgro" class="btn btn-sm" onclick="switchPostTab('agro')" style="font-size:12px;padding:5px 10px">어그로글</button>
           </div>
 
           <!-- 재생성 버튼 -->
@@ -507,11 +507,40 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
             <button class="btn btn-sm" onclick="openEditModal('comment')" id="commentRegenBtn" style="font-size:12px">💬 댓글 수정</button>
           </div>
 
-          <!-- 게시글 미리보기 -->
-          <div style="border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:10px;background:var(--sur)">
-            <div style="font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:8px">게시글</div>
-            <div id="previewPost" style="font-size:14px;line-height:1.75;white-space:pre-wrap;color:var(--txt2);font-style:italic;min-height:60px">글을 생성하면 여기에 미리보기가 나와요</div>
-            <textarea id="postText" style="display:none" oninput="updatePreview()"></textarea>
+          <!-- 게시글 미리보기 - 실제 스레드 UI -->
+          <div style="border:1px solid var(--bdr);border-radius:16px;overflow:hidden;margin-bottom:10px;background:#fff">
+            <!-- 스레드 게시글 -->
+            <div style="padding:14px 14px 10px">
+              <div style="display:flex;gap:10px">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+                  <div id="previewAccAvatar2" style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;flex-shrink:0">?</div>
+                  <div style="width:2px;background:#e0e0e0;flex:1;margin-top:6px;min-height:40px"></div>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                    <div id="previewAccName2" style="font-size:13px;font-weight:700;color:#0f0f0f">계정 미선택</div>
+                    <div style="font-size:12px;color:#888">방금 전</div>
+                    <div style="margin-left:auto">
+                      <button onclick="genPost()" style="background:none;border:none;cursor:pointer;font-size:16px;color:#888;padding:0">글 수정</button>
+                    </div>
+                  </div>
+                  <div id="previewPost" style="font-size:14px;line-height:1.75;white-space:pre-wrap;color:#888;font-style:italic;min-height:60px">글을 생성하면 여기에 미리보기가 나와요</div>
+                  <textarea id="postText" style="display:none" oninput="updatePreview()"></textarea>
+                  <!-- 미디어 그리드 -->
+                  <div id="previewMediaGrid" style="margin-top:10px;display:none">
+                    <div id="previewList" style="display:grid;gap:3px;border-radius:10px;overflow:hidden"></div>
+                    <div id="vidPreview" style="margin-top:6px"></div>
+                  </div>
+                  <!-- 액션 버튼 -->
+                  <div style="display:flex;gap:14px;margin-top:10px;color:#888">
+                    <span style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">❤️ <span id="previewLikes">0</span></span>
+                    <span style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer">💬 <span id="previewCommentCount">0</span></span>
+                    <span style="font-size:13px;cursor:pointer">🔄</span>
+                    <span style="font-size:13px;cursor:pointer">↗️</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <!-- 미디어 업로드 슬롯 -->
             <div style="margin-top:10px;border-top:1px solid var(--bdr);padding-top:10px">
@@ -530,17 +559,38 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
             </div>
           </div>
 
-          <!-- 댓글 미리보기 -->
-          <div style="border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--sur)">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              <div style="font-size:12px;font-weight:700;color:var(--txt2)">댓글</div>
-              <button class="btn btn-sm" onclick="genComment()" style="font-size:11px;padding:4px 8px">🪄 생성</button>
+            <!-- 댓글 - 스레드 스타일 -->
+            <div style="padding:10px 14px 14px;border-top:1px solid #f0f0f0">
+              <div style="display:flex;gap:10px">
+                <div id="previewAccAvatar3" style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0">?</div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                    <div id="previewAccName3" style="font-size:12px;font-weight:700;color:#0f0f0f">계정 미선택</div>
+                    <div style="font-size:11px;color:#888">방금 전</div>
+                    <button onclick="genComment()" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:11px;color:var(--acc);padding:0;font-weight:700">댓글 생성</button>
+                  </div>
+                  <div id="previewComment" style="font-size:13px;white-space:pre-wrap;line-height:1.7;color:#888;font-style:italic;min-height:30px">댓글을 생성해줘</div>
+                  <textarea id="commentText" style="display:none" oninput="updatePreview()"></textarea>
+                  <div id="commentList" style="display:none"></div>
+                  <div style="display:flex;gap:10px;margin-top:6px;color:#aaa">
+                    <span style="font-size:12px;cursor:pointer">❤️</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <textarea id="commentText" style="display:none" oninput="updatePreview()"></textarea>
-            <div id="commentList" style="display:none"></div>
-            <div id="previewComment" style="font-size:13px;white-space:pre-wrap;line-height:1.75;min-height:40px;color:var(--txt2)">댓글을 생성해줘</div>
+          </div>
+
+          <!-- 링크 직접 입력 + 쿠팡 설정 -->
+          <div style="border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--sur)">
+            <div style="font-size:12px;font-weight:700;margin-bottom:8px">🔗 링크 입력</div>
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+              <input id="manualLink" placeholder="쿠팡 파트너스 링크 직접 붙여넣기" style="flex:1;font-size:12px">
+              <button class="btn btn-sm" onclick="applyManualLink()" style="font-size:12px;white-space:nowrap">적용</button>
+            </div>
+            <div style="font-size:11px;color:var(--txt2)">링크는 댓글 하단에 자동 삽입됩니다</div>
 
             <!-- 쿠팡 설정 (플랜 허용 시) -->
+            <div id="coupangCommentWrap" style="display:none">
             <div id="coupangLinkCard" style="display:none;margin-top:10px;border-top:1px solid var(--bdr);padding-top:10px">
               <div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:8px">🛒 쿠팡/홍보 설정</div>
               <div style="font-size:11px;color:var(--acc);padding:6px 8px;background:var(--acc-soft);border-radius:6px;margin-bottom:8px;border:1px solid var(--acc-border)">링크 입력 → 저장 → 댓글 적용 → 발행</div>
@@ -558,6 +608,7 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
                 <button class="btn btn-p btn-sm" onclick="applyCoupangComment()" style="flex:1;font-size:11px">✅ 댓글 적용</button>
               </div>
             </div>
+            </div><!-- /coupangCommentWrap -->
           </div>
 
           <!-- 예약 설정 (hidden inputs - openSchedModal에서 사용) -->
@@ -2019,7 +2070,7 @@ async function genPost() {
     }
     btn.innerHTML = '<span class="spin"></span> 글 생성 중...';
     var userPrompt = document.getElementById('userPostPrompt') ? document.getElementById('userPostPrompt').value.trim() : '';
-    var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, fixedTones: fixedTones, type: 'post', imageDesc: imageDesc, userPrompt: userPrompt, postLength: postLength } });
+    var d = await api('/api/generate', { method: 'POST', body: { topic: topic, tone: tone, fixedTones: fixedTones, type: 'post', imageDesc: imageDesc, userPrompt: userPrompt, postLength: postLength, postMode: window._postMode || 'normal' } });
     if (d.error) throw new Error(d.error);
     document.getElementById('postText').value = d.text;
     incGenCount();
@@ -2241,10 +2292,12 @@ async function handleImg(input) {
   files.forEach(function(f) {
     var item = document.createElement('div');
     item.className = 'preview-item';
-    item.innerHTML = '<img src="' + URL.createObjectURL(f) + '"><button class="remove-img" onclick="removeImg(' + imgFiles.length + ')">x</button>';
+    item.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1';
+    item.innerHTML = '<img src="' + URL.createObjectURL(f) + '" style="width:100%;height:100%;object-fit:cover"><button class="remove-img" onclick="removeImg(' + imgFiles.length + ')" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px;display:grid;place-items:center">✕</button>';
     document.getElementById('previewList').appendChild(item);
     imgFiles.push(f);
   });
+  updatePreview();
   toast('사진 업로드 중...');
   var fd = new FormData();
   files.forEach(function(f) { fd.append('images', f); });
@@ -2958,12 +3011,25 @@ function updatePreview() {
     var txt = postEl.value;
     prevPost.textContent = txt || '글을 생성하면 여기에 미리보기가 나와요';
     prevPost.style.fontStyle = txt ? 'normal' : 'italic';
-    prevPost.style.color = txt ? 'var(--txt)' : 'var(--txt2)';
+    prevPost.style.color = txt ? '#0f0f0f' : '#888';
+    // 댓글수 업데이트
+    var cc = document.getElementById('previewCommentCount');
+    if (cc && commentEl && commentEl.value) cc.textContent = '1';
   }
   if (prevComment && commentEl) {
     var ctxt = commentEl.value;
     prevComment.textContent = ctxt || '댓글을 생성해줘';
-    prevComment.style.color = ctxt ? 'var(--txt)' : 'var(--txt2)';
+    prevComment.style.fontStyle = ctxt ? 'normal' : 'italic';
+    prevComment.style.color = ctxt ? '#0f0f0f' : '#888';
+  }
+  // 미디어 그리드 표시
+  var grid = document.getElementById('previewMediaGrid');
+  var pl = document.getElementById('previewList');
+  if (grid && pl) grid.style.display = pl.children.length > 0 ? 'block' : 'none';
+  // 이미지 그리드 레이아웃
+  if (pl && pl.children.length > 0) {
+    var n = pl.children.length;
+    pl.style.gridTemplateColumns = n === 1 ? '1fr' : n === 2 ? '1fr 1fr' : '1fr 1fr 1fr';
   }
 }
 
@@ -2972,6 +3038,13 @@ function updatePreviewAcc() {
   var sel = document.getElementById('globalAcc');
   if (!sel) return;
   var name = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : '계정 미선택';
+  // 새 UI 아바타/이름도 동기화
+  ['previewAccName2','previewAccName3'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.textContent = name || '계정 미선택';
+  });
+  ['previewAccAvatar2','previewAccAvatar3'].forEach(function(id){
+    var el = document.getElementById(id); if(el && name) el.textContent = name[0].toUpperCase();
+  });
   var nameEl = document.getElementById('previewAccName');
   var avatarEl = document.getElementById('previewAccAvatar');
   if (nameEl) nameEl.textContent = name === '계정을 선택해줘' ? '계정 미선택' : name;
@@ -4180,6 +4253,38 @@ async function loadNaverPublishLogs() {
         '</div>';
     }).join('');
   } catch(e) { el.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px">로드 실패</div>'; }
+}
+
+// 일반글/어그로글 탭 전환
+window._postMode = 'normal';
+function switchPostTab(mode) {
+  window._postMode = mode;
+  var btnNormal = document.getElementById('tabNormal');
+  var btnAgro = document.getElementById('tabAgro');
+  if (mode === 'agro') {
+    if (btnNormal) { btnNormal.className = 'btn btn-sm'; btnNormal.style.cssText = 'font-size:12px;padding:5px 10px'; }
+    if (btnAgro) { btnAgro.className = 'btn btn-p btn-sm'; btnAgro.style.cssText = 'font-size:12px;padding:5px 10px'; }
+    toast('어그로글 모드 — 경험담 후킹 방식으로 생성돼!');
+  } else {
+    if (btnNormal) { btnNormal.className = 'btn btn-p btn-sm'; btnNormal.style.cssText = 'font-size:12px;padding:5px 10px'; }
+    if (btnAgro) { btnAgro.className = 'btn btn-sm'; btnAgro.style.cssText = 'font-size:12px;padding:5px 10px'; }
+    toast('일반글 모드');
+  }
+}
+
+// 링크 직접 입력 → 댓글에 적용
+function applyManualLink() {
+  var link = document.getElementById('manualLink');
+  if (!link || !link.value.trim()) return toast('링크를 입력해줘', 'err');
+  var url = link.value.trim();
+  var commentEl = document.getElementById('commentText');
+  var prev = document.getElementById('previewComment');
+  var current = commentEl ? commentEl.value.trim() : '';
+  // 기존 링크 있으면 교체, 없으면 추가
+  var newComment = current ? current + '\n\n' + url : url;
+  if (commentEl) { commentEl.value = newComment; }
+  if (prev) { prev.textContent = newComment; prev.style.color = '#0f0f0f'; prev.style.fontStyle = 'normal'; }
+  toast('링크가 댓글에 적용됐어!');
 }
 
 init();
