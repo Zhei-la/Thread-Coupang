@@ -253,12 +253,20 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
       <div class="nav-pill" id="adminNav" style="display:none" onclick="go('admin',this)" data-page="admin">⚙️ 관리자</div>
     </nav>
     <div class="topbar-actions">
-      <div id="topUserInfo" style="display:flex;align-items:center;gap:8px">
+      <div id="topUserInfo" style="display:flex;align-items:center;gap:8px;position:relative">
         <div style="text-align:right">
           <div id="sideNick" style="font-size:13px;font-weight:700;color:var(--txt)"></div>
           <div id="sideRole" style="font-size:11px;color:var(--txt2)"></div>
         </div>
-        <div class="topbar-avatar" id="topAvatar">?</div>
+        <div class="topbar-avatar" id="topAvatar" onclick="toggleUserMenu()" style="cursor:pointer">?</div>
+        <div id="userDropdown" style="display:none;position:absolute;top:48px;right:0;background:var(--sur);border:1px solid var(--bdr);border-radius:14px;box-shadow:var(--shadow2);min-width:180px;z-index:999;overflow:hidden">
+          <div style="padding:14px 16px;border-bottom:1px solid var(--bdr)">
+            <div id="dropNick" style="font-size:14px;font-weight:700"></div>
+            <div id="dropPlan" style="font-size:11px;color:var(--txt2);margin-top:2px"></div>
+          </div>
+          <div onclick="go('accounts',null);closeUserMenu()" style="padding:11px 16px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='var(--sur2)'" onmouseout="this.style.background=''">⚙️ 발행 관리</div>
+          <div onclick="doLogout()" style="padding:11px 16px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--red);border-top:1px solid var(--bdr)" onmouseover="this.style.background='var(--red-soft)'" onmouseout="this.style.background=''">🚪 로그아웃</div>
+        </div>
       </div>
     </div>
   </header>
@@ -938,55 +946,6 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
         </div>
       </div>
 
-      <!-- 쿠팡 파트너스 설정 -->
-      <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-          <div style="font-size:17px;font-weight:800">🛒 쿠팡 파트너스 설정</div>
-          <span style="font-size:11px;padding:3px 8px;border-radius:100px;background:var(--sur2);border:1px solid var(--bdr);color:var(--txt2)">ID: AF5722914</span>
-        </div>
-        <div style="padding:10px 12px;background:var(--blue-soft);border:1px solid var(--blue-border);border-radius:10px;font-size:12px;color:var(--blue);margin-bottom:16px;line-height:1.7">
-          💡 활성화하면 앱의 모든 쿠팡 클릭이 관리자 파트너스 링크를 통해 이동합니다.<br>
-          사용자가 상품 구매 시 관리자 계정(AF5722914)으로 수수료가 적립됩니다.
-        </div>
-        <div class="form-stack">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--bdr)">
-            <div><div style="font-size:14px;font-weight:700">파트너스 활성화</div><div style="font-size:12px;color:var(--txt2)">모든 상품 클릭을 파트너스 링크로 변환</div></div>
-            <div class="toggle-sw" id="coupangEnabledToggle" onclick="toggleCoupangEnabled(this)"></div>
-          </div>
-          <div class="form-group">
-            <label class="label">파트너스 Access Key</label>
-            <input id="coupangAccessKey" type="password" placeholder="쿠팡 파트너스 Access Key">
-          </div>
-          <div class="form-group">
-            <label class="label">파트너스 Secret Key</label>
-            <input id="coupangSecretKey" type="password" placeholder="쿠팡 파트너스 Secret Key">
-          </div>
-          <div class="form-group">
-            <label class="label">기본 SubID</label>
-            <input id="coupangSubIdDefault" placeholder="예: app" value="app">
-            <div style="font-size:11px;color:var(--txt2);margin-top:4px">thread_comment · blog_body · product_list · saved_post</div>
-          </div>
-          <div class="form-group">
-            <label class="label">딥링크 방식</label>
-            <div class="chips" id="coupangModeChips" style="margin-bottom:0">
-              <div class="chip active" onclick="pickCoupangMode(this,'template')" data-mode="template">템플릿 방식 (기본)</div>
-              <div class="chip" onclick="pickCoupangMode(this,'api')" data-mode="api">API 방식</div>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <button class="btn btn-sm" onclick="loadCoupangPartnerSettings()">🔄 불러오기</button>
-            <button class="btn btn-p btn-sm" onclick="saveCoupangPartnerSettings()">💾 설정 저장</button>
-          </div>
-        </div>
-        <div style="margin-top:16px;border-top:1px solid var(--bdr);padding-top:16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="font-size:14px;font-weight:700">📊 클릭 로그</div>
-            <button class="btn btn-sm" onclick="loadCoupangClickLogs()" style="font-size:12px">새로고침</button>
-          </div>
-          <div id="coupangClickLogList" style="font-size:12px;color:var(--txt2)">로그를 불러오려면 새로고침을 눌러줘</div>
-        </div>
-      </div>
-
       <!-- 등록된 계정 목록 -->
       <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px">
         <div style="font-size:17px;font-weight:800;margin-bottom:14px">등록된 계정</div>
@@ -1097,6 +1056,60 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
           <button class="btn btn-sm btn-r" onclick="setAutoScheduler(false)">테스트 전용</button>
         </div>
       </div>
+      <!-- 쿠팡 파트너스 설정 (관리자 전용) -->
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <h2 style="margin:0">🛒 쿠팡 파트너스 설정</h2>
+          <span style="font-size:11px;padding:3px 8px;border-radius:100px;background:var(--acc-soft);border:1px solid var(--acc-border);color:var(--acc);font-weight:700">ID: AF5722914</span>
+        </div>
+        <div style="padding:10px 12px;background:var(--blue-soft);border:1px solid var(--blue-border);border-radius:10px;font-size:12px;color:var(--blue);margin-bottom:14px;line-height:1.7">
+          💡 활성화하면 앱의 모든 쿠팡 클릭이 관리자 파트너스 링크를 통해 이동합니다.<br>
+          사용자가 구매 시 <b>AF5722914</b> 계정으로 수수료가 적립됩니다.
+        </div>
+        <div class="form-stack">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--bdr)">
+            <div>
+              <div style="font-size:14px;font-weight:600">파트너스 활성화</div>
+              <div style="font-size:12px;color:var(--txt2)">모든 상품 클릭을 파트너스 링크로 변환</div>
+            </div>
+            <div class="toggle-sw" id="coupangEnabledToggle" onclick="toggleCoupangEnabled(this)"></div>
+          </div>
+          <div class="form-group">
+            <label class="label">Access Key</label>
+            <input id="coupangAccessKey" type="password" placeholder="쿠팡 파트너스 Access Key">
+          </div>
+          <div class="form-group">
+            <label class="label">Secret Key</label>
+            <input id="coupangSecretKey" type="password" placeholder="쿠팡 파트너스 Secret Key">
+          </div>
+          <div class="form-group">
+            <label class="label">기본 SubID <span style="font-size:11px;color:var(--txt2)">(수익 추적)</span></label>
+            <input id="coupangSubIdDefault" placeholder="예: app" value="app">
+            <div style="font-size:11px;color:var(--txt2);margin-top:4px">thread_comment · blog_body · product_list · saved_post</div>
+          </div>
+          <div class="form-group">
+            <label class="label">딥링크 방식</label>
+            <div class="chips" id="coupangModeChips" style="margin-bottom:0">
+              <div class="chip active" onclick="pickCoupangMode(this,'template')" data-mode="template">템플릿 방식 (기본)</div>
+              <div class="chip" onclick="pickCoupangMode(this,'api')" data-mode="api">API 방식</div>
+            </div>
+            <div style="font-size:11px;color:var(--txt2);margin-top:4px">※ API 방식은 Access/Secret Key 있을 때 사용 가능</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="btn btn-sm" onclick="loadCoupangPartnerSettings()">🔄 설정 불러오기</button>
+            <button class="btn btn-p btn-sm" onclick="saveCoupangPartnerSettings()">💾 설정 저장</button>
+          </div>
+        </div>
+        <!-- 클릭 로그 -->
+        <div style="margin-top:16px;border-top:1px solid var(--bdr);padding-top:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:13px;font-weight:700">📊 파트너스 클릭 로그</div>
+            <button class="btn btn-sm" onclick="loadCoupangClickLogs()" style="font-size:12px">새로고침</button>
+          </div>
+          <div id="coupangClickLogList" style="font-size:12px;color:var(--txt2)">새로고침을 눌러줘</div>
+        </div>
+      </div>
+
       <div class="card">
         <h2>관리자 문의 링크</h2>
         <div style="display:flex;gap:8px;margin-bottom:16px">
@@ -1490,6 +1503,7 @@ function enterApp(user) {
   document.getElementById('sideNick').textContent = user.nickname;
   var av = document.getElementById('topAvatar');
   if (av) av.textContent = user.nickname ? user.nickname[0].toUpperCase() : '?';
+  updateDropdownInfo(user);
   document.getElementById('sideRole').textContent = isRealAdmin ? '관리자' : '멤버';
   if (isRealAdmin) {
     document.getElementById('adminNav').style.display = 'block';
@@ -3422,6 +3436,237 @@ async function genBlog() {
     toast('블로그 글 생성 완료!');
   } catch(e) { toast(e.message||'생성 실패', 'err'); }
   if (btn) { btn.disabled=false; btn.innerHTML='✍️ 블로그 글 생성'; }
+}
+
+// ===== 유저 드롭다운 =====
+function toggleUserMenu() {
+  var dd = document.getElementById('userDropdown');
+  if (!dd) return;
+  var isOpen = dd.style.display !== 'none';
+  dd.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    // 드롭다운 열릴 때 바깥 클릭 닫기 리스너
+    setTimeout(function() {
+      document.addEventListener('click', closeUserMenuOutside, { once: true });
+    }, 10);
+  }
+}
+function closeUserMenuOutside(e) {
+  var dd = document.getElementById('userDropdown');
+  var av = document.getElementById('topAvatar');
+  if (dd && av && !dd.contains(e.target) && !av.contains(e.target)) {
+    dd.style.display = 'none';
+  }
+}
+function closeUserMenu() {
+  var dd = document.getElementById('userDropdown');
+  if (dd) dd.style.display = 'none';
+}
+function updateDropdownInfo(user) {
+  var planLabel = { pro:'💎 프로', free:'🎁 이벤트', basic:'베이직' };
+  var dn = document.getElementById('dropNick');
+  var dp = document.getElementById('dropPlan');
+  if (dn) dn.textContent = user.nickname || '';
+  if (dp) dp.textContent = (planLabel[user.plan] || user.plan || '') + (user.expiresAt ? ' · ' + Math.max(0, Math.ceil((new Date(user.expiresAt)-new Date())/86400000)) + '일 남음' : '');
+}
+
+// ===== 누락 함수 전체 복구 =====
+
+// 만료 안내 토글
+function toggleExpireHelp() {
+  var el = document.getElementById('sideExpireHelp');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+function toggleTokenHelp() {
+  var el = document.getElementById('tokenHelpWrap');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// 프롬프트 저장/초기화
+function saveUserPrompt() {
+  var v = document.getElementById('userPostPrompt');
+  if (v) { localStorage.setItem('userPostPrompt', v.value); toast('프롬프트 저장됐어!'); }
+}
+function clearUserPrompt() {
+  var v = document.getElementById('userPostPrompt');
+  if (v) { v.value = ''; localStorage.removeItem('userPostPrompt'); toast('초기화됐어!'); }
+}
+
+// 요금제 배너 토글
+function togglePlanBannerDetail() {
+  var el = document.getElementById('planBannerDetail');
+  var btn = document.getElementById('planBannerToggleBtn');
+  if (!el) return;
+  var open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if (btn) btn.textContent = open ? '상세 ▼' : '상세 ▲';
+}
+function togglePlanBannerReq() {
+  var el = document.getElementById('planBannerReq');
+  var btn = document.getElementById('planBannerReqBtn');
+  if (!el) return;
+  var open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if (btn) btn.textContent = open ? '📋 변경 요청 닫기' : '📋 변경 요청';
+}
+async function openPlanModal() {
+  toast('요금제 안내: 이벤트(7일 무료) / 베이직(영구 무료) / 프로 1개월(7,900원) / 프로 3개월(18,900원)');
+}
+async function requestPlanChange(plan) {
+  var planNames = { free:'이벤트', basic:'베이직', pro:'프로 1개월', pro90:'프로 3개월' };
+  if (myRole === 'admin') {
+    var me = await api('/api/auth/me');
+    var body = { status:'approved' };
+    if (plan === 'free') { body.plan='free'; body.planDays=7; body.accountLimit=2; body.dailyPublishLimit=5; }
+    else if (plan === 'basic') { body.plan='basic'; body.clearExpiry=true; }
+    else if (plan === 'pro') { body.plan='pro'; body.planDays=30; body.accountLimit=6; body.dailyPublishLimit=5; }
+    else if (plan === 'pro90') { body.plan='pro'; body.planDays=90; body.accountLimit=6; body.dailyPublishLimit=5; }
+    var d = await api('/api/users/' + me.id + '/status', { method:'PUT', body:body });
+    if (d && d.error) return toast(d.error, 'err');
+    toast(planNames[plan] + ' 즉시 변경됐어!');
+    setTimeout(function() { location.reload(); }, 800);
+    return;
+  }
+  var d = await api('/api/users/limit-request', { method:'POST', body:{ requestPlan:plan } });
+  if (d && d.error) return toast(d.error, 'err');
+  var msg = planNames[plan] + ' 변경 요청 완료 — 카카오로 문의해주세요!';
+  toast(msg);
+  var s1 = document.getElementById('limitRequestStatus');
+  if (s1) { s1.textContent = msg; s1.style.color = 'var(--green)'; }
+  var s2 = document.getElementById('bannerPlanChangeStatus');
+  if (s2) s2.textContent = msg;
+}
+
+// 블로그 옵션
+function pickBlogLen(el, len) {
+  document.querySelectorAll('.blog-len-chip').forEach(function(c) {
+    c.style.border = '1px solid var(--bdr)';
+    c.style.background = '';
+    var t = c.querySelector('div');
+    if (t) { t.style.color = ''; t.style.fontWeight = '700'; }
+  });
+  el.style.border = '2px solid var(--acc)';
+  el.style.background = 'var(--acc-soft)';
+  var t = el.querySelector('div');
+  if (t) t.style.color = 'var(--acc)';
+  if (typeof blogOptions !== 'undefined') blogOptions.length = len;
+}
+function toggleBlogOption(el, key) {
+  el.classList.toggle('active');
+  if (typeof blogOptions !== 'undefined') blogOptions[key] = el.classList.contains('active');
+}
+function addBlogBlock(type) {
+  if (typeof blogBlocks === 'undefined') blogBlocks = [];
+  blogBlocks.push({ type:type, content:'', url:'', label:type==='image'?'이미지 블록':'영상 블록' });
+  if (typeof renderBlogBlocks === 'function') renderBlogBlocks();
+  if (typeof renderBlogPreview === 'function') renderBlogPreview();
+}
+function addBlogBlockFromPreview(type) { addBlogBlock(type); }
+function editBlogSection(section) {
+  var label = section === 'intro' ? '도입문' : '본문';
+  var val = prompt(label + '을 수정해줘:', '');
+  if (val !== null) {
+    if (typeof blogBlocks === 'undefined') blogBlocks = [];
+    blogBlocks.unshift({ type:'text', content:val, url:'', label:label });
+    if (typeof renderBlogBlocks === 'function') renderBlogBlocks();
+    if (typeof renderBlogPreview === 'function') renderBlogPreview();
+  }
+}
+function saveBlogDraft() {
+  if (typeof blogBlocks === 'undefined' || !blogBlocks.length) return toast('저장할 내용이 없어', 'err');
+  var data = { blocks:blogBlocks.map(function(b){return{type:b.type,content:b.content,label:b.label};}), savedAt:new Date().toISOString() };
+  localStorage.setItem('blog_draft', JSON.stringify(data));
+  toast('블로그 초안 저장됐어!');
+}
+function copyBlogText() {
+  var texts = (typeof blogBlocks !== 'undefined') ? blogBlocks.filter(function(b){return b.type==='text';}).map(function(b){return b.content;}).join('\n\n') : '';
+  if (!texts) return toast('복사할 텍스트가 없어', 'err');
+  navigator.clipboard.writeText(texts).then(function(){toast('복사됐어!');}).catch(function(){toast('복사 실패','err');});
+}
+function openBlogSched() { openSchedModal(); }
+
+// 베이직 태그
+function addBasicTag() {
+  var inp = document.getElementById('basicTagInput');
+  if (!inp || !inp.value.trim()) return;
+  var tags = JSON.parse(localStorage.getItem('basicTags') || '[]');
+  if (!tags.includes(inp.value.trim())) { tags.push(inp.value.trim()); localStorage.setItem('basicTags', JSON.stringify(tags)); }
+  inp.value = '';
+  renderBasicTagsUI();
+}
+function renderBasicTagsUI() {
+  var el = document.getElementById('basicTagList');
+  if (!el) return;
+  var tags = JSON.parse(localStorage.getItem('basicTags') || '[]');
+  el.innerHTML = tags.map(function(t,i){return '<span style="background:var(--sur2);border:1px solid var(--bdr);border-radius:100px;padding:3px 8px;font-size:11px;display:inline-flex;align-items:center;gap:4px">'+t+'<span onclick="removeBasicTag('+i+')" style="cursor:pointer;color:var(--red)">✕</span></span>';}).join('');
+}
+function removeBasicTag(i) {
+  var tags = JSON.parse(localStorage.getItem('basicTags') || '[]');
+  tags.splice(i,1); localStorage.setItem('basicTags', JSON.stringify(tags)); renderBasicTagsUI();
+}
+async function saveBasicTags() {
+  var tags = JSON.parse(localStorage.getItem('basicTags') || '[]');
+  var d = await api('/api/settings/basic-tags', { method:'PUT', body:{ tags:tags } });
+  if (d && d.error) return toast(d.error, 'err');
+  toast('태그 저장됐어!');
+}
+
+// 자동 스케줄러
+function openNewAutoSched() {
+  go('accounts', null);
+  setTimeout(function() {
+    var wrap = document.getElementById('autoSchedForm');
+    if (wrap) wrap.scrollIntoView({ behavior:'smooth' });
+  }, 300);
+}
+
+// 발행 이력 필터
+function filterLogs(el, type) {
+  el.parentElement.querySelectorAll('.chip').forEach(function(c){c.classList.remove('active');});
+  el.classList.add('active');
+  if (typeof loadPublishLogs === 'function') { 
+    window._logCurrentFilter = type;
+    loadPublishLogs();
+  }
+}
+
+// 관리자 패널 함수들
+async function clearOpenaiAlert() {
+  await api('/api/settings/openai-alert', { method:'DELETE' });
+  var el = document.getElementById('openaiAlertBanner');
+  if (el) el.style.display = 'none';
+  toast('알림 닫혔어!');
+}
+async function makeInvite() {
+  var d = await api('/api/invites', { method:'POST' });
+  if (d && d.error) return toast(d.error, 'err');
+  toast('초대코드 생성됐어: ' + (d.code || ''));
+  loadAdmin();
+}
+async function setAutoScheduler(type) {
+  var enabled = type === 'all';
+  var d = await api('/api/settings/auto-scheduler', { method:'PUT', body:{ enabled:enabled } });
+  if (d && d.error) return toast(d.error, 'err');
+  toast(enabled ? '자동 스케줄러 전체 활성화됐어!' : '테스트 전용으로 변경됐어!');
+  loadAdmin();
+}
+async function saveKakaoLink() {
+  var v = document.getElementById('kakaoLinkInput');
+  if (!v) return;
+  var d = await api('/api/settings', { method:'PUT', body:{ kakaoLink:v.value.trim() } });
+  if (d && d.error) return toast(d.error, 'err');
+  toast('카카오 링크 저장됐어!');
+}
+async function savePartnerCode() {
+  var v = document.getElementById('partnerCodeInput');
+  if (!v) return;
+  var d = await api('/api/settings', { method:'PUT', body:{ partnerCode:v.value.trim() } });
+  if (d && d.error) return toast(d.error, 'err');
+  toast('파트너 코드 저장됐어!');
+}
+function copyPlanInquiry() {
+  var text = '요금제 변경 문의\n이벤트: 7일 무료\n베이직: 영구 무료\n프로 1개월: 7,900원\n프로 3개월: 18,900원';
+  navigator.clipboard.writeText(text).then(function(){toast('복사됐어!');}).catch(function(){toast('복사 실패','err');});
 }
 
 </script>
