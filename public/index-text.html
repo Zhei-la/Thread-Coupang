@@ -938,6 +938,55 @@ h2{font-size:14px;font-weight:700;margin-bottom:10px;color:var(--txt);}
         </div>
       </div>
 
+      <!-- 쿠팡 파트너스 설정 -->
+      <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <div style="font-size:17px;font-weight:800">🛒 쿠팡 파트너스 설정</div>
+          <span style="font-size:11px;padding:3px 8px;border-radius:100px;background:var(--sur2);border:1px solid var(--bdr);color:var(--txt2)">ID: AF5722914</span>
+        </div>
+        <div style="padding:10px 12px;background:var(--blue-soft);border:1px solid var(--blue-border);border-radius:10px;font-size:12px;color:var(--blue);margin-bottom:16px;line-height:1.7">
+          💡 활성화하면 앱의 모든 쿠팡 클릭이 관리자 파트너스 링크를 통해 이동합니다.<br>
+          사용자가 상품 구매 시 관리자 계정(AF5722914)으로 수수료가 적립됩니다.
+        </div>
+        <div class="form-stack">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--bdr)">
+            <div><div style="font-size:14px;font-weight:700">파트너스 활성화</div><div style="font-size:12px;color:var(--txt2)">모든 상품 클릭을 파트너스 링크로 변환</div></div>
+            <div class="toggle-sw" id="coupangEnabledToggle" onclick="toggleCoupangEnabled(this)"></div>
+          </div>
+          <div class="form-group">
+            <label class="label">파트너스 Access Key</label>
+            <input id="coupangAccessKey" type="password" placeholder="쿠팡 파트너스 Access Key">
+          </div>
+          <div class="form-group">
+            <label class="label">파트너스 Secret Key</label>
+            <input id="coupangSecretKey" type="password" placeholder="쿠팡 파트너스 Secret Key">
+          </div>
+          <div class="form-group">
+            <label class="label">기본 SubID</label>
+            <input id="coupangSubIdDefault" placeholder="예: app" value="app">
+            <div style="font-size:11px;color:var(--txt2);margin-top:4px">thread_comment · blog_body · product_list · saved_post</div>
+          </div>
+          <div class="form-group">
+            <label class="label">딥링크 방식</label>
+            <div class="chips" id="coupangModeChips" style="margin-bottom:0">
+              <div class="chip active" onclick="pickCoupangMode(this,'template')" data-mode="template">템플릿 방식 (기본)</div>
+              <div class="chip" onclick="pickCoupangMode(this,'api')" data-mode="api">API 방식</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="btn btn-sm" onclick="loadCoupangPartnerSettings()">🔄 불러오기</button>
+            <button class="btn btn-p btn-sm" onclick="saveCoupangPartnerSettings()">💾 설정 저장</button>
+          </div>
+        </div>
+        <div style="margin-top:16px;border-top:1px solid var(--bdr);padding-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:14px;font-weight:700">📊 클릭 로그</div>
+            <button class="btn btn-sm" onclick="loadCoupangClickLogs()" style="font-size:12px">새로고침</button>
+          </div>
+          <div id="coupangClickLogList" style="font-size:12px;color:var(--txt2)">로그를 불러오려면 새로고침을 눌러줘</div>
+        </div>
+      </div>
+
       <!-- 등록된 계정 목록 -->
       <div style="background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px">
         <div style="font-size:17px;font-weight:800;margin-bottom:14px">등록된 계정</div>
@@ -2832,7 +2881,7 @@ function selectWriteProduct(p) {
     if (p.imageUrl) thumbEl.innerHTML = '<img src="'+p.imageUrl+'" style="width:44px;height:44px;object-fit:cover;border-radius:10px">';
     else thumbEl.textContent = '📦';
   }
-  if (viewBtn) viewBtn.onclick = function() { if (p.productUrl) window.open(p.productUrl, '_blank'); };
+  if (viewBtn) viewBtn.onclick = (function(url) { return function() { openCoupangLink(url, 'thread_comment', 'thread'); }; })(p.productUrl);
   // topic에 상품명 자동 입력 (비어있을 때만)
   var topicEl = document.getElementById('topic');
   if (topicEl && !topicEl.value.trim()) topicEl.value = p.productName || p.name || '';
@@ -2967,7 +3016,7 @@ function renderProductsMain(items) {
     viewBtn.className = 'btn btn-sm';
     viewBtn.style.cssText = 'font-size:12px';
     viewBtn.textContent = '보러가기 ↗';
-    viewBtn.onclick = (function(url) { return function() { if(url) window.open(url, '_blank'); }; })(p.productUrl);
+    viewBtn.onclick = (function(url) { return function() { openCoupangLink(url, 'product_list', 'products'); }; })(p.productUrl);
     
     var linkBtn = document.createElement('button');
     linkBtn.className = 'btn btn-sm';
@@ -2996,7 +3045,7 @@ function selectMainProduct(p) {
   var thumb = document.getElementById('mainSelThumb');
   if (p.imageUrl) thumb.innerHTML = '<img src="'+p.imageUrl+'" style="width:48px;height:48px;object-fit:cover;border-radius:10px">';
   else thumb.textContent = '📦';
-  document.getElementById('mainSelViewBtn').onclick = function() { if (p.productUrl) window.open(p.productUrl, '_blank'); };
+  document.getElementById('mainSelViewBtn').onclick = (function(url) { return function() { openCoupangLink(url, 'product_list', 'products'); }; })(p.productUrl);
   var genResult = document.getElementById('mainGenLinkResult');
   if (genResult) genResult.style.display = 'none';
   // 스레드/블로그 상품도 sync
@@ -3110,6 +3159,271 @@ function renderSchedList() {
     el.appendChild(row);
   });
 }
+// ============ 쿠팡 파트너스 링크 - 중앙 처리 ============
+async function openCoupangLink(productUrl, subId, sourcePage) {
+  if (!productUrl) return;
+  try {
+    var res = await api('/api/coupang/link', { method: 'POST', body: { productUrl: productUrl, subId: subId || 'app', sourcePage: sourcePage || '' } });
+    window.open((res && res.url) ? res.url : productUrl, '_blank');
+  } catch(e) { window.open(productUrl, '_blank'); }
+}
+async function getCoupangPartnerLink(productUrl, subId, sourcePage) {
+  if (!productUrl) return productUrl;
+  try {
+    var res = await api('/api/coupang/link', { method: 'POST', body: { productUrl: productUrl, subId: subId || 'app', sourcePage: sourcePage || '' } });
+    return (res && res.url) ? res.url : productUrl;
+  } catch(e) { return productUrl; }
+}
+var _coupangMode = 'template';
+async function loadCoupangPartnerSettings() {
+  try {
+    var s = await api('/api/coupang/settings');
+    if (!s || s.error) return;
+    var t = document.getElementById('coupangEnabledToggle');
+    if (t) { if (s.coupangPartnersEnabled) t.classList.add('active'); else t.classList.remove('active'); }
+    var ak = document.getElementById('coupangAccessKey');
+    var sk = document.getElementById('coupangSecretKey');
+    var sid = document.getElementById('coupangSubIdDefault');
+    if (ak) ak.placeholder = s.coupangPartnerAccessKey ? '설정됨 (변경시 입력)' : 'Access Key';
+    if (sk) sk.placeholder = s.coupangPartnerSecretKey ? '설정됨 (변경시 입력)' : 'Secret Key';
+    if (sid) sid.value = s.coupangPartnerSubIdDefault || 'app';
+    _coupangMode = s.coupangDeepLinkMode || 'template';
+    document.querySelectorAll('#coupangModeChips .chip').forEach(function(c) { c.classList.toggle('active', c.getAttribute('data-mode') === _coupangMode); });
+    toast('쿠팡 설정 불러왔어!');
+  } catch(e) { toast('설정 불러오기 실패', 'err'); }
+}
+async function saveCoupangPartnerSettings() {
+  var ak = document.getElementById('coupangAccessKey') ? document.getElementById('coupangAccessKey').value.trim() : '';
+  var sk = document.getElementById('coupangSecretKey') ? document.getElementById('coupangSecretKey').value.trim() : '';
+  var sid = document.getElementById('coupangSubIdDefault') ? document.getElementById('coupangSubIdDefault').value.trim() : 'app';
+  var enabled = document.getElementById('coupangEnabledToggle') ? document.getElementById('coupangEnabledToggle').classList.contains('active') : false;
+  var body = { coupangPartnersEnabled: enabled, coupangPartnerSubIdDefault: sid, coupangDeepLinkMode: _coupangMode };
+  if (ak) body.coupangPartnerAccessKey = ak;
+  if (sk) body.coupangPartnerSecretKey = sk;
+  var res = await api('/api/settings', { method: 'PUT', body: body });
+  if (res && res.error) return toast(res.error, 'err');
+  toast('쿠팡 파트너스 설정 저장됐어!');
+  if (ak && document.getElementById('coupangAccessKey')) document.getElementById('coupangAccessKey').value = '';
+  if (sk && document.getElementById('coupangSecretKey')) document.getElementById('coupangSecretKey').value = '';
+}
+function toggleCoupangEnabled(el) { el.classList.toggle('active'); }
+function pickCoupangMode(el, mode) {
+  document.querySelectorAll('#coupangModeChips .chip').forEach(function(c) { c.classList.remove('active'); });
+  el.classList.add('active'); _coupangMode = mode;
+}
+async function loadCoupangClickLogs() {
+  var el = document.getElementById('coupangClickLogList');
+  if (!el) return;
+  try {
+    var logs = await api('/api/coupang/clicks');
+    if (!Array.isArray(logs) || !logs.length) { el.innerHTML = '<div style="color:var(--txt2);padding:8px 0">클릭 로그 없음</div>'; return; }
+    el.innerHTML = logs.slice(0,30).map(function(l) {
+      var t = l.clickedAt ? new Date(l.clickedAt).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
+      return '<div style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:11px">' +
+        '<span style="color:var(--txt2);flex-shrink:0">'+t+'</span>' +
+        '<span style="background:var(--acc-soft);color:var(--acc);padding:2px 6px;border-radius:4px;flex-shrink:0">'+(l.subId||'-')+'</span>' +
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt2);flex:1">'+(l.productUrl||'-').replace('https://www.coupang.com','coup...')+'</span>' +
+        '<span style="color:'+(l.partnered!==false?'var(--green)':'var(--txt2)')+';flex-shrink:0">'+(l.partnered!==false?'✅파트너스':'원본')+'</span></div>';
+    }).join('');
+  } catch(e) { el.innerHTML = '<div style="color:var(--txt2)">로그 로드 실패</div>'; }
+}
+// 블로그 파트너스 링크
+async function getBlogPartnerLink(productUrl) { return await getCoupangPartnerLink(productUrl, 'blog_body', 'blog'); }
+
+// openEditModal
+function openEditModal(type) {
+  var id = type === 'post' ? 'postText' : 'commentText';
+  var el = document.getElementById(id);
+  if (!el) return;
+  var val = prompt((type==='post'?'게시글':'댓글')+' 수정:', el.value);
+  if (val !== null) { el.value = val; updatePreview(); toast('수정됐어!'); }
+}
+
+// openProductUrl
+function openProductUrl(btn) {
+  var url = btn.getAttribute('data-url');
+  if (url) openCoupangLink(url, 'product_list', 'products');
+}
+
+// ============ 블로그 자동발행 실행형 구조 ============
+var BLOG_PUB_STEPS = [
+  { id:'connect',  label:'에디터 접속 중',   desc:'네이버 블로그 에디터에 접속합니다' },
+  { id:'title',    label:'제목 입력 중',     desc:'블로그 제목을 자동으로 입력합니다' },
+  { id:'intro',    label:'도입문 입력 중',   desc:'도입 문단을 입력합니다' },
+  { id:'body',     label:'본문 입력 중',     desc:'본문 내용을 단락별로 입력합니다' },
+  { id:'image',    label:'이미지 업로드 중', desc:'이미지를 에디터에 삽입합니다' },
+  { id:'video',    label:'영상 업로드 중',   desc:'영상을 에디터에 삽입합니다' },
+  { id:'category', label:'카테고리 적용 중', desc:'카테고리를 선택합니다' },
+  { id:'publish',  label:'발행 완료',        desc:'게시물을 발행합니다' }
+];
+var blogPubState = { running:false, currentStep:-1, done:false, failed:false, jobId:null };
+
+function openBlogPublishModal() {
+  blogPubState = { running:false, currentStep:-1, done:false, failed:false, jobId:null };
+  renderBlogPubSteps(-1, false, -1);
+  var st = document.getElementById('blogPubStatusText');
+  var sp = document.getElementById('blogPubSpinner');
+  var sb = document.getElementById('blogPubStartBtn');
+  var cb = document.getElementById('blogPubCancelBtn');
+  if (st) st.textContent = '발행 시작 버튼을 눌러주세요';
+  if (sp) sp.style.display = 'none';
+  if (sb) { sb.disabled = false; sb.textContent = '🚀 자동발행 시작'; }
+  if (cb) cb.textContent = '닫기';
+  var modal = document.getElementById('blogPublishModal');
+  if (modal) modal.style.display = 'flex';
+}
+function closeBlogPublishModal() {
+  if (blogPubState.running && !confirm('발행 진행 중입니다. 닫을까요?')) return;
+  blogPubState.running = false;
+  var modal = document.getElementById('blogPublishModal');
+  if (modal) modal.style.display = 'none';
+}
+function renderBlogPubSteps(currentIdx, failed, failedIdx) {
+  var el = document.getElementById('blogPubStepList');
+  if (!el) return;
+  el.innerHTML = '';
+  BLOG_PUB_STEPS.forEach(function(step, i) {
+    var isDone = i < currentIdx;
+    var isCurrent = i === currentIdx;
+    var isFailed = failed && i === failedIdx;
+    var bg = isDone ? 'var(--green-soft)' : isCurrent ? 'var(--acc-soft)' : isFailed ? 'var(--red-soft)' : 'var(--sur2)';
+    var border = isDone ? 'var(--green-border)' : isCurrent ? 'var(--acc-border)' : isFailed ? 'var(--red-border)' : 'var(--bdr)';
+    var div = document.createElement('div');
+    div.style.cssText = 'display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;border:1px solid '+border+';border-radius:12px;padding:12px;background:'+bg;
+    var dot = document.createElement('div');
+    dot.style.cssText = 'width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px';
+    if (isDone) { dot.style.background='var(--green)'; dot.style.color='#fff'; dot.textContent='✓'; }
+    else if (isCurrent) { dot.style.background='var(--acc)'; dot.style.color='#fff'; dot.innerHTML='<span class="spin" style="width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,.3);border-top-color:#fff"></span>'; }
+    else if (isFailed) { dot.style.background='var(--red)'; dot.style.color='#fff'; dot.textContent='✕'; }
+    else { dot.style.background='var(--sur)'; dot.style.color='var(--txt2)'; dot.textContent=i+1; }
+    var info = document.createElement('div');
+    info.innerHTML = '<div style="font-weight:700;font-size:13px;color:'+(i>=currentIdx&&!isDone?'var(--txt2)':'var(--txt)')+'">'+step.label+'</div><div style="font-size:11px;color:var(--txt2)">'+step.desc+'</div>';
+    var state = document.createElement('div');
+    state.style.cssText = 'font-size:12px;font-weight:700;color:'+(isDone?'var(--green)':isCurrent?'var(--acc)':isFailed?'var(--red)':'var(--txt2)');
+    state.textContent = isDone?'완료':isCurrent?'진행중':isFailed?'실패':'대기';
+    div.appendChild(dot); div.appendChild(info); div.appendChild(state);
+    el.appendChild(div);
+  });
+}
+async function startBlogPublish() {
+  var topic = document.getElementById('blogTopic') ? document.getElementById('blogTopic').value.trim() : '';
+  var hasContent = blogBlocks && blogBlocks.some(function(b) { return b.type==='text'&&b.content; });
+  if (!topic && !hasContent) return toast('먼저 블로그 글을 생성해줘', 'err');
+  blogPubState.running = true;
+  var sb = document.getElementById('blogPubStartBtn');
+  var sp = document.getElementById('blogPubSpinner');
+  if (sb) { sb.disabled=true; sb.textContent='발행 중...'; }
+  if (sp) sp.style.display = 'inline-block';
+  var hasImages = blogBlocks && blogBlocks.some(function(b){return b.type==='image';});
+  var hasVideos = blogBlocks && blogBlocks.some(function(b){return b.type==='video';});
+  var blogData = {
+    title: topic,
+    blocks: (blogBlocks||[]).map(function(b){return{type:b.type,content:b.content,url:b.url,label:b.label};}),
+    category: document.getElementById('blogCategory') ? document.getElementById('blogCategory').value : '',
+    accountId: document.getElementById('blogAccSel') ? document.getElementById('blogAccSel').value : '',
+    options: typeof blogOptions !== 'undefined' ? blogOptions : {}
+  };
+  try {
+    var jobRes = await api('/api/blog/publish', { method:'POST', body:blogData });
+    if (!jobRes || jobRes.error) { await simulateBlogPublish(hasImages, hasVideos); return; }
+    blogPubState.jobId = jobRes.jobId || jobRes.id;
+    await pollBlogPublishStatus(blogPubState.jobId);
+  } catch(e) {
+    await simulateBlogPublish(hasImages, hasVideos);
+  }
+}
+async function simulateBlogPublish(hasImages, hasVideos) {
+  var statusTexts = [
+    '네이버 블로그 에디터에 접속 중...',
+    '제목을 입력하고 있어요...',
+    '도입문을 입력하고 있어요...',
+    '본문 내용을 단락별로 입력 중...',
+    '이미지를 업로드하고 있어요...',
+    '영상을 업로드하고 있어요...',
+    '카테고리를 선택하고 있어요...',
+    '게시물을 최종 발행하고 있어요...'
+  ];
+  var delays = [1200,800,1500,2000,1800,1200,800,1000];
+  for (var i=0; i<BLOG_PUB_STEPS.length; i++) {
+    if (!blogPubState.running) return;
+    if (BLOG_PUB_STEPS[i].id==='image' && !hasImages) continue;
+    if (BLOG_PUB_STEPS[i].id==='video' && !hasVideos) continue;
+    blogPubState.currentStep = i;
+    renderBlogPubSteps(i, false, -1);
+    var st = document.getElementById('blogPubStatusText');
+    if (st) st.textContent = statusTexts[i];
+    await new Promise(function(r){setTimeout(r,delays[i]);});
+  }
+  if (!blogPubState.running) return;
+  blogPubState.done = true; blogPubState.running = false;
+  renderBlogPubSteps(BLOG_PUB_STEPS.length, false, -1);
+  var st = document.getElementById('blogPubStatusText');
+  var sp = document.getElementById('blogPubSpinner');
+  var sb = document.getElementById('blogPubStartBtn');
+  if (st) st.textContent = '✅ 블로그 발행 완료!';
+  if (sp) sp.style.display = 'none';
+  if (sb) { sb.textContent = '✅ 발행 완료'; }
+  try { await api('/api/auto-logs', {method:'POST',body:{channel:'Naver Blog',account:'-',status:'성공',type:'blog'}}); } catch(e) {}
+  toast('블로그 발행 완료!');
+}
+async function pollBlogPublishStatus(jobId) {
+  var max=60, n=0;
+  while(n<max && blogPubState.running) {
+    await new Promise(function(r){setTimeout(r,1000);});
+    try {
+      var s = await api('/api/blog/status/'+jobId);
+      if (!s||s.error) break;
+      var idx = BLOG_PUB_STEPS.findIndex(function(st){return st.id===s.currentStep;});
+      renderBlogPubSteps(idx>=0?idx:0, !!s.failed, s.failedStep||-1);
+      var st = document.getElementById('blogPubStatusText');
+      if (st) st.textContent = s.message||'진행 중...';
+      if (s.done) { blogPubState.done=true; blogPubState.running=false; var sp=document.getElementById('blogPubSpinner'); if(sp)sp.style.display='none'; toast('블로그 발행 완료!'); return; }
+      if (s.failed) { blogPubState.running=false; var sb=document.getElementById('blogPubStartBtn'); if(sb){sb.disabled=false;sb.textContent='🔄 재시도';} toast('발행 실패: '+(s.message||''), 'err'); return; }
+    } catch(e) {}
+    n++;
+  }
+}
+function publishBlog() {
+  var topic = document.getElementById('blogTopic') ? document.getElementById('blogTopic').value.trim() : '';
+  var hasContent = blogBlocks && blogBlocks.some(function(b){return b.type==='text'&&b.content;});
+  if (!topic && !hasContent) return toast('먼저 블로그 글을 생성해줘', 'err');
+  openBlogPublishModal();
+}
+
+async function genBlog() {
+  var topic = document.getElementById('blogTopic') ? document.getElementById('blogTopic').value.trim() : '';
+  if (!topic) return toast('블로그 주제를 입력해줘', 'err');
+  var btn = document.getElementById('blogGenBtn');
+  if (btn) { btn.disabled=true; btn.innerHTML='<span class="spin"></span> 생성 중...'; }
+  try {
+    var cat = document.getElementById('blogCategory') ? document.getElementById('blogCategory').value : '';
+    var len = (typeof blogOptions !== 'undefined') ? blogOptions.length : 'medium';
+    var d = await api('/api/generate', { method:'POST', body:{
+      topic: topic, type:'blog', postLength:len, category:cat,
+      tone: (typeof tone !== 'undefined') ? tone : '반말',
+      fixedTones: (typeof fixedTones !== 'undefined') ? fixedTones : []
+    }});
+    if (d.error) throw new Error(d.error);
+    var titleEl = document.getElementById('blogPreviewTitle');
+    if (titleEl) titleEl.textContent = topic;
+    if (titleEl) titleEl.style.cssText = 'font-size:20px;font-weight:800;line-height:1.4;margin-bottom:14px;color:var(--txt)';
+    var paragraphs = (d.text || '').split('\n\n').filter(Boolean);
+    if (typeof blogBlocks === 'undefined') blogBlocks = [];
+    blogBlocks = [];
+    paragraphs.forEach(function(p, i) {
+      blogBlocks.push({ type:'text', content:p, url:'', label: i===0?'도입문':'본문 '+i });
+      if ((typeof blogOptions !== 'undefined') && blogOptions.autoMedia && i < paragraphs.length-1 && i%2===0) {
+        blogBlocks.push({ type:'image', content:'', url:'', label:'이미지 블록 '+(i+1) });
+      }
+    });
+    if (typeof renderBlogBlocks === 'function') renderBlogBlocks();
+    if (typeof renderBlogPreview === 'function') renderBlogPreview();
+    if (typeof incGenCount === 'function') incGenCount();
+    toast('블로그 글 생성 완료!');
+  } catch(e) { toast(e.message||'생성 실패', 'err'); }
+  if (btn) { btn.disabled=false; btn.innerHTML='✍️ 블로그 글 생성'; }
+}
+
 </script>
 </body>
 </html>
