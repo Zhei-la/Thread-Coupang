@@ -1561,6 +1561,9 @@ function enterApp(user) {
   renderSavedTopics();
   loadSavedPrompts();
   updateSidePlanInfo();
+  // 홈 진입 시 인기상품 자동 로드
+  setTimeout(function() { loadWriteProducts('', '전체'); }, 300);
+  loadProducts();
   // 무료 플랜이면 계정 추가 폼 숨기고 태그 전용 UI 표시
   if (user.plan === 'basic') {
     var notice = document.getElementById('basicPlanNotice');
@@ -3198,8 +3201,9 @@ async function loadCoupangPartnerSettings() {
     var ak = document.getElementById('coupangAccessKey');
     var sk = document.getElementById('coupangSecretKey');
     var sid = document.getElementById('coupangSubIdDefault');
-    if (ak) ak.placeholder = s.coupangPartnerAccessKey ? '설정됨 (변경시 입력)' : 'Access Key';
-    if (sk) sk.placeholder = s.coupangPartnerSecretKey ? '설정됨 (변경시 입력)' : 'Secret Key';
+    // 저장된 키 값을 직접 input에 표시 (탭 이동해도 유지)
+    if (ak) { ak.value = s.coupangPartnerAccessKey || ''; ak.placeholder = 'Access Key'; }
+    if (sk) { sk.value = s.coupangPartnerSecretKey && s.coupangPartnerSecretKey !== '***' ? s.coupangPartnerSecretKey : (s.coupangPartnerSecretKey === '***' ? '저장됨' : ''); sk.placeholder = 'Secret Key'; }
     if (sid) sid.value = s.coupangPartnerSubIdDefault || 'app';
     _coupangMode = s.coupangDeepLinkMode || 'template';
     document.querySelectorAll('#coupangModeChips .chip').forEach(function(c) { c.classList.toggle('active', c.getAttribute('data-mode') === _coupangMode); });
@@ -3217,8 +3221,7 @@ async function saveCoupangPartnerSettings() {
   var res = await api('/api/settings', { method: 'PUT', body: body });
   if (res && res.error) return toast(res.error, 'err');
   toast('쿠팡 파트너스 설정 저장됐어!');
-  if (ak && document.getElementById('coupangAccessKey')) document.getElementById('coupangAccessKey').value = '';
-  if (sk && document.getElementById('coupangSecretKey')) document.getElementById('coupangSecretKey').value = '';
+  // 저장 후 키 그대로 유지 (지우지 않음)
 }
 function toggleCoupangEnabled(el) { el.classList.toggle('active'); }
 function pickCoupangMode(el, mode) {
