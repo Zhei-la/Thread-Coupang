@@ -1442,7 +1442,7 @@ function go(name, el) {
   location.hash = name;
   if (name === 'schedule') loadSched();
   if (name === 'accounts') loadAccs();
-  if (name === 'admin') { loadAdmin(); loadStats(); }
+  if (name === 'admin') { loadAdmin(); loadStats(); loadCoupangPartnerSettings(); loadCoupangClickLogs(); }
   if (name === 'autoSchedule' && typeof loadAutoSched === 'function') loadAutoSched();
   if (name === 'products') loadProducts();
   if (name === 'blog') loadBlog();
@@ -3805,6 +3805,8 @@ async function delInvite(code) {
   await loadInviteList();
 }
 
+
+init();
 </script>
 </body>
 </html>
