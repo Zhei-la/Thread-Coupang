@@ -3641,7 +3641,62 @@ async function makeInvite() {
   var d = await api('/api/invites', { method:'POST' });
   if (d && d.error) return toast(d.error, 'err');
   toast('초대코드 생성됐어: ' + (d.code || ''));
-  loadAdmin();
+  await loadInviteList();
+}
+
+async function loadInviteList() {
+  var iEl = document.getElementById('inviteList');
+  if (!iEl) return;
+  try {
+    var invites = await api('/api/invites');
+    var allInv = Array.isArray(invites) ? invites : [];
+    iEl.innerHTML = '';
+    if (!allInv.length) {
+      iEl.innerHTML = '<div style="color:var(--txt2);font-size:13px">초대코드 없음</div>';
+      return;
+    }
+    allInv.forEach(function(c) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--bdr);border-radius:10px;background:var(--sur);margin-bottom:8px';
+      var isDone = c.status === 'done';
+      var info = document.createElement('div');
+      info.style.flex = '1';
+      var codeRow = document.createElement('div');
+      codeRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px';
+      var codeText = document.createElement('span');
+      codeText.style.cssText = 'font-size:15px;font-weight:800;font-family:monospace;letter-spacing:1px;color:var(--txt)';
+      codeText.textContent = c.code;
+      var badge = document.createElement('span');
+      badge.style.cssText = 'font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;border:1px solid;' +
+        (isDone ? 'background:var(--sur2);color:var(--txt2);border-color:var(--bdr)' : 'background:var(--green-soft);color:var(--green);border-color:var(--green-border)');
+      badge.textContent = isDone ? '사용완료' : '사용가능';
+      codeRow.appendChild(codeText);
+      codeRow.appendChild(badge);
+      var meta = document.createElement('div');
+      meta.style.cssText = 'font-size:12px;color:var(--txt2);display:flex;gap:12px';
+      var countSpan = document.createElement('span');
+      countSpan.textContent = '사용횟수: ' + (c.usedCount || 0) + '회';
+      meta.appendChild(countSpan);
+      if (c.createdAt) {
+        var dateSpan = document.createElement('span');
+        var d2 = new Date(c.createdAt);
+        dateSpan.textContent = '생성: ' + d2.toLocaleDateString('ko-KR') + ' ' + d2.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+        meta.appendChild(dateSpan);
+      }
+      info.appendChild(codeRow);
+      info.appendChild(meta);
+      var delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-sm';
+      delBtn.style.cssText = 'color:var(--red);border-color:var(--red-border);font-size:12px;flex-shrink:0';
+      delBtn.textContent = '삭제';
+      delBtn.onclick = (function(code) { return function() { delInvite(code); }; })(c.code);
+      row.appendChild(info);
+      row.appendChild(delBtn);
+      iEl.appendChild(row);
+    });
+  } catch(e) {
+    iEl.innerHTML = '<div style="color:var(--red);font-size:13px">목록 로드 실패</div>';
+  }
 }
 async function setAutoScheduler(type) {
   var enabled = type === 'all';
@@ -3667,6 +3722,87 @@ async function savePartnerCode() {
 function copyPlanInquiry() {
   var text = '요금제 변경 문의\n이벤트: 7일 무료\n베이직: 영구 무료\n프로 1개월: 7,900원\n프로 3개월: 18,900원';
   navigator.clipboard.writeText(text).then(function(){toast('복사됐어!');}).catch(function(){toast('복사 실패','err');});
+}
+
+// ===== 관리자 패널 로드 =====
+async function loadAdmin() {
+  // 초대코드 목록
+  await loadInviteList();
+
+  // 설정 로드
+  try {
+    var settings = await api('/api/settings');
+    var kakaoEl = document.getElementById('kakaoLinkInput');
+    var partnerEl = document.getElementById('partnerCodeInput');
+    if (kakaoEl && settings.kakaoLink) kakaoEl.value = settings.kakaoLink;
+    if (partnerEl && settings.partnerCode) partnerEl.value = settings.partnerCode;
+  } catch(e) {}
+
+  // 유저 목록 로드
+  try {
+    var users = await api('/api/users');
+    var allUsers = Array.isArray(users) ? users : [];
+
+    // 가입 대기
+    var pending = allUsers.filter(function(u) { return u.status === 'pending'; });
+    var pendingEl = document.getElementById('pendingList');
+    var pendingCount = document.getElementById('pendingCount');
+    if (pendingCount) pendingCount.textContent = pending.length || '';
+    if (pendingEl) {
+      pendingEl.innerHTML = '';
+      if (!pending.length) {
+        pendingEl.innerHTML = '<div style="color:var(--txt2);font-size:13px">대기중 없음</div>';
+      } else {
+        pending.forEach(function(u) {
+          pendingEl.innerHTML += renderUser(u);
+        });
+      }
+    }
+
+    // 요금제 변경 신청
+    var planReq = allUsers.filter(function(u) { return u.planChangeRequest; });
+    var planReqEl = document.getElementById('planChangeList');
+    if (planReqEl) {
+      planReqEl.innerHTML = '';
+      if (!planReq.length) {
+        planReqEl.innerHTML = '<div style="color:var(--txt2);font-size:13px">신청 없음</div>';
+      } else {
+        planReq.forEach(function(u) { planReqEl.innerHTML += renderUser(u); });
+      }
+    }
+
+    // 한도/연장 요청
+    var limitReq = allUsers.filter(function(u) { return u.limitRequest || u.extendRequest; });
+    var limitReqEl = document.getElementById('limitReqList');
+    if (limitReqEl) {
+      limitReqEl.innerHTML = '';
+      if (!limitReq.length) {
+        limitReqEl.innerHTML = '<div style="color:var(--txt2);font-size:13px">요청 없음</div>';
+      } else {
+        limitReq.forEach(function(u) { limitReqEl.innerHTML += renderUser(u); });
+      }
+    }
+
+    // 전체 유저 목록
+    var normal = allUsers.filter(function(u) { return u.role !== 'admin' && u.status !== 'pending'; });
+    var userListEl = document.getElementById('userList');
+    if (userListEl) {
+      userListEl.innerHTML = '';
+      if (!normal.length) {
+        userListEl.innerHTML = '<div style="color:var(--txt2);font-size:13px">유저 없음</div>';
+      } else {
+        normal.forEach(function(u) { userListEl.innerHTML += renderUser(u); });
+      }
+    }
+  } catch(e) {}
+}
+
+async function delInvite(code) {
+  if (!confirm('초대코드 ' + code + ' 를 삭제할까?')) return;
+  var d = await api('/api/invites/' + code, { method:'DELETE' });
+  if (d && d.error) return toast(d.error, 'err');
+  toast('삭제됐어!');
+  await loadInviteList();
 }
 
 </script>
