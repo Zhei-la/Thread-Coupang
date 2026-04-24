@@ -682,6 +682,7 @@ app.post('/api/generate', auth, rateLimit(30, 60000), async (req, res) => {
   }
 
   const { topic, tone, type, imageDesc, userPrompt, commentPrompt } = req.body;
+  const postMode = req.body.postMode || 'normal'; // 'normal' or 'agro'
   const fixedTones = Array.isArray(req.body.fixedTones) ? req.body.fixedTones : [];
   // 프론트에서 직접 빌드한 프롬프트가 있으면 우선 사용
   const builtPrompt = req.body.customCommentPrompt ? String(req.body.customCommentPrompt).slice(0, 3000) : '';
@@ -1030,7 +1031,34 @@ ${shahriMoodInstr}
     }
   } else {
     const extra = customUserPrompt ? '\n\n[사용자 지침]\n' + customUserPrompt : '';
-    prompt = toneInstruction + fixedToneInstr + '\n\n주제: ' + (topic||'') + imgContext + extra + '\n\n위 형식으로 자연스러운 Threads 게시글 작성. 한국어만, 반말, 이모지·해시태그 없이, 텍스트만 출력.';
+    if (postMode === 'agro') {
+      // 어그로글 - 제품 경험담 후킹 방식
+      prompt = `아래 제품/상황을 경험한 일반인이 SNS에 올리는 어그로성 후킹 게시글을 써줘.
+
+[핵심 원칙]
+- 광고처럼 보이면 절대 안 됨. 진짜 일상 경험담처럼.
+- 제품명·브랜드명 직접 언급 절대 금지.
+- 거짓말 아닌 과장된 반응. "이게 뭐야" "미쳤다" "진짜임?" 같은 실제 반응.
+- 후킹은 제품 효과/변화에 대한 놀람이나 감탄으로.
+
+[어그로 패턴 - 아래 중 1개 랜덤 선택]
+1. 가족/반려동물 반응형: "우리 강아지가 이것만 찾아요" "남편이 또 달라고 함 지겨워"
+2. 변화 전/후 비교형: "쓰기 전엔 몰랐는데 이제 못 돌아가겠음"  
+3. 의외성 반전형: "별로일 줄 알았는데 진짜로 달라짐"
+4. 공감 유도형: "나만 이런 거 아니지 써보면 다 알아"
+5. 시간 경과형: "한 달 쓰고 나서 주변에서 다 물어봄"
+
+[말투]
+- 반말. 마침표 없음. 자연스러운 일상체.
+- 6~10줄. 2~3줄씩 묶어서.
+- 이모지 금지. 해시태그 금지.
+
+주제/상황: ` + (topic||'') + imgContext + extra + `
+
+텍스트만 출력.`;
+    } else {
+      prompt = toneInstruction + fixedToneInstr + '\n\n주제: ' + (topic||'') + imgContext + extra + '\n\n위 형식으로 자연스러운 Threads 게시글 작성. 한국어만, 반말, 이모지·해시태그 없이, 텍스트만 출력.';
+    }
   }
 
   // OpenAI 먼저 시도, 쿼터 초과 시 Groq fallback
