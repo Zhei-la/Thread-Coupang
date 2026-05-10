@@ -2276,6 +2276,7 @@ cron.schedule('* * * * *', async () => {
         let text = '';
         try {
           const r = await fetch(apiUrl, {
+            signal: AbortSignal.timeout(45000),
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
             body: JSON.stringify({ model, messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: prompt }], temperature: 0.82, max_tokens: 400 })
@@ -2291,6 +2292,7 @@ cron.schedule('* * * * *', async () => {
             settings2._openaiQuotaAlert = { at: new Date().toISOString(), msg: genErr.message };
             saveSettings(settings2);
             const rf = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              signal: AbortSignal.timeout(45000),
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
               body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: prompt }], temperature: 0.82, max_tokens: 400 })
@@ -2310,6 +2312,7 @@ cron.schedule('* * * * *', async () => {
           const commentAt = new Date(Date.now() + delay * 60 * 1000).toISOString();
           const commentPrompt = '댓글 1개.\n주제: ' + selectedTopic + '\n반말, 1~2문장, 이모지 금지, 한국어만, 텍스트만.';
           const rc = await fetch(apiUrl, {
+            signal: AbortSignal.timeout(45000),
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
             body: JSON.stringify({ model, messages: [{ role: 'system', content: systemMsg }, { role: 'user', content: commentPrompt }], temperature: 0.82, max_tokens: 150 })
